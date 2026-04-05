@@ -31,6 +31,36 @@ export async function getVersesByChapter(
   };
 }
 
+export async function getVersesByJuz(
+  juzNumber: number
+): Promise<VersesResponse> {
+  const firstPage = await apiGet<VersesResponse>(
+    `/verses/by_juz/${juzNumber}`,
+    { language: "en", words: "false", translations: "131", fields: "text_uthmani", per_page: 50, page: 1 }
+  );
+
+  const { total_pages } = firstPage.pagination;
+  if (total_pages <= 1) return firstPage;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: total_pages - 1 }, (_, i) =>
+      apiGet<VersesResponse>(`/verses/by_juz/${juzNumber}`, {
+        language: "en",
+        words: "false",
+        translations: "131",
+        fields: "text_uthmani",
+        per_page: 50,
+        page: i + 2,
+      })
+    )
+  );
+
+  return {
+    verses: [firstPage, ...remainingPages].flatMap((r) => r.verses),
+    pagination: remainingPages[remainingPages.length - 1].pagination,
+  };
+}
+
 export async function getVersesByPage(
   pageNumber: number
 ): Promise<VersesResponse> {

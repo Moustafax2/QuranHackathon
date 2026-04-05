@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
 
 const gameModes = [
   {
@@ -53,6 +57,7 @@ const gameModes = [
 export default function PlayPage() {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState("");
+  const newRoomCode = useMemo(() => generateRoomCode(), []);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
@@ -109,7 +114,7 @@ export default function PlayPage() {
             </h2>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Link
-                href={`/play/new?mode=${selectedMode}`}
+                href={`/play/${newRoomCode}?mode=${selectedMode}`}
                 className="flex-1 rounded-xl bg-emerald-600 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
               >
                 Create Room
