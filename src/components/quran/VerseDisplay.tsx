@@ -14,10 +14,10 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
         return (
           <div
             key={verse.id}
-            className="rounded-lg border border-gray-100 p-6 dark:border-gray-800"
+            className="rounded-lg border border-gray-800 bg-gray-900/50 p-6"
           >
             <div className="mb-4 flex items-start justify-between">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900/40 text-xs font-semibold text-emerald-400">
                 {verse.verse_number}
               </span>
               <BookmarkButton
@@ -35,14 +35,14 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
             <p
               dir="rtl"
               lang="ar"
-              className="font-amiri mb-4 text-right text-2xl leading-loose text-gray-900 dark:text-gray-100"
+              className="font-amiri mb-4 text-right text-2xl leading-loose text-white"
             >
               {verse.text_uthmani}
             </p>
             {verse.translations?.map((t) => (
               <p
                 key={t.id}
-                className="text-base leading-relaxed text-gray-600 dark:text-gray-400"
+                className="text-base leading-relaxed text-gray-400"
                 dangerouslySetInnerHTML={{ __html: t.text }}
               />
             ))}

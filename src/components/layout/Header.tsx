@@ -1,40 +1,41 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const navLinks = [
+  { href: "/play", label: "Play" },
+  { href: "/train", label: "Train" },
+  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/quran", label: "Quran" },
+];
 
 export function Header() {
+  const pathname = usePathname();
+
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/95">
+    <header className="sticky top-0 z-40 border-b border-gray-800 bg-gray-950/95 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link
-          href="/"
-          className="text-xl font-bold text-emerald-700 dark:text-emerald-400"
-        >
-          Quran Reader
+        <Link href="/" className="text-xl font-bold text-emerald-400">
+          Quran<span className="text-white">Arena</span>
         </Link>
-        <nav className="flex items-center gap-6 text-sm font-medium">
-          <Link
-            href="/"
-            className="text-gray-600 transition-colors hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400"
-          >
-            Surahs
-          </Link>
-          <Link
-            href="/page-view/1"
-            className="text-gray-600 transition-colors hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400"
-          >
-            Page View
-          </Link>
-          <Link
-            href="/search"
-            className="text-gray-600 transition-colors hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400"
-          >
-            Search
-          </Link>
-          <Link
-            href="/bookmarks"
-            className="text-gray-600 transition-colors hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400"
-          >
-            Bookmarks
-          </Link>
+        <nav className="flex items-center gap-1 text-sm font-medium">
+          {navLinks.map(({ href, label }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`rounded-lg px-3 py-2 transition-colors ${
+                  active
+                    ? "bg-emerald-600/20 text-emerald-400"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </header>

@@ -22,9 +22,9 @@ const amiri = Amiri({
 });
 
 export const metadata: Metadata = {
-  title: "Quran Reader",
+  title: "QuranArena",
   description:
-    "A beautiful Quran reader with Arabic text, English translations, audio recitations, and more.",
+    "Compete with friends to memorize the Quran. Live multiplayer competitions, training modes, and leaderboards.",
   manifest: "/manifest.json",
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} h-full antialiased dark`}
     >
       <body className="flex min-h-full flex-col">
         <Providers>

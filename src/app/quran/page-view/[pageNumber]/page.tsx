@@ -17,7 +17,7 @@ export default async function MushafPageView({ params }: Props) {
         <PageNavigator currentPage={page} />
       </div>
 
-      <div className="rounded-lg border border-gray-200 p-6 dark:border-gray-700">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-6">
         <VerseDisplay verses={verses} />
       </div>
 

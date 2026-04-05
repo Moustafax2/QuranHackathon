@@ -14,7 +14,7 @@ export function SearchBar() {
 
     timerRef.current = setTimeout(() => {
       if (query.trim()) {
-        router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+        router.push(`/quran/search?q=${encodeURIComponent(query.trim())}`);
       }
     }, 400);
 
