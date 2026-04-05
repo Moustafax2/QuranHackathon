@@ -43,7 +43,7 @@ export function AudioPlayerBar() {
   if (!currentChapter) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 p-3 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/95">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-800 bg-gray-900/95 p-3 backdrop-blur-sm">
       <div className="mx-auto flex max-w-4xl items-center gap-4">
         <button
           onClick={toggle}
@@ -63,7 +63,7 @@ export function AudioPlayerBar() {
 
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="text-gray-700 dark:text-gray-300">
+            <span className="text-gray-300">
               {error ? (
                 <span className="text-red-500">{error}</span>
               ) : (
@@ -80,14 +80,14 @@ export function AudioPlayerBar() {
             max={duration || 0}
             value={progress}
             onChange={(e) => seek(Number(e.target.value))}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-emerald-600 dark:bg-gray-700"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-700 accent-emerald-500"
           />
         </div>
 
         <select
           value={reciterId}
           onChange={(e) => changeReciter(Number(e.target.value))}
-          className="max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          className="max-w-[160px] rounded-md border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-200"
         >
           {RECITERS.map((r) => (
             <option key={r.id} value={r.id}>
