@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { RECITERS } from "@/lib/api";
+import { RECITERS } from "@/lib/quran/reciters";
 
 export function useAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -46,8 +46,6 @@ export function useAudioPlayer() {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-    // Only re-run when the audio URL changes so we re-attach after a src swap
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl]);
 
   const play = useCallback(async (chapterNumber: number, url: string) => {
@@ -74,7 +72,6 @@ export function useAudioPlayer() {
           : "Could not play audio."
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const pause = useCallback(() => {
@@ -110,6 +107,10 @@ export function useAudioPlayer() {
     }
   }, []);
 
+  const setErrorMessage = useCallback((message: string | null) => {
+    setError(message);
+  }, []);
+
   return {
     isPlaying,
     currentChapter,
@@ -122,5 +123,6 @@ export function useAudioPlayer() {
     toggle,
     seek,
     changeReciter,
+    setErrorMessage,
   };
 }

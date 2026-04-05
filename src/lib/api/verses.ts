@@ -1,3 +1,5 @@
+import "server-only";
+
 import { apiGet } from "./client";
 import type { VersesResponse } from "@/lib/types";
 

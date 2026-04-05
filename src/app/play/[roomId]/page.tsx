@@ -369,7 +369,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
                     What comes next?
                   </p>
-                  <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
+                  <p
+                    dir="rtl"
+                    lang="ar"
+                    translate="no"
+                    className="font-amiri text-3xl leading-loose text-white"
+                  >
                     {question.promptVerse.text_uthmani}
                   </p>
                   <p className="mt-2 text-sm text-gray-500">
@@ -382,7 +387,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
                     What does this word mean?
                   </p>
-                  <p dir="rtl" lang="ar" className="font-amiri text-5xl leading-loose text-white">
+                  <p
+                    dir="rtl"
+                    lang="ar"
+                    translate="no"
+                    className="font-amiri text-5xl leading-loose text-white"
+                  >
                     {question.promptWord}
                   </p>
                   <p className="mt-3 text-sm text-gray-500">
@@ -403,7 +413,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                     <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Fill in the blank
                     </p>
-                    <p dir="rtl" lang="ar" className="font-amiri text-2xl leading-loose text-white">
+                    <p
+                      dir="rtl"
+                      lang="ar"
+                      translate="no"
+                      className="font-amiri text-2xl leading-loose text-white"
+                    >
                       {parts.length === 2 ? (
                         <>
                           {parts[0]}
@@ -448,7 +463,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                   >
                     {question.type === "next-ayah-mc" && (
                       <>
-                        <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                        <p
+                          dir="rtl"
+                          lang="ar"
+                          translate="no"
+                          className="font-amiri text-xl leading-loose text-white"
+                        >
                           {option.text_uthmani}
                         </p>
                         {answered && (
@@ -460,7 +480,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                       <p className="text-sm font-medium text-white">{option.meaning}</p>
                     )}
                     {question.type === "blank-word-mc" && (
-                      <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                      <p
+                        dir="rtl"
+                        lang="ar"
+                        translate="no"
+                        className="font-amiri text-xl leading-loose text-white"
+                      >
                         {option.text_uthmani}
                       </p>
                     )}
@@ -477,7 +502,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                 {selected !== question.correctIndex && (
                   <p className="mt-1 text-sm text-gray-500">
                     Correct answer:{" "}
-                    <span dir={question.type === "word-meaning-mc" ? "ltr" : "rtl"} lang={question.type === "word-meaning-mc" ? undefined : "ar"} className="font-amiri text-gray-300">
+                    <span
+                      dir={question.type === "word-meaning-mc" ? "ltr" : "rtl"}
+                      lang={question.type === "word-meaning-mc" ? undefined : "ar"}
+                      translate={question.type === "word-meaning-mc" ? undefined : "no"}
+                      className="font-amiri text-gray-300"
+                    >
                       {question.type === "word-meaning-mc"
                         ? question.options[question.correctIndex].meaning
                         : question.options[question.correctIndex].text_uthmani}

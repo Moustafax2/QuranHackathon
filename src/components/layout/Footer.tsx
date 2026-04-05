@@ -5,12 +5,12 @@ export function Footer() {
         <p>
           Powered by{" "}
           <a
-            href="https://quran.com"
+            href="https://quran.foundation"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-emerald-600"
           >
-            Quran.com API
+            Quran Foundation Content API
           </a>
         </p>
       </div>

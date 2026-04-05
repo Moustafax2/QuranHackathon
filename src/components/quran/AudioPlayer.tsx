@@ -1,7 +1,8 @@
 "use client";
 
 import { useAudioPlayer } from "@/lib/hooks/useAudioPlayer";
-import { getChapterRecitation, RECITERS } from "@/lib/api";
+import { RECITERS } from "@/lib/quran/reciters";
+import type { AudioResponse } from "@/lib/types";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 type AudioContextType = ReturnType<typeof useAudioPlayer>;
@@ -101,7 +102,14 @@ export function AudioPlayerBar() {
 }
 
 export function PlayChapterButton({ chapterNumber }: { chapterNumber: number }) {
-  const { play, pause, isPlaying, currentChapter, reciterId } = useAudio();
+  const {
+    play,
+    pause,
+    isPlaying,
+    currentChapter,
+    reciterId,
+    setErrorMessage,
+  } = useAudio();
   const [loading, setLoading] = useState(false);
 
   const isThisChapter = currentChapter === chapterNumber;
@@ -112,9 +120,26 @@ export function PlayChapterButton({ chapterNumber }: { chapterNumber: number }) 
       return;
     }
     setLoading(true);
+    setErrorMessage(null);
     try {
-      const data = await getChapterRecitation(reciterId, chapterNumber);
+      const response = await fetch(
+        `/api/quran/chapter-recitation/${reciterId}/${chapterNumber}`,
+        { cache: "no-store" }
+      );
+
+      if (!response.ok) {
+        const payload = (await response
+          .json()
+          .catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Failed to load recitation.");
+      }
+
+      const data = (await response.json()) as AudioResponse;
       await play(chapterNumber, data.audio_file.audio_url);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to load recitation."
+      );
     } finally {
       setLoading(false);
     }
