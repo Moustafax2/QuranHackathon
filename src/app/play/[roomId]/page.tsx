@@ -24,11 +24,11 @@ const QUESTION_TYPE_META: {
   available: boolean;
 }[] = [
   { id: "next-ayah-mc", label: "Next Ayah — Multiple Choice", available: true },
+  { id: "word-meaning-mc", label: "Word Meaning Trivia", available: true },
 ];
 
 const DISABLED_TYPES = [
   { label: "Buzzer — Next Ayah", available: false },
-  { label: "Word Meaning Trivia", available: false },
   { label: "Quran Trivia", available: false },
 ];
 
@@ -247,7 +247,8 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
 
     try {
       const juzesParam = settings.juzes.join(",");
-      const res = await fetch(`/api/game/question?juzes=${juzesParam}&type=next-ayah-mc`);
+      const type = settings.questionTypes[Math.floor(Math.random() * settings.questionTypes.length)];
+      const res = await fetch(`/api/game/question?juzes=${juzesParam}&type=${type}`);
       if (!res.ok) throw new Error("Failed to fetch question");
       const data: GameQuestion = await res.json();
       setQuestion(data);
@@ -256,7 +257,7 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
     } finally {
       setLoading(false);
     }
-  }, [settings.juzes]);
+  }, [settings.juzes, settings.questionTypes]);
 
   useEffect(() => {
     fetchQuestion();
@@ -360,18 +361,36 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
         {/* Question */}
         {!loading && !error && question && (
           <>
+            {/* Prompt card */}
             <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                What comes next?
-              </p>
-              <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
-                {question.promptVerse.text_uthmani}
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
-              </p>
+              {question.type === "next-ayah-mc" ? (
+                <>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    What comes next?
+                  </p>
+                  <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
+                    {question.promptVerse.text_uthmani}
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    What does this word mean?
+                  </p>
+                  <p dir="rtl" lang="ar" className="font-amiri text-5xl leading-loose text-white">
+                    {question.promptWord}
+                  </p>
+                  <p className="mt-3 text-sm text-gray-500">
+                    {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
+                  </p>
+                </>
+              )}
             </div>
 
+            {/* Options */}
             <div className="grid gap-3 sm:grid-cols-2">
               {question.options.map((option, i) => {
                 let style = "border-gray-800 bg-gray-900 hover:border-gray-600 cursor-pointer";
@@ -380,18 +399,27 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                   else if (i === selected) style = "border-red-500 bg-red-500/10 cursor-default";
                   else style = "border-gray-800 bg-gray-900 opacity-40 cursor-default";
                 }
+
                 return (
                   <button
-                    key={option.verse_key}
+                    key={`${option.verse_key}-${i}`}
                     onClick={() => handleSelect(i)}
                     disabled={answered}
-                    className={`rounded-xl border p-4 text-right transition-all ${style}`}
+                    className={`rounded-xl border p-4 transition-all ${style} ${
+                      question.type === "word-meaning-mc" ? "text-left" : "text-right"
+                    }`}
                   >
-                    <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
-                      {option.text_uthmani}
-                    </p>
-                    {answered && (
-                      <p className="mt-1 text-left text-xs text-gray-500">{option.verse_key}</p>
+                    {question.type === "next-ayah-mc" ? (
+                      <>
+                        <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                          {option.text_uthmani}
+                        </p>
+                        {answered && (
+                          <p className="mt-1 text-left text-xs text-gray-500">{option.verse_key}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-white">{option.meaning}</p>
                     )}
                   </button>
                 );
@@ -405,7 +433,12 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                 </p>
                 {selected !== question.correctIndex && (
                   <p className="mt-1 text-sm text-gray-500">
-                    Correct answer: <span className="text-gray-300">{question.options[question.correctIndex].verse_key}</span>
+                    Correct answer:{" "}
+                    <span className="text-gray-300">
+                      {question.type === "word-meaning-mc"
+                        ? question.options[question.correctIndex].meaning
+                        : question.options[question.correctIndex].verse_key}
+                    </span>
                   </p>
                 )}
                 <button

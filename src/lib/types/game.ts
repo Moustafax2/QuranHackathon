@@ -1,4 +1,4 @@
-export type QuestionType = "next-ayah-mc";
+export type QuestionType = "next-ayah-mc" | "word-meaning-mc";
 
 export interface GameSettings {
   questionTypes: QuestionType[];
@@ -9,6 +9,8 @@ export interface GameSettings {
 export interface QuestionOption {
   text_uthmani: string;
   verse_key: string;
+  // For word-meaning-mc: the English meaning shown as the option label
+  meaning?: string;
 }
 
 export interface GameQuestion {
@@ -18,6 +20,8 @@ export interface GameQuestion {
     verse_key: string;
     surah_name: string;
   };
+  // word-meaning-mc only: the specific Arabic word being asked about
+  promptWord?: string;
   options: QuestionOption[];
   correctIndex: number;
 }
