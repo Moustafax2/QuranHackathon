@@ -1,4 +1,4 @@
 export { getChapters, getChapter } from "./chapters";
-export { getVersesByChapter, getVersesByPage } from "./verses";
+export { getVersesByChapter, getVersesByPage, getVersesByJuz, getVersesByJuzWithWords } from "./verses";
 export { getChapterRecitation, RECITERS } from "./audio";
 export { searchQuran } from "./search";
