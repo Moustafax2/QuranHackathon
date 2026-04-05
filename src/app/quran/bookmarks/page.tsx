@@ -18,7 +18,7 @@ export default function BookmarksPage() {
             No bookmarks yet. Bookmark verses while reading to save them here.
           </p>
           <Link
-            href="/"
+            href="/quran"
             className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             Browse Surahs
@@ -32,7 +32,7 @@ export default function BookmarksPage() {
               className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-700"
             >
               <Link
-                href={`/surah/${bookmark.chapterId}`}
+                href={`/quran/surah/${bookmark.chapterId}`}
                 className="flex items-center gap-3 hover:text-emerald-600"
               >
                 <span className="rounded bg-emerald-50 px-2 py-0.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">

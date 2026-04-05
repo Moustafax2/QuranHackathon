@@ -33,7 +33,7 @@ export default async function SearchPage({ searchParams }: Props) {
               return (
                 <Link
                   key={result.verse_id}
-                  href={`/surah/${chapterId}`}
+                  href={`/quran/surah/${chapterId}`}
                   className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-emerald-500 dark:border-gray-700 dark:hover:border-emerald-400"
                 >
                   <div className="mb-2 flex items-center gap-2">
@@ -65,7 +65,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <div className="mt-6 flex justify-center gap-2">
               {currentPage > 1 && (
                 <Link
-                  href={`/search?q=${encodeURIComponent(query)}&page=${currentPage - 1}`}
+                  href={`/quran/search?q=${encodeURIComponent(query)}&page=${currentPage - 1}`}
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                   Previous
@@ -73,7 +73,7 @@ export default async function SearchPage({ searchParams }: Props) {
               )}
               {currentPage < results.search.total_pages && (
                 <Link
-                  href={`/search?q=${encodeURIComponent(query)}&page=${currentPage + 1}`}
+                  href={`/quran/search?q=${encodeURIComponent(query)}&page=${currentPage + 1}`}
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                   Next
