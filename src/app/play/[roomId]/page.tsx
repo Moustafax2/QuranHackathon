@@ -25,6 +25,7 @@ const QUESTION_TYPE_META: {
 }[] = [
   { id: "next-ayah-mc", label: "Next Ayah — Multiple Choice", available: true },
   { id: "word-meaning-mc", label: "Word Meaning Trivia", available: true },
+  { id: "blank-word-mc", label: "Fill in the Blank", available: true },
 ];
 
 const DISABLED_TYPES = [
@@ -363,7 +364,7 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
           <>
             {/* Prompt card */}
             <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-              {question.type === "next-ayah-mc" ? (
+              {question.type === "next-ayah-mc" && (
                 <>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
                     What comes next?
@@ -375,7 +376,8 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                     {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
                   </p>
                 </>
-              ) : (
+              )}
+              {question.type === "word-meaning-mc" && (
                 <>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
                     What does this word mean?
@@ -388,6 +390,41 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                   </p>
                 </>
               )}
+              {question.type === "blank-word-mc" && (() => {
+                const blankWord = question.options[question.correctIndex].text_uthmani;
+                const fullText = question.promptVerse.text_uthmani;
+                // Replace the blank word in the full ayah text with a placeholder token
+                const PLACEHOLDER = "█████";
+                const withBlank = answered ? fullText : fullText.replace(blankWord, PLACEHOLDER);
+                const parts = withBlank.split(PLACEHOLDER);
+
+                return (
+                  <>
+                    <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Fill in the blank
+                    </p>
+                    <p dir="rtl" lang="ar" className="font-amiri text-2xl leading-loose text-white">
+                      {parts.length === 2 ? (
+                        <>
+                          {parts[0]}
+                          <span className={`mx-1 inline-block rounded-lg px-2 font-bold ${
+                            answered ? "bg-emerald-500/20 text-emerald-300" : "bg-gray-700 text-gray-600"
+                          }`}>
+                            {answered ? blankWord : "　　　"}
+                          </span>
+                          {parts[1]}
+                        </>
+                      ) : (
+                        // Fallback if replace didn't find the word — show full text
+                        fullText
+                      )}
+                    </p>
+                    <p className="mt-3 text-sm text-gray-500">
+                      {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Options */}
@@ -409,7 +446,7 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                       question.type === "word-meaning-mc" ? "text-left" : "text-right"
                     }`}
                   >
-                    {question.type === "next-ayah-mc" ? (
+                    {question.type === "next-ayah-mc" && (
                       <>
                         <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
                           {option.text_uthmani}
@@ -418,8 +455,14 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                           <p className="mt-1 text-left text-xs text-gray-500">{option.verse_key}</p>
                         )}
                       </>
-                    ) : (
+                    )}
+                    {question.type === "word-meaning-mc" && (
                       <p className="text-sm font-medium text-white">{option.meaning}</p>
+                    )}
+                    {question.type === "blank-word-mc" && (
+                      <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                        {option.text_uthmani}
+                      </p>
                     )}
                   </button>
                 );
@@ -434,10 +477,10 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
                 {selected !== question.correctIndex && (
                   <p className="mt-1 text-sm text-gray-500">
                     Correct answer:{" "}
-                    <span className="text-gray-300">
+                    <span dir={question.type === "word-meaning-mc" ? "ltr" : "rtl"} lang={question.type === "word-meaning-mc" ? undefined : "ar"} className="font-amiri text-gray-300">
                       {question.type === "word-meaning-mc"
                         ? question.options[question.correctIndex].meaning
-                        : question.options[question.correctIndex].verse_key}
+                        : question.options[question.correctIndex].text_uthmani}
                     </span>
                   </p>
                 )}

@@ -32,6 +32,10 @@ export async function GET(req: NextRequest) {
     return generateWordMeaningQuestion(juzNumber);
   }
 
+  if (type === "blank-word-mc") {
+    return generateBlankWordQuestion(juzNumber);
+  }
+
   return generateNextAyahQuestion(juzNumber);
 }
 
@@ -201,6 +205,85 @@ async function generateWordMeaningQuestion(juzNumber: number) {
       verse_key: o.verse_key,
       meaning: o.meaning,
     })),
+    correctIndex,
+  };
+
+  return NextResponse.json(question);
+}
+
+// ---------------------------------------------------------------------------
+// Blank Word — Multiple Choice
+// ---------------------------------------------------------------------------
+
+async function generateBlankWordQuestion(juzNumber: number) {
+  const { verses } = await getVersesByJuzWithWords(juzNumber);
+
+  // Only use verses that have enough content words to build 4 options
+  const eligibleVerses = verses.filter(
+    (v) => v.words && v.words.filter((w) => isContentWord(w.text_uthmani ?? "")).length >= 4
+  );
+
+  if (eligibleVerses.length === 0) {
+    return NextResponse.json({ error: "Not enough eligible verses" }, { status: 500 });
+  }
+
+  const verse = pickRandom(eligibleVerses);
+  const allWords = verse.words!;
+
+  // Content words only (for picking the blank and distractors)
+  const contentWords = allWords.filter((w) => isContentWord(w.text_uthmani ?? ""));
+
+  // Pick the blank word
+  const blankWord = pickRandom(contentWords);
+  const blankWordIndex = allWords.findIndex((w) => w.id === blankWord.id);
+
+  // Distractors: other content words from the same verse, then fallback to other verses
+  const seenTexts = new Set([blankWord.text_uthmani]);
+  const distractors: string[] = [];
+
+  for (const w of contentWords.filter((w) => w.id !== blankWord.id).sort(() => Math.random() - 0.5)) {
+    if (!seenTexts.has(w.text_uthmani)) {
+      seenTexts.add(w.text_uthmani);
+      distractors.push(w.text_uthmani);
+    }
+    if (distractors.length === 3) break;
+  }
+
+  if (distractors.length < 3) {
+    for (const v of verses) {
+      if (v.verse_key === verse.verse_key || !v.words) continue;
+      for (const w of v.words.sort(() => Math.random() - 0.5)) {
+        if (!w.text_uthmani || !isContentWord(w.text_uthmani)) continue;
+        if (!seenTexts.has(w.text_uthmani)) {
+          seenTexts.add(w.text_uthmani);
+          distractors.push(w.text_uthmani);
+        }
+        if (distractors.length === 3) break;
+      }
+      if (distractors.length === 3) break;
+    }
+  }
+
+  if (distractors.length < 3) {
+    return NextResponse.json({ error: "Not enough distractors available" }, { status: 500 });
+  }
+
+  const optionTexts = [blankWord.text_uthmani, ...distractors].sort(() => Math.random() - 0.5);
+  const correctIndex = optionTexts.indexOf(blankWord.text_uthmani);
+
+  const surahNum = parseInt(verse.verse_key.split(":")[0]);
+  const chapter = await getChapter(surahNum);
+
+  const question: GameQuestion = {
+    type: "blank-word-mc",
+    promptVerse: {
+      text_uthmani: verse.text_uthmani,
+      verse_key: verse.verse_key,
+      surah_name: chapter.chapter.name_simple,
+    },
+    ayahWords: allWords.map((w) => w.text_uthmani ?? ""),
+    blankWordIndex,
+    options: optionTexts.map((t) => ({ text_uthmani: t, verse_key: verse.verse_key })),
     correctIndex,
   };
 

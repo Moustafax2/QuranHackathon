@@ -1,4 +1,4 @@
-export type QuestionType = "next-ayah-mc" | "word-meaning-mc";
+export type QuestionType = "next-ayah-mc" | "word-meaning-mc" | "blank-word-mc";
 
 export interface GameSettings {
   questionTypes: QuestionType[];
@@ -22,6 +22,9 @@ export interface GameQuestion {
   };
   // word-meaning-mc only: the specific Arabic word being asked about
   promptWord?: string;
+  // blank-word-mc only: ordered words of the ayah, and which index is blanked
+  ayahWords?: string[];
+  blankWordIndex?: number;
   options: QuestionOption[];
   correctIndex: number;
 }
