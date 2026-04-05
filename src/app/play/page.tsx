@@ -17,7 +17,7 @@ export default function PlayPage() {
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold">Play</h1>
           <p className="mt-2 text-gray-400">
-            Create a room or join a friend's. Pick your question types inside.
+            Create a room or join a friend&apos;s. Pick your question types inside.
           </p>
         </div>
 

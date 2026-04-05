@@ -1,6 +1,10 @@
-import { searchQuran } from "@/lib/api";
+import {
+  isQuranSearchUnavailableError,
+  searchQuran,
+} from "@/lib/api";
 import { SearchBar } from "@/components/search/SearchBar";
 import Link from "next/link";
+import type { SearchResponse } from "@/lib/types";
 
 interface Props {
   searchParams: Promise<{ q?: string; page?: string }>;
@@ -10,8 +14,22 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q, page } = await searchParams;
   const query = q || "";
   const currentPage = parseInt(page || "1", 10);
+  let results: SearchResponse | null = null;
+  let unavailableMessage: string | null = null;
+  let errorMessage: string | null = null;
 
-  const results = query ? await searchQuran(query, currentPage) : null;
+  if (query) {
+    try {
+      results = await searchQuran(query, currentPage);
+    } catch (error) {
+      if (isQuranSearchUnavailableError(error)) {
+        unavailableMessage = error.message;
+      } else {
+        errorMessage =
+          "Search could not be completed right now. Please try again later.";
+      }
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -20,6 +38,18 @@ export default async function SearchPage({ searchParams }: Props) {
       </h1>
 
       <SearchBar />
+
+      {unavailableMessage && (
+        <div className="mt-8 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+          {unavailableMessage}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="mt-8 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          {errorMessage}
+        </div>
+      )}
 
       {results && (
         <div className="mt-8">
@@ -44,6 +74,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <p
                     dir="rtl"
                     lang="ar"
+                    translate="no"
                     className="font-amiri mb-2 text-lg leading-loose text-gray-900 dark:text-gray-100"
                   >
                     {result.text}
@@ -84,11 +115,15 @@ export default async function SearchPage({ searchParams }: Props) {
         </div>
       )}
 
-      {query && results && results.search.total_results === 0 && (
+      {query &&
+        results &&
+        !unavailableMessage &&
+        !errorMessage &&
+        results.search.total_results === 0 && (
         <p className="mt-8 text-center text-gray-500 dark:text-gray-400">
           No results found for &ldquo;{query}&rdquo;
         </p>
-      )}
+        )}
     </div>
   );
 }
