@@ -1,8 +1,10 @@
 "use client";
 
-import { useAudioPlayer } from "@/lib/hooks/useAudioPlayer";
-import { getChapterRecitation, RECITERS } from "@/lib/api";
 import { createContext, useContext, useState, type ReactNode } from "react";
+
+import { RECITERS } from "@/lib/audio/reciters";
+import { useAudioPlayer } from "@/lib/hooks/useAudioPlayer";
+import type { AudioResponse } from "@/lib/types";
 
 type AudioContextType = ReturnType<typeof useAudioPlayer>;
 
@@ -10,12 +12,17 @@ const AudioContext = createContext<AudioContextType | null>(null);
 
 export function useAudio() {
   const ctx = useContext(AudioContext);
-  if (!ctx) throw new Error("useAudio must be used within AudioProvider");
+
+  if (!ctx) {
+    throw new Error("useAudio must be used within AudioProvider");
+  }
+
   return ctx;
 }
 
 export function AudioProvider({ children }: { children: ReactNode }) {
   const audio = useAudioPlayer();
+
   return (
     <AudioContext.Provider value={audio}>{children}</AudioContext.Provider>
   );
@@ -40,7 +47,9 @@ export function AudioPlayerBar() {
     changeReciter,
   } = useAudio();
 
-  if (!currentChapter) return null;
+  if (!currentChapter) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 p-3 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/95">
@@ -51,12 +60,30 @@ export function AudioPlayerBar() {
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-              <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z" clipRule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z"
+                clipRule="evenodd"
+              />
             </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-              <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+                clipRule="evenodd"
+              />
             </svg>
           )}
         </button>
@@ -89,9 +116,9 @@ export function AudioPlayerBar() {
           onChange={(e) => changeReciter(Number(e.target.value))}
           className="max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
         >
-          {RECITERS.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
+          {RECITERS.map((reciter) => (
+            <option key={reciter.id} value={reciter.id}>
+              {reciter.name}
             </option>
           ))}
         </select>
@@ -100,8 +127,35 @@ export function AudioPlayerBar() {
   );
 }
 
+async function fetchChapterRecitation(
+  reciterId: number,
+  chapterNumber: number
+): Promise<AudioResponse> {
+  const response = await fetch(
+    `/api/quran/chapter-recitation/${reciterId}/${chapterNumber}`
+  );
+  const data = (await response.json()) as AudioResponse | { message?: string };
+
+  if (!response.ok) {
+    throw new Error(
+      "message" in data && data.message
+        ? data.message
+        : "Failed to load recitation."
+    );
+  }
+
+  return data as AudioResponse;
+}
+
 export function PlayChapterButton({ chapterNumber }: { chapterNumber: number }) {
-  const { play, pause, isPlaying, currentChapter, reciterId } = useAudio();
+  const {
+    play,
+    pause,
+    isPlaying,
+    currentChapter,
+    reciterId,
+    reportError,
+  } = useAudio();
   const [loading, setLoading] = useState(false);
 
   const isThisChapter = currentChapter === chapterNumber;
@@ -111,10 +165,17 @@ export function PlayChapterButton({ chapterNumber }: { chapterNumber: number }) 
       pause();
       return;
     }
+
     setLoading(true);
+    reportError(null);
+
     try {
-      const data = await getChapterRecitation(reciterId, chapterNumber);
+      const data = await fetchChapterRecitation(reciterId, chapterNumber);
       await play(chapterNumber, data.audio_file.audio_url);
+    } catch (error) {
+      reportError(
+        error instanceof Error ? error.message : "Failed to load recitation."
+      );
     } finally {
       setLoading(false);
     }
@@ -127,21 +188,55 @@ export function PlayChapterButton({ chapterNumber }: { chapterNumber: number }) 
       className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
     >
       {loading ? (
-        <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        <svg
+          className="h-4 w-4 animate-spin"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
         </svg>
       ) : isThisChapter && isPlaying ? (
         <>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-            <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
+            <path
+              fillRule="evenodd"
+              d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z"
+              clipRule="evenodd"
+            />
           </svg>
           Pause
         </>
       ) : (
         <>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-            <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+              clipRule="evenodd"
+            />
           </svg>
           Play Recitation
         </>

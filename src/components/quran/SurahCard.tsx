@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import type { Chapter } from "@/lib/types";
 
 export function SurahCard({ chapter }: { chapter: Chapter }) {
@@ -15,15 +16,20 @@ export function SurahCard({ chapter }: { chapter: Chapter }) {
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">
             {chapter.name_simple}
           </h3>
-          <span className="font-amiri text-lg text-gray-700 dark:text-gray-300">
+          <span
+            dir="rtl"
+            lang="ar"
+            translate="no"
+            className="font-amiri text-lg text-gray-700 dark:text-gray-300"
+          >
             {chapter.name_arabic}
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <span>{chapter.translated_name.name}</span>
-          <span>·</span>
+          <span>&middot;</span>
           <span>{chapter.verses_count} verses</span>
-          <span>·</span>
+          <span>&middot;</span>
           <span className="capitalize">{chapter.revelation_place}</span>
         </div>
       </div>

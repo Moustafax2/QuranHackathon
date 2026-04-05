@@ -1,7 +1,8 @@
-import { getChapter, getVersesByChapter } from "@/lib/api";
-import { VerseDisplay } from "@/components/quran/VerseDisplay";
-import { PlayChapterButton } from "@/components/quran/AudioPlayer";
 import Link from "next/link";
+
+import { PlayChapterButton } from "@/components/quran/AudioPlayer";
+import { VerseDisplay } from "@/components/quran/VerseDisplay";
+import { getChapter, getVersesByChapter } from "@/lib/api";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -30,6 +31,7 @@ export default async function SurahPage({ params }: Props) {
         <p
           dir="rtl"
           lang="ar"
+          translate="no"
           className="font-amiri mt-2 text-2xl text-gray-700 dark:text-gray-300"
         >
           {chapter.name_arabic}
@@ -48,9 +50,10 @@ export default async function SurahPage({ params }: Props) {
         <p
           dir="rtl"
           lang="ar"
+          translate="no"
           className="font-amiri mb-8 text-center text-2xl text-gray-800 dark:text-gray-200"
         >
-          بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
+          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
         </p>
       )}
 

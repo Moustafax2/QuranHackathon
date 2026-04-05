@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { RECITERS } from "@/lib/api";
+
+import { RECITERS } from "@/lib/audio/reciters";
 
 export function useAudioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -13,12 +14,12 @@ export function useAudioPlayer() {
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Lazily create the audio element once on the client
   function getAudio(): HTMLAudioElement {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.preload = "auto";
     }
+
     return audioRef.current;
   }
 
@@ -27,7 +28,9 @@ export function useAudioPlayer() {
 
     const onTimeUpdate = () => setProgress(audio.currentTime);
     const onDurationChange = () => {
-      if (isFinite(audio.duration)) setDuration(audio.duration);
+      if (isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
     };
     const onEnded = () => setIsPlaying(false);
     const onError = () => {
@@ -46,8 +49,6 @@ export function useAudioPlayer() {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-    // Only re-run when the audio URL changes so we re-attach after a src swap
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl]);
 
   const play = useCallback(async (chapterNumber: number, url: string) => {
@@ -56,7 +57,7 @@ export function useAudioPlayer() {
 
     if (audio.src !== url) {
       audio.src = url;
-      audio.load(); // explicitly trigger load before play
+      audio.load();
     }
 
     setCurrentChapter(chapterNumber);
@@ -66,15 +67,13 @@ export function useAudioPlayer() {
       await audio.play();
       setIsPlaying(true);
     } catch (err) {
-      // NotSupportedError or NotAllowedError
       setIsPlaying(false);
       setError(
         err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Autoplay blocked — tap play again."
+          ? "Autoplay blocked - tap play again."
           : "Could not play audio."
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const pause = useCallback(() => {
@@ -84,12 +83,19 @@ export function useAudioPlayer() {
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+
+    if (!audio) {
+      return;
+    }
+
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else if (audio.src && audio.src !== window.location.href) {
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
     }
   }, [isPlaying]);
 
@@ -104,10 +110,15 @@ export function useAudioPlayer() {
     setIsPlaying(false);
     setAudioUrl(null);
     setError(null);
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
     }
+  }, []);
+
+  const reportError = useCallback((message: string | null) => {
+    setError(message);
   }, []);
 
   return {
@@ -122,5 +133,6 @@ export function useAudioPlayer() {
     toggle,
     seek,
     changeReciter,
+    reportError,
   };
 }

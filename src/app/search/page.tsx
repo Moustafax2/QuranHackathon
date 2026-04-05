@@ -1,6 +1,9 @@
-import { searchQuran } from "@/lib/api";
-import { SearchBar } from "@/components/search/SearchBar";
 import Link from "next/link";
+
+import { SearchBar } from "@/components/search/SearchBar";
+import { searchQuran } from "@/lib/api";
+import { isSearchUnavailableError } from "@/lib/api/search";
+import type { SearchResponse } from "@/lib/types";
 
 interface Props {
   searchParams: Promise<{ q?: string; page?: string }>;
@@ -10,8 +13,20 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q, page } = await searchParams;
   const query = q || "";
   const currentPage = parseInt(page || "1", 10);
+  let results: SearchResponse | null = null;
+  let searchError: string | null = null;
 
-  const results = query ? await searchQuran(query, currentPage) : null;
+  if (query) {
+    try {
+      results = await searchQuran(query, currentPage);
+    } catch (error) {
+      if (isSearchUnavailableError(error)) {
+        searchError = error.message;
+      } else {
+        throw error;
+      }
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -20,6 +35,12 @@ export default async function SearchPage({ searchParams }: Props) {
       </h1>
 
       <SearchBar />
+
+      {searchError && (
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+          {searchError}
+        </div>
+      )}
 
       {results && (
         <div className="mt-8">
@@ -30,6 +51,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <div className="space-y-4">
             {results.search.results.map((result) => {
               const [chapterId] = result.verse_key.split(":");
+
               return (
                 <Link
                   key={result.verse_id}
@@ -44,6 +66,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <p
                     dir="rtl"
                     lang="ar"
+                    translate="no"
                     className="font-amiri mb-2 text-lg leading-loose text-gray-900 dark:text-gray-100"
                   >
                     {result.text}

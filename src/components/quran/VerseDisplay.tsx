@@ -35,6 +35,7 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
             <p
               dir="rtl"
               lang="ar"
+              translate="no"
               className="font-amiri mb-4 text-right text-2xl leading-loose text-gray-900 dark:text-gray-100"
             >
               {verse.text_uthmani}
