@@ -1,4 +1,10 @@
+import "server-only";
+
 export { getChapters, getChapter } from "./chapters";
-export { getVersesByChapter, getVersesByPage } from "./verses";
-export { getChapterRecitation, RECITERS } from "./audio";
-export { searchQuran } from "./search";
+export { getVersesByChapter, getVersesByPage, getVersesByJuz, getVersesByJuzWithWords } from "./verses";
+export { getChapterRecitation } from "./audio";
+export {
+  isQuranSearchUnavailableError,
+  QuranSearchUnavailableError,
+  searchQuran,
+} from "./search";

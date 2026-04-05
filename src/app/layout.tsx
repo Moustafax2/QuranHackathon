@@ -39,6 +39,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} h-full antialiased dark`}
     >
+      <head>
+        <meta name="google" content="notranslate" />
+      </head>
       <body className="flex min-h-full flex-col">
         <Providers>
           <Header />

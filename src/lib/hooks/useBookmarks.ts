@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 export interface Bookmark {
   verseKey: string;
@@ -10,27 +10,59 @@ export interface Bookmark {
 }
 
 const STORAGE_KEY = "quran-bookmarks";
+const STORAGE_EVENT = "quran-bookmarks-change";
+const EMPTY_BOOKMARKS: Bookmark[] = [];
 
-function loadBookmarks(): Bookmark[] {
-  if (typeof window === "undefined") return [];
+let cachedBookmarks: Bookmark[] = EMPTY_BOOKMARKS;
+let cachedRawBookmarks: string | null | undefined = undefined;
+
+function readBookmarksSnapshot(): Bookmark[] {
+  if (typeof window === "undefined") return EMPTY_BOOKMARKS;
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+
+    if (raw === cachedRawBookmarks) {
+      return cachedBookmarks;
+    }
+
+    cachedRawBookmarks = raw;
+    cachedBookmarks = raw ? (JSON.parse(raw) as Bookmark[]) : EMPTY_BOOKMARKS;
+    return cachedBookmarks;
   } catch {
-    return [];
+    cachedRawBookmarks = null;
+    cachedBookmarks = EMPTY_BOOKMARKS;
+    return cachedBookmarks;
   }
 }
 
 export function useBookmarks() {
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const bookmarks = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
 
-  useEffect(() => {
-    setBookmarks(loadBookmarks());
-  }, []);
+      const handleChange = () => onStoreChange();
+
+      window.addEventListener("storage", handleChange);
+      window.addEventListener(STORAGE_EVENT, handleChange);
+
+      return () => {
+        window.removeEventListener("storage", handleChange);
+        window.removeEventListener(STORAGE_EVENT, handleChange);
+      };
+    },
+    readBookmarksSnapshot,
+    () => EMPTY_BOOKMARKS
+  );
 
   const save = useCallback((updated: Bookmark[]) => {
-    setBookmarks(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const raw = JSON.stringify(updated);
+    cachedRawBookmarks = raw;
+    cachedBookmarks = updated;
+    localStorage.setItem(STORAGE_KEY, raw);
+    window.dispatchEvent(new Event(STORAGE_EVENT));
   }, []);
 
   const addBookmark = useCallback(

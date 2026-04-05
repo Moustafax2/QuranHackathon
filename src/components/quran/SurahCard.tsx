@@ -15,7 +15,11 @@ export function SurahCard({ chapter }: { chapter: Chapter }) {
           <h3 className="font-semibold text-white">
             {chapter.name_simple}
           </h3>
-          <span className="font-amiri text-lg text-gray-300">
+          <span
+            lang="ar"
+            translate="no"
+            className="font-amiri text-lg text-gray-300"
+          >
             {chapter.name_arabic}
           </span>
         </div>

@@ -30,6 +30,7 @@ export default async function SurahPage({ params }: Props) {
         <p
           dir="rtl"
           lang="ar"
+          translate="no"
           className="font-amiri mt-2 text-2xl text-gray-300"
         >
           {chapter.name_arabic}
@@ -48,6 +49,7 @@ export default async function SurahPage({ params }: Props) {
         <p
           dir="rtl"
           lang="ar"
+          translate="no"
           className="font-amiri mb-8 text-center text-2xl text-gray-800 dark:text-gray-200"
         >
           بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
