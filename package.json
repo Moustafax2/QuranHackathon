@@ -6,12 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build-lexical-db": "tsx scripts/build-lexical-db.ts",
+    "build-lexical-db:full": "tsx scripts/build-lexical-db.ts --full"
   },
   "dependencies": {
     "next": "16.2.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "ts-fsrs": "^5.3.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +24,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }
