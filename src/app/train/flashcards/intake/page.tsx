@@ -154,7 +154,9 @@ function IntakeContent() {
               >
                 <div className="mb-4">
                   <div className="mb-2 font-amiri text-3xl text-white">
-                    {word.canonical_form}
+                    {word.type === CardType.VERB && word.forms && "past" in word.forms && word.forms.past && word.forms.past !== "-"
+                      ? word.forms.past
+                      : word.canonical_form}
                   </div>
                   <div className="mb-2 text-emerald-400">{word.translation}</div>
                   <div className="text-xs text-gray-500">{word.type}</div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFlashcards, getReviewLog } from "@/lib/storage/flashcard-storage";
+import { getFlashcards, getReviewLog } from "@/lib/storage/flashcard-storage-supabase";
 import { FSRSState } from "@/lib/types/flashcard";
 import type { UserFlashcard, ReviewLogEntry } from "@/lib/types/flashcard";
 

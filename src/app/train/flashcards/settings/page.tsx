@@ -8,7 +8,7 @@ import {
   savePreferences,
   resetAllData,
   exportData,
-} from "@/lib/storage/flashcard-storage";
+} from "@/lib/storage/flashcard-storage-supabase";
 import { DEFAULT_PREFERENCES } from "@/lib/types/flashcard";
 
 export default function SettingsPage() {

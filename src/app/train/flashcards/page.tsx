@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getFlashcards, getReviewLog } from "@/lib/storage/flashcard-storage";
+import { getFlashcards, getReviewLog, migrateFromLocalStorage } from "@/lib/storage/flashcard-storage-supabase";
 import { getDueCardsCount, getNewCardsCount } from "@/lib/flashcard/session-manager";
 import { addDemoCards } from "@/lib/flashcard/demo-helper";
 
@@ -14,7 +14,11 @@ export default function FlashcardsHubPage() {
   const [addingDemo, setAddingDemo] = useState(false);
 
   useEffect(() => {
-    loadStats();
+    async function initializeAndLoad() {
+      await migrateFromLocalStorage();
+      await loadStats();
+    }
+    initializeAndLoad();
   }, []);
 
   async function loadStats() {

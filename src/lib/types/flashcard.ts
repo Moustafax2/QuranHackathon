@@ -27,13 +27,13 @@ export enum Rating {
 export interface VerbForms {
   past: string;
   present: string;
-  imperative?: string;
-  verbal_noun?: string;
+  imperative: string;
+  verbal_noun: string;
 }
 
 export interface NounForms {
   singular: string;
-  plural?: string;
+  plural: string;
 }
 
 export interface ExampleReference {

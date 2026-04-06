@@ -132,11 +132,55 @@ type RawWord = {
   pos: string;
   root?: string;
   lemma?: string;
+  buckwalter_root?: string;
+  buckwalter_lemma?: string;
+  verb_form?: string;
+  tense?: "PERF" | "IMPF" | "IMPV";
+  person?: string;
+  is_passive?: boolean;
+  features: string[];
   translation?: string;
   surah: number;
   ayah: number;
   position: number;
 };
+
+function normalizeBuckwalterLemma(lemma: string, features: string[]): string {
+  let normalized = lemma.replace(/\d+$/, "");
+
+  // The corpus sometimes stores masculine sound plurals as the lemma
+  // (for example active participles like r~a`sixuwn). Strip the plural
+  // ending for participles so the lexical DB stores a singular headword
+  // without mangling regular singular lemmas like misokiyn.
+  if (features.includes("MP") && features.includes("PCPL")) {
+    normalized = normalized.replace(/(uwn|iyn)$/, "");
+  }
+
+  return normalized;
+}
+
+function getVerbForm(features: string[]): string | undefined {
+  return features.find((feature) => /^\([IVX]+\)$/.test(feature));
+}
+
+function getVerbTense(features: string[]): "PERF" | "IMPF" | "IMPV" | undefined {
+  if (features.includes("PERF")) return "PERF";
+  if (features.includes("IMPF")) return "IMPF";
+  if (features.includes("IMPV")) return "IMPV";
+  return undefined;
+}
+
+function getPerson(features: string[]): string | undefined {
+  return features.find((feature) => /^\d[MF]?[SPD]$/.test(feature));
+}
+
+function createGroupingKey(word: RawWord): string {
+  if (word.pos.startsWith("V") || (word.pos.startsWith("N") && word.features.includes("VN"))) {
+    return `verb:${word.buckwalter_root || word.root || ""}:${word.verb_form || ""}`;
+  }
+
+  return word.lemma || word.text;
+}
 
 function parseCorpusFile(filePath: string): RawWord[] {
   console.log("Reading morphological data file...");
@@ -173,7 +217,13 @@ function parseCorpusFile(filePath: string): RawWord[] {
       // #region agent log
       // Clean numeric suffixes from lemma BEFORE Buckwalter conversion
       // The corpus uses numeric suffixes (e.g., "maE2") to distinguish lemma variants
-      const cleanedLemma = lemma ? lemma.replace(/\d+$/, '') : undefined;
+      const cleanedLemma = lemma ? normalizeBuckwalterLemma(lemma, featureParts) : undefined;
+      const isEawth = root === 'Ew*';
+      if (isEawth) {
+        const arabicText = buckwalterToArabic(text);
+        const arabicLemma = cleanedLemma ? buckwalterToArabic(cleanedLemma) : undefined;
+        fetch('http://127.0.0.1:7928/ingest/072fcd97-088c-4485-ab8e-cc835b14d75c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8997fe'},body:JSON.stringify({sessionId:'8997fe',location:'build-lexical-db.ts:225',message:'H2: Processing عوذ word - before/after Buckwalter conversion',data:{buckwalter_text:text,arabic_text:arabicText,buckwalter_lemma:lemma,buckwalter_cleaned:cleanedLemma,arabic_lemma:arabicLemma,pos:pos,tense:getVerbTense(featureParts),person:getPerson(featureParts)},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      }
       // #endregion
       
       rawWords.push({
@@ -181,6 +231,13 @@ function parseCorpusFile(filePath: string): RawWord[] {
         pos: pos,
         root: root ? buckwalterToArabic(root) : undefined,
         lemma: cleanedLemma ? buckwalterToArabic(cleanedLemma) : undefined,
+        buckwalter_root: root,
+        buckwalter_lemma: cleanedLemma,
+        verb_form: pos.startsWith("V") ? getVerbForm(featureParts) : undefined,
+        tense: pos.startsWith("V") ? getVerbTense(featureParts) : undefined,
+        person: pos.startsWith("V") ? getPerson(featureParts) : undefined,
+        is_passive: featureParts.includes("PASS"),
+        features: featureParts,
         translation: "", // Translations not in corpus file
         surah: parseInt(surah),
         ayah: parseInt(ayah),
@@ -218,7 +275,7 @@ async function buildFullDatabase() {
   
   const groupedByLemma = new Map<string, RawWord[]>();
   rawWords.forEach((word) => {
-    const key = word.lemma || word.text;
+    const key = createGroupingKey(word);
     if (!groupedByLemma.has(key)) {
       groupedByLemma.set(key, []);
     }

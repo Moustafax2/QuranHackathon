@@ -24,8 +24,17 @@ export default function ReviewPage() {
 
   useEffect(() => {
     async function initSession() {
+      // #region agent log
+      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:27',message:'initSession called',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       const newSession = await createReviewSession();
+      // #region agent log
+      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:32',message:'createReviewSession result',data:{hasSession:!!newSession,sessionId:newSession?.id,cardsCount:newSession?.cards.length},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       if (!newSession) {
+        // #region agent log
+        fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:37',message:'No session - redirecting',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         router.push("/train/flashcards");
         return;
       }
@@ -54,9 +63,19 @@ export default function ReviewPage() {
       }
 
       const currentCard = getCurrentCard(session);
+      // #region agent log
+      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:58',message:'getCurrentCard result',data:{hasCard:!!currentCard,cardId:currentCard?.id,wordId:currentCard?.word_id,currentIndex:session.current_index,totalCards:session.cards.length},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
+      // #endregion
       if (currentCard) {
         const word = await getWordById(currentCard.word_id);
-        setCurrentWord(word);
+        // #region agent log
+        fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:64',message:'getWordById result',data:{hasWord:!!word,wordId:currentCard.word_id},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        if (word) {
+          setCurrentWord(word);
+        } else {
+          console.error(`Word not found in lexical DB for id: ${currentCard.word_id}`);
+        }
       } else {
         setCurrentWord(null);
       }

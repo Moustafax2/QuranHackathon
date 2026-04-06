@@ -26,7 +26,45 @@ export async function loadLexicalDB(): Promise<LexicalEntry[]> {
 export async function getWordById(id: string): Promise<LexicalEntry | null> {
   await loadLexicalDB();
   if (cachedDB.length === 0) return null;
-  return cachedDB.find((entry) => entry.id === id) || null;
+
+  // Exact match
+  const exact = cachedDB.find((entry) => entry.id === id);
+  if (exact) return exact;
+
+  // Fuzzy fallback for IDs that changed after a DB rebuild.
+  // ID formats:
+  //   verb:     v_{root_underscores}_{lemma_prefix3}
+  //   noun:     n_{lemma_prefix5}_{root_prefix3}
+  //   particle: p_{text_prefix5}_001
+  // Roots are stable (come directly from corpus), so we match on root + type.
+  const parts = id.split("_");
+  if (parts.length >= 3) {
+    const typePrefix = parts[0];
+    if (typePrefix === "v") {
+      // root is everything between v_ and the last _
+      const rootJoined = parts.slice(1, -1).join("_");
+      const rootNoSep = rootJoined.replace(/_/g, "");
+      const match = cachedDB.find(
+        (e) =>
+          e.type === CardType.VERB &&
+          e.root &&
+          e.root.replace(/[\s_]/g, "") === rootNoSep
+      );
+      if (match) return match;
+    } else if (typePrefix === "n") {
+      // last part is the first 3 chars of the root
+      const rootPrefix = parts[parts.length - 1];
+      const match = cachedDB.find(
+        (e) =>
+          e.type === CardType.NOUN &&
+          e.root &&
+          e.root.replace(/\s/g, "").startsWith(rootPrefix)
+      );
+      if (match) return match;
+    }
+  }
+
+  return null;
 }
 
 export async function getWordsBySurah(surahNumber: number): Promise<LexicalEntry[]> {

@@ -11,7 +11,7 @@ import {
   updateFlashcard,
   saveReviewLog,
   getPreferences,
-} from "@/lib/storage/flashcard-storage";
+} from "@/lib/storage/flashcard-storage-supabase";
 import { scheduleReview, getCardsForSession } from "@/lib/fsrs/scheduler";
 
 export async function createReviewSession(): Promise<FlashcardSession | null> {
@@ -30,7 +30,7 @@ export async function createReviewSession(): Promise<FlashcardSession | null> {
   
   const session: FlashcardSession = {
     id: crypto.randomUUID(),
-    cards: sessionCards.slice(0, prefs.session_size),
+    cards: sessionCards.slice(0, prefs.session_size || 20),
     current_index: 0,
     start_time: new Date(),
     stats: {

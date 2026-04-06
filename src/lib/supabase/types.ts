@@ -212,6 +212,164 @@ export interface Database {
           last_mistake_at?: string;
         };
       };
+      lexical_entries: {
+        Row: {
+          id: string;
+          word_id: string;
+          type: "VERB" | "NOUN" | "PARTICLE";
+          canonical_form: string;
+          root: string | null;
+          lemma: string | null;
+          forms: VerbForms | NounForms | null;
+          translation: string;
+          arabic_explanation: string | null;
+          examples: ExampleReference[];
+          source: string;
+          frequency: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          word_id: string;
+          type: "VERB" | "NOUN" | "PARTICLE";
+          canonical_form: string;
+          root?: string | null;
+          lemma?: string | null;
+          forms?: VerbForms | NounForms | null;
+          translation: string;
+          arabic_explanation?: string | null;
+          examples?: ExampleReference[];
+          source: string;
+          frequency?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          word_id?: string;
+          type?: "VERB" | "NOUN" | "PARTICLE";
+          canonical_form?: string;
+          root?: string | null;
+          lemma?: string | null;
+          forms?: VerbForms | NounForms | null;
+          translation?: string;
+          arabic_explanation?: string | null;
+          examples?: ExampleReference[];
+          source?: string;
+          frequency?: number | null;
+          created_at?: string;
+        };
+      };
+      user_flashcards: {
+        Row: {
+          id: string;
+          user_id: string;
+          word_id: string;
+          status: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
+          fsrs_state: FSRSCard;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          word_id: string;
+          status?: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
+          fsrs_state: FSRSCard;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          word_id?: string;
+          status?: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
+          fsrs_state?: FSRSCard;
+          created_at?: string;
+        };
+      };
+      review_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          card_id: string;
+          word_id: string;
+          rating: number;
+          timestamp: string;
+          session_id: string;
+          review_duration_ms: number | null;
+          state_before: number;
+          state_after: number;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          card_id: string;
+          word_id: string;
+          rating: number;
+          timestamp?: string;
+          session_id: string;
+          review_duration_ms?: number | null;
+          state_before: number;
+          state_after: number;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          card_id?: string;
+          word_id?: string;
+          rating?: number;
+          timestamp?: string;
+          session_id?: string;
+          review_duration_ms?: number | null;
+          state_before?: number;
+          state_after?: number;
+        };
+      };
+      user_preferences: {
+        Row: {
+          user_id: string;
+          show_arabic_explanation: boolean;
+          show_root: boolean;
+          show_ayah_examples: boolean;
+          include_particles: boolean;
+          include_proper_nouns: boolean;
+          auto_audio: boolean;
+          show_transliteration: boolean;
+          daily_new_cards_limit: number;
+          daily_review_cards_limit: number;
+          session_size: number;
+          normalization_level: "strict" | "moderate" | "broad";
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          show_arabic_explanation?: boolean;
+          show_root?: boolean;
+          show_ayah_examples?: boolean;
+          include_particles?: boolean;
+          include_proper_nouns?: boolean;
+          auto_audio?: boolean;
+          show_transliteration?: boolean;
+          daily_new_cards_limit?: number;
+          daily_review_cards_limit?: number;
+          session_size?: number;
+          normalization_level?: "strict" | "moderate" | "broad";
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          show_arabic_explanation?: boolean;
+          show_root?: boolean;
+          show_ayah_examples?: boolean;
+          include_particles?: boolean;
+          include_proper_nouns?: boolean;
+          auto_audio?: boolean;
+          show_transliteration?: boolean;
+          daily_new_cards_limit?: number;
+          daily_review_cards_limit?: number;
+          session_size?: number;
+          normalization_level?: "strict" | "moderate" | "broad";
+          updated_at?: string;
+        };
+      };
     };
   };
 }
@@ -220,4 +378,34 @@ export interface RoomSettings {
   num_rounds: number;
   surah_filter: number[] | null;
   time_per_question: number;
+}
+
+export interface VerbForms {
+  past: string;
+  present: string;
+  imperative: string;
+  verbal_noun: string;
+}
+
+export interface NounForms {
+  singular: string;
+  plural: string;
+}
+
+export interface ExampleReference {
+  surah: number;
+  ayah: number;
+  position: number;
+}
+
+export interface FSRSCard {
+  due: string;
+  stability: number;
+  difficulty: number;
+  elapsed_days: number;
+  scheduled_days: number;
+  reps: number;
+  lapses: number;
+  state: number;
+  last_review?: string;
 }

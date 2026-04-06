@@ -160,18 +160,30 @@ export function getCardsForSession(
   newLimit: number,
   reviewLimit: number
 ): UserFlashcard[] {
+  // #region agent log
+  fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'scheduler.ts:158',message:'getCardsForSession called',data:{totalCards:cards.length,newLimit,reviewLimit,now:new Date().toISOString()},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const dueCards = getDueCards(cards);
+  // #region agent log
+  fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'scheduler.ts:164',message:'getDueCards result',data:{dueCardsCount:dueCards.length,firstDueDue:dueCards[0]?.fsrs_state.due,firstDueState:dueCards[0]?.fsrs_state.state},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const newCards = getNewCards(cards, newLimit);
+  // #region agent log
+  fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'scheduler.ts:169',message:'getNewCards result',data:{newCardsCount:newCards.length},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   const reviewCards = dueCards.filter(
     (card) => card.fsrs_state.state !== FSRSState.New
   );
+  // #region agent log
+  fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'scheduler.ts:176',message:'reviewCards filtered',data:{reviewCardsCount:reviewCards.length},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   const selectedReviewCards = reviewCards.slice(0, reviewLimit);
-  const selectedNewCards = newCards.slice(
-    0,
-    Math.min(newLimit, newLimit - selectedReviewCards.length)
-  );
+  const selectedNewCards = newCards.slice(0, newLimit);
+  // #region agent log
+  fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'scheduler.ts:184',message:'Final selection',data:{selectedReviewCount:selectedReviewCards.length,selectedNewCount:selectedNewCards.length,totalSelected:selectedReviewCards.length+selectedNewCards.length},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   return [...selectedReviewCards, ...selectedNewCards];
 }

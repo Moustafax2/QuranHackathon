@@ -1,6 +1,6 @@
 "use client";
 
-import { addFlashcard } from "@/lib/storage/flashcard-storage";
+import { addFlashcard } from "@/lib/storage/flashcard-storage-supabase";
 import { createNewCard } from "@/lib/fsrs/scheduler";
 import { WordStatus } from "@/lib/types/flashcard";
 import type { UserFlashcard } from "@/lib/types/flashcard";

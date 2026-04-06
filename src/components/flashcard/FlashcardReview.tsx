@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { LexicalEntry, Rating } from "@/lib/types/flashcard";
 import { CardType } from "@/lib/types/flashcard";
+import { ensureCompleteVerbForms } from "@/lib/corpus/verb-generator";
 
 interface FlashcardReviewProps {
   word: LexicalEntry;
@@ -69,31 +70,32 @@ export function FlashcardReview({
   };
 
   const renderVerbForms = () => {
-    if (word.type !== CardType.VERB || !word.forms || !("past" in word.forms)) return null;
-    const forms = word.forms;
+    if (word.type !== CardType.VERB) return null;
+    
+    // Ensure all verb forms are present, generating missing ones if needed
+    const forms = ensureCompleteVerbForms(
+      word.root,
+      word.forms && "past" in word.forms ? word.forms : undefined
+    );
+
+    const renderForm = (label: string, value: string) => {
+      const isMissing = !value || value === "-";
+      return (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <div className="mb-2 text-xs font-medium text-gray-500">{label}</div>
+          <div className={`font-amiri text-2xl ${isMissing ? "text-gray-600 italic" : "text-white"}`}>
+            {isMissing ? "غير متوفر" : value}
+          </div>
+        </div>
+      );
+    };
 
     return (
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <div className="mb-2 text-xs font-medium text-gray-500">Past / ماضي</div>
-          <div className="font-amiri text-2xl text-white">{forms.past}</div>
-        </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <div className="mb-2 text-xs font-medium text-gray-500">Present / مضارع</div>
-          <div className="font-amiri text-2xl text-white">{forms.present}</div>
-        </div>
-        {forms.imperative && (
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <div className="mb-2 text-xs font-medium text-gray-500">Imperative / أمر</div>
-            <div className="font-amiri text-2xl text-white">{forms.imperative}</div>
-          </div>
-        )}
-        {forms.verbal_noun && (
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <div className="mb-2 text-xs font-medium text-gray-500">Verbal Noun / مصدر</div>
-            <div className="font-amiri text-2xl text-white">{forms.verbal_noun}</div>
-          </div>
-        )}
+        {renderForm("ماضي / Past", forms.past)}
+        {renderForm("مضارع / Present", forms.present)}
+        {renderForm("أمر / Command", forms.imperative)}
+        {renderForm("مصدر / Verbal Noun", forms.verbal_noun)}
       </div>
     );
   };
@@ -101,12 +103,15 @@ export function FlashcardReview({
   const renderNounForms = () => {
     if (word.type !== CardType.NOUN || !word.forms || !("singular" in word.forms)) return null;
     const forms = word.forms;
+    const hasPlural = forms.plural && forms.plural !== "-";
 
     return (
       <div className="space-y-2 text-center">
         <div className="font-amiri text-4xl text-white">{forms.singular}</div>
-        {forms.plural && (
+        {hasPlural ? (
           <div className="font-amiri text-2xl text-gray-400">({forms.plural})</div>
+        ) : (
+          <div className="text-sm text-gray-600 italic">(الجمع غير متوفر)</div>
         )}
       </div>
     );

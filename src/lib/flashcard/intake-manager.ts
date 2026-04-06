@@ -1,7 +1,7 @@
 import type { LexicalEntry, UserFlashcard, WordStatus } from "@/lib/types/flashcard";
 import { FSRSState } from "@/lib/types/flashcard";
 import { getWordsBySurah } from "@/lib/corpus/lexical-db";
-import { getFlashcards, addFlashcard } from "@/lib/storage/flashcard-storage";
+import { getFlashcards, addFlashcard } from "@/lib/storage/flashcard-storage-supabase";
 import { createNewCard } from "@/lib/fsrs/scheduler";
 
 export async function getSurahWords(surahNumber: number): Promise<LexicalEntry[]> {
