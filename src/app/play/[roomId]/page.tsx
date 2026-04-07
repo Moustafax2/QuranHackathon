@@ -1,53 +1,129 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { use } from "react";
-import type { GameSettings, GameQuestion, QuestionType } from "@/lib/types/game";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useRoom } from "@/lib/hooks/useRoom";
+import { useGame } from "@/lib/hooks/useGame";
+import { createClient } from "@/lib/supabase/client";
+import type { GamePhase } from "@/lib/game/state-machine";
 
 interface Props {
   params: Promise<{ roomId: string }>;
   searchParams: Promise<{ mode?: string }>;
 }
 
-const mockPlayers = [
-  { id: "1", name: "You", score: 0, isHost: true, isYou: true },
-  { id: "2", name: "Waiting...", score: 0, isHost: false, isYou: false },
-  { id: "3", name: "Waiting...", score: 0, isHost: false, isYou: false },
-];
-
-const ALL_JUZES = Array.from({ length: 30 }, (_, i) => i + 1);
-
-const QUESTION_TYPE_META: {
-  id: QuestionType;
-  label: string;
-  available: boolean;
-}[] = [
-  { id: "next-ayah-mc", label: "Next Ayah — Multiple Choice", available: true },
-  { id: "word-meaning-mc", label: "Word Meaning Trivia", available: true },
-  { id: "blank-word-mc", label: "Fill in the Blank", available: true },
-];
-
-const DISABLED_TYPES = [
-  { label: "Buzzer — Next Ayah", available: false },
-  { label: "Quran Trivia", available: false },
-];
+interface RoomInfo {
+  id: string;
+  code: string;
+  host_id: string;
+  game_mode: string;
+  settings: { num_rounds: number; surah_filter: number[] | null; time_per_question: number };
+}
 
 export default function GameRoomPage({ params, searchParams }: Props) {
   const { roomId } = use(params);
-  use(searchParams); // mode available if needed later
+  use(searchParams);
+  const { player, loading: authLoading } = useAuth();
+  const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
+  const [gameId, setGameId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [gameSettings, setGameSettings] = useState<GameSettings>({
-    questionTypes: ["next-ayah-mc"],
-    numQuestions: 10,
-    juzes: ALL_JUZES,
-  });
-  const [started, setStarted] = useState(false);
+  // Fetch room info on mount
+  useEffect(() => {
+    async function fetchRoom() {
+      const supabase = createClient();
+      const { data, error: fetchError } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("code", roomId)
+        .single();
 
-  if (started) {
-    return <GameInProgress roomId={roomId} settings={gameSettings} />;
+      if (fetchError || !data) {
+        setError("Room not found");
+      } else {
+        setRoomInfo(data as unknown as RoomInfo);
+      }
+      setLoading(false);
+    }
+    fetchRoom();
+  }, [roomId]);
+
+  // Realtime hooks
+  const { players, isConnected } = useRoom(
+    roomId,
+    player ? { id: player.id, display_name: player.display_name } : null,
+    roomInfo?.host_id ?? null
+  );
+
+  const { gameState, submitAnswer, pressBuzzer } = useGame(
+    gameId,
+    player?.id ?? null
+  );
+
+  const isHost = player?.id === roomInfo?.host_id;
+  const phase: GamePhase = gameState.phase;
+
+  async function handleStartGame() {
+    if (!roomInfo || !player) return;
+    setError(null);
+
+    try {
+      const response = await fetch("/api/multiplayer/start-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: roomInfo.id }),
+      });
+      const data = (await response.json()) as { game_id?: string; error?: string };
+      if (!response.ok || !data.game_id) {
+        throw new Error(data.error ?? "Failed to start game.");
+      }
+      setGameId(data.game_id);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
+  if (loading || authLoading) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="text-gray-500">Loading room...</div>
+      </div>
+    );
+  }
+
+  if (error && !roomInfo) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="text-center">
+          <p className="text-red-400">{error}</p>
+          <Link href="/play" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
+            Back to game modes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Game in progress
+  if (phase !== "lobby" && gameState.current_round) {
+    return (
+      <GameInProgress
+        key={gameState.current_round.round_id}
+        roomCode={roomId}
+        gameState={gameState}
+        playerId={player?.id ?? ""}
+        players={players}
+        onSubmitAnswer={submitAnswer}
+        onPressBuzzer={pressBuzzer}
+        isBuzzerMode={roomInfo?.game_mode === "buzzer"}
+      />
+    );
+  }
+
+  // Lobby
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
       <div className="mx-auto max-w-2xl px-4 py-12">
@@ -68,152 +144,73 @@ export default function GameRoomPage({ params, searchParams }: Props) {
               </svg>
             </button>
           </div>
-          <p className="mt-3 text-sm text-gray-500">Share this code with friends to join</p>
+          <p className="mt-3 text-sm text-gray-500">
+            Share this code with friends to join
+          </p>
+          {!isConnected && (
+            <p className="mt-2 text-xs text-amber-400">Connecting...</p>
+          )}
         </div>
 
         {/* Players */}
         <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-4">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-            Players ({mockPlayers.length}/8)
+            Players ({players.length}/8)
           </h2>
           <div className="space-y-2">
-            {mockPlayers.map((player) => (
-              <div key={player.id} className="flex items-center justify-between rounded-xl bg-gray-800/50 px-4 py-3">
+            {players.map((p) => (
+              <div
+                key={p.player_id}
+                className="flex items-center justify-between rounded-xl bg-gray-800/50 px-4 py-3"
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${player.isYou ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-500"}`}>
-                    {player.isYou ? player.name[0] : "?"}
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${p.player_id === player?.id ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-400"}`}>
+                    {p.display_name[0]?.toUpperCase() ?? "?"}
                   </div>
-                  <span className={`text-sm font-medium ${player.isYou ? "text-white" : "text-gray-500"}`}>
-                    {player.name}
-                    {player.isHost && <span className="ml-2 text-xs text-amber-400">Host</span>}
+                  <span className={`text-sm font-medium ${p.player_id === player?.id ? "text-white" : "text-gray-300"}`}>
+                    {p.display_name}
+                    {p.player_id === player?.id && " (You)"}
+                    {p.is_host && (
+                      <span className="ml-2 text-xs text-amber-400">Host</span>
+                    )}
                   </span>
                 </div>
-                {player.isYou && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                  </span>
-                )}
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                </span>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Game Settings */}
-        <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-5 space-y-5">
-          <h2 className="font-semibold text-white">Game Settings</h2>
-
-          {/* Question Types */}
-          <div>
-            <p className="mb-2 text-sm font-medium text-gray-400">Question Types</p>
-            <div className="space-y-2">
-              {QUESTION_TYPE_META.map((qt) => (
-                <label key={qt.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-700 bg-gray-800/50 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={gameSettings.questionTypes.includes(qt.id)}
-                    onChange={(e) => {
-                      setGameSettings((s) => ({
-                        ...s,
-                        questionTypes: e.target.checked
-                          ? [...s.questionTypes, qt.id]
-                          : s.questionTypes.filter((t) => t !== qt.id),
-                      }));
-                    }}
-                    className="h-4 w-4 accent-emerald-500"
-                  />
-                  <span className="text-sm text-white">{qt.label}</span>
-                </label>
-              ))}
-              {DISABLED_TYPES.map((qt) => (
-                <div key={qt.label} className="flex items-center gap-3 rounded-xl border border-gray-800 px-4 py-3 opacity-40">
-                  <input type="checkbox" disabled className="h-4 w-4" />
-                  <span className="text-sm text-gray-500">{qt.label}</span>
-                  <span className="ml-auto rounded-full border border-gray-700 px-2 py-0.5 text-xs text-gray-600">Soon</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Number of Questions */}
-          <div>
-            <p className="mb-2 text-sm font-medium text-gray-400">Number of Questions</p>
-            <div className="flex items-center gap-3">
-              {[5, 10, 15, 20].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setGameSettings((s) => ({ ...s, numQuestions: n }))}
-                  className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                    gameSettings.numQuestions === n
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                      : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Juz Selector */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-400">
-                Juzes ({gameSettings.juzes.length}/30)
+            {players.length === 0 && (
+              <p className="py-3 text-center text-sm text-gray-600">
+                Waiting for players to join...
               </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setGameSettings((s) => ({ ...s, juzes: ALL_JUZES }))}
-                  className="text-xs text-emerald-400 hover:text-emerald-300"
-                >
-                  All
-                </button>
-                <span className="text-gray-700">·</span>
-                <button
-                  onClick={() => setGameSettings((s) => ({ ...s, juzes: [] }))}
-                  className="text-xs text-gray-500 hover:text-gray-300"
-                >
-                  None
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-10 gap-1.5">
-              {ALL_JUZES.map((juz) => {
-                const selected = gameSettings.juzes.includes(juz);
-                return (
-                  <button
-                    key={juz}
-                    onClick={() =>
-                      setGameSettings((s) => ({
-                        ...s,
-                        juzes: selected
-                          ? s.juzes.filter((j) => j !== juz)
-                          : [...s.juzes, juz].sort((a, b) => a - b),
-                      }))
-                    }
-                    className={`rounded-lg py-1.5 text-xs font-semibold transition-colors ${
-                      selected
-                        ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/50"
-                        : "bg-gray-800 text-gray-500 hover:bg-gray-700"
-                    }`}
-                  >
-                    {juz}
-                  </button>
-                );
-              })}
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3">
-          <button
-            onClick={() => setStarted(true)}
-            disabled={gameSettings.questionTypes.length === 0 || gameSettings.juzes.length === 0}
-            className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Start Game
-          </button>
+          {isHost ? (
+            <button
+              onClick={handleStartGame}
+              disabled={players.length < 2}
+              className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+            >
+              Start Game
+            </button>
+          ) : (
+            <div className="flex-1 rounded-xl border border-gray-700 py-3 text-center text-sm text-gray-500">
+              Waiting for host to start...
+            </div>
+          )}
           <Link
             href="/play"
             className="rounded-xl border border-gray-700 px-4 py-3 text-sm font-semibold text-gray-400 transition-colors hover:border-gray-500 hover:text-white"
@@ -226,92 +223,119 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// GameInProgress
-// ---------------------------------------------------------------------------
+// ==========================================
+// Game In Progress Component
+// ==========================================
 
-function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSettings }) {
-  const [question, setQuestion] = useState<GameQuestion | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<number | null>(null);
+import type { GameState } from "@/lib/game/state-machine";
+import type { RoomPlayer } from "@/lib/hooks/useRoom";
+
+interface GameProps {
+  roomCode: string;
+  gameState: GameState;
+  playerId: string;
+  players: RoomPlayer[];
+  onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
+  onPressBuzzer: (roundId: string) => Promise<void>;
+  isBuzzerMode: boolean;
+}
+
+function GameInProgress({
+  roomCode,
+  gameState,
+  playerId,
+  players,
+  onSubmitAnswer,
+  onPressBuzzer,
+  isBuzzerMode,
+}: GameProps) {
   const [answered, setAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [questionNum, setQuestionNum] = useState(1);
-  const [finished, setFinished] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [buzzed, setBuzzed] = useState(false);
 
-  const fetchQuestion = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setSelected(null);
-    setAnswered(false);
+  const round = gameState.current_round;
+  const result = gameState.round_result;
+  const phase = gameState.phase;
 
-    try {
-      const juzesParam = settings.juzes.join(",");
-      const type = settings.questionTypes[Math.floor(Math.random() * settings.questionTypes.length)];
-      const res = await fetch(`/api/game/question?juzes=${juzesParam}&type=${type}`);
-      if (!res.ok) throw new Error("Failed to fetch question");
-      const data: GameQuestion = await res.json();
-      setQuestion(data);
-    } catch {
-      setError("Failed to load question. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [settings.juzes, settings.questionTypes]);
+  // Game over screen
+  if (phase === "game_over") {
+    const sortedScores = Object.entries(gameState.scores).sort(
+      ([, a], [, b]) => b - a
+    );
+    const winnerName = players.find(
+      (p) => p.player_id === gameState.winner_id
+    )?.display_name;
 
-  useEffect(() => {
-    fetchQuestion();
-  }, [fetchQuestion]);
-
-  function handleSelect(i: number) {
-    if (answered || !question) return;
-    setSelected(i);
-    setAnswered(true);
-    if (i === question.correctIndex) {
-      setScore((s) => s + 1);
-    }
-  }
-
-  function handleNext() {
-    if (questionNum >= settings.numQuestions) {
-      setFinished(true);
-      return;
-    }
-    setQuestionNum((n) => n + 1);
-    fetchQuestion();
-  }
-
-  // Finished screen
-  if (finished) {
-    const pct = Math.round((score / settings.numQuestions) * 100);
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
-        <div className="mx-auto max-w-md px-4 text-center">
-          <div className="mb-6 text-6xl">{pct >= 70 ? "🎉" : pct >= 40 ? "📖" : "💪"}</div>
-          <h1 className="mb-2 text-3xl font-bold">
-            {score}/{settings.numQuestions}
+      <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
+        <div className="mx-auto max-w-2xl px-4 py-12 text-center">
+          <h1 className="mb-2 text-4xl font-bold text-emerald-400">
+            Game Over!
           </h1>
-          <p className="mb-1 text-gray-400">{pct}% correct</p>
-          <p className="mb-8 text-sm text-gray-500">Room {roomId}</p>
-          <div className="flex flex-col gap-3">
-            <Link
-              href={`/play/${roomId}`}
-              className="rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
-              Play Again
-            </Link>
-            <Link
-              href="/play"
-              className="rounded-xl border border-gray-700 py-3 text-sm font-semibold text-gray-400 hover:border-gray-500 hover:text-white"
-            >
-              Back to Lobby
-            </Link>
+          <p className="mb-8 text-lg text-gray-400">
+            {gameState.winner_id === playerId
+              ? "You won!"
+              : `${winnerName ?? "Someone"} wins!`}
+          </p>
+          <div className="mb-8 space-y-2">
+            {sortedScores.map(([pid, score], i) => {
+              const name = players.find((p) => p.player_id === pid)?.display_name ?? "Unknown";
+              return (
+                <div
+                  key={pid}
+                  className={`flex items-center justify-between rounded-xl px-5 py-3 ${
+                    i === 0
+                      ? "border border-amber-500/30 bg-amber-500/10"
+                      : "bg-gray-800/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg font-bold ${i === 0 ? "text-amber-400" : "text-gray-500"}`}>
+                      #{i + 1}
+                    </span>
+                    <span className="font-medium">
+                      {name}
+                      {pid === playerId && " (You)"}
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {score} pts
+                  </span>
+                </div>
+              );
+            })}
           </div>
+          <Link
+            href="/play"
+            className="inline-block rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Play Again
+          </Link>
         </div>
       </div>
     );
   }
+
+  if (!round) return null;
+
+  async function handleSelect(verseKey: string) {
+    if (answered) return;
+    setSelected(verseKey);
+    setAnswered(true);
+    await onSubmitAnswer(round!.round_id, verseKey);
+  }
+
+  async function handleBuzzer() {
+    if (buzzed) return;
+    setBuzzed(true);
+    await onPressBuzzer(round!.round_id);
+  }
+
+  // Build scores display
+  const myScore = gameState.scores[playerId] ?? 0;
+  const othersScore = Object.entries(gameState.scores)
+    .filter(([id]) => id !== playerId)
+    .reduce((sum, [, s]) => sum + s, 0);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
@@ -319,210 +343,107 @@ function GameInProgress({ roomId, settings }: { roomId: string; settings: GameSe
         {/* Score bar */}
         <div className="mb-8 flex items-center justify-between rounded-2xl border border-gray-800 bg-gray-900 px-5 py-3">
           <div className="text-sm">
-            <span className="text-gray-500">Q </span>
-            <span className="font-semibold text-gray-300">{questionNum}</span>
-            <span className="text-gray-500"> / {settings.numQuestions}</span>
+            <span className="text-gray-500">Room </span>
+            <span className="font-mono text-gray-300">{roomCode}</span>
+            <span className="ml-3 text-gray-600">
+              Round {round.round_number}/{round.total_rounds}
+            </span>
           </div>
           <div className="flex items-center gap-4 text-sm font-semibold">
-            <span className="text-emerald-400">Score: {score}</span>
+            <span className="text-emerald-400">You: {myScore}</span>
             <span className="text-gray-500">|</span>
-            <span className="font-mono text-gray-500">{roomId}</span>
+            <span className="text-gray-400">Others: {othersScore}</span>
           </div>
         </div>
 
-        {/* Error state */}
-        {error && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center">
-            <p className="text-sm text-red-400">{error}</p>
+        {/* Prompt */}
+        <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            {isBuzzerMode ? "Recite the next ayah" : "What comes next?"}
+          </p>
+          <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
+            {round.prompt_text}
+          </p>
+          <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
+        </div>
+
+        {/* Round result overlay */}
+        {phase === "round_result" && result && (
+          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <p className="mb-2 text-sm font-semibold text-emerald-400">
+              Correct answer:
+            </p>
+            <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+              {result.correct_text}
+            </p>
+            <div className="mt-3 space-y-1">
+              {result.answers.map((a) => (
+                <p key={a.player_id} className="text-sm">
+                  <span className={a.is_correct ? "text-emerald-400" : "text-red-400"}>
+                    {a.is_correct ? "+" : ""}
+                    {a.points_awarded} pts
+                  </span>
+                  <span className="ml-2 text-gray-400">
+                    {a.display_name}
+                    {a.player_id === playerId && " (You)"}
+                  </span>
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Buzzer mode */}
+        {isBuzzerMode && phase === "round_active" && (
+          <div className="text-center">
             <button
-              onClick={fetchQuestion}
-              className="mt-3 rounded-xl bg-red-500/20 px-4 py-2 text-sm text-red-400 hover:bg-red-500/30"
+              onClick={handleBuzzer}
+              disabled={buzzed}
+              className={`h-32 w-32 rounded-full text-2xl font-bold transition-all ${
+                buzzed
+                  ? "bg-gray-700 text-gray-500"
+                  : "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-500 active:scale-95"
+              }`}
             >
-              Retry
+              {buzzed ? "Buzzed!" : "BUZZ"}
             </button>
           </div>
         )}
 
-        {/* Loading skeleton */}
-        {loading && !error && (
-          <>
-            <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-              <div className="mx-auto mb-3 h-3 w-24 animate-pulse rounded-full bg-gray-800" />
-              <div className="mx-auto h-10 w-3/4 animate-pulse rounded-xl bg-gray-800" />
-              <div className="mx-auto mt-3 h-3 w-32 animate-pulse rounded-full bg-gray-800" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-20 animate-pulse rounded-xl border border-gray-800 bg-gray-900" />
-              ))}
-            </div>
-          </>
+        {/* Multiple choice options */}
+        {!isBuzzerMode && round.options && phase === "round_active" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {round.options.map((option) => {
+              let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
+              if (answered && result) {
+                if (option.verse_key === result.correct_verse_key)
+                  style = "border-emerald-500 bg-emerald-500/10";
+                else if (option.verse_key === selected)
+                  style = "border-red-500 bg-red-500/10";
+                else style = "border-gray-800 bg-gray-900 opacity-50";
+              } else if (option.verse_key === selected) {
+                style = "border-blue-500 bg-blue-500/10";
+              }
+              return (
+                <button
+                  key={option.verse_key}
+                  onClick={() => handleSelect(option.verse_key)}
+                  disabled={answered}
+                  className={`rounded-xl border p-4 text-right transition-all ${style}`}
+                >
+                  <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                    {option.text}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {/* Question */}
-        {!loading && !error && question && (
-          <>
-            {/* Prompt card */}
-            <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
-              {question.type === "next-ayah-mc" && (
-                <>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    What comes next?
-                  </p>
-                  <p
-                    dir="rtl"
-                    lang="ar"
-                    translate="no"
-                    className="font-amiri text-3xl leading-loose text-white"
-                  >
-                    {question.promptVerse.text_uthmani}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-500">
-                    {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
-                  </p>
-                </>
-              )}
-              {question.type === "word-meaning-mc" && (
-                <>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    What does this word mean?
-                  </p>
-                  <p
-                    dir="rtl"
-                    lang="ar"
-                    translate="no"
-                    className="font-amiri text-5xl leading-loose text-white"
-                  >
-                    {question.promptWord}
-                  </p>
-                  <p className="mt-3 text-sm text-gray-500">
-                    {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
-                  </p>
-                </>
-              )}
-              {question.type === "blank-word-mc" && (() => {
-                const blankWord = question.options[question.correctIndex].text_uthmani;
-                const fullText = question.promptVerse.text_uthmani;
-                // Replace the blank word in the full ayah text with a placeholder token
-                const PLACEHOLDER = "█████";
-                const withBlank = answered ? fullText : fullText.replace(blankWord, PLACEHOLDER);
-                const parts = withBlank.split(PLACEHOLDER);
-
-                return (
-                  <>
-                    <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Fill in the blank
-                    </p>
-                    <p
-                      dir="rtl"
-                      lang="ar"
-                      translate="no"
-                      className="font-amiri text-2xl leading-loose text-white"
-                    >
-                      {parts.length === 2 ? (
-                        <>
-                          {parts[0]}
-                          <span className={`mx-1 inline-block rounded-lg px-2 font-bold ${
-                            answered ? "bg-emerald-500/20 text-emerald-300" : "bg-gray-700 text-gray-600"
-                          }`}>
-                            {answered ? blankWord : "　　　"}
-                          </span>
-                          {parts[1]}
-                        </>
-                      ) : (
-                        // Fallback if replace didn't find the word — show full text
-                        fullText
-                      )}
-                    </p>
-                    <p className="mt-3 text-sm text-gray-500">
-                      {question.promptVerse.surah_name} · {question.promptVerse.verse_key}
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Options */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {question.options.map((option, i) => {
-                let style = "border-gray-800 bg-gray-900 hover:border-gray-600 cursor-pointer";
-                if (answered) {
-                  if (i === question.correctIndex) style = "border-emerald-500 bg-emerald-500/10 cursor-default";
-                  else if (i === selected) style = "border-red-500 bg-red-500/10 cursor-default";
-                  else style = "border-gray-800 bg-gray-900 opacity-40 cursor-default";
-                }
-
-                return (
-                  <button
-                    key={`${option.verse_key}-${i}`}
-                    onClick={() => handleSelect(i)}
-                    disabled={answered}
-                    className={`rounded-xl border p-4 transition-all ${style} ${
-                      question.type === "word-meaning-mc" ? "text-left" : "text-right"
-                    }`}
-                  >
-                    {question.type === "next-ayah-mc" && (
-                      <>
-                        <p
-                          dir="rtl"
-                          lang="ar"
-                          translate="no"
-                          className="font-amiri text-xl leading-loose text-white"
-                        >
-                          {option.text_uthmani}
-                        </p>
-                        {answered && (
-                          <p className="mt-1 text-left text-xs text-gray-500">{option.verse_key}</p>
-                        )}
-                      </>
-                    )}
-                    {question.type === "word-meaning-mc" && (
-                      <p className="text-sm font-medium text-white">{option.meaning}</p>
-                    )}
-                    {question.type === "blank-word-mc" && (
-                      <p
-                        dir="rtl"
-                        lang="ar"
-                        translate="no"
-                        className="font-amiri text-xl leading-loose text-white"
-                      >
-                        {option.text_uthmani}
-                      </p>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {answered && (
-              <div className="mt-6 text-center">
-                <p className={`text-lg font-semibold ${selected === question.correctIndex ? "text-emerald-400" : "text-red-400"}`}>
-                  {selected === question.correctIndex ? "Correct! +1" : "Wrong"}
-                </p>
-                {selected !== question.correctIndex && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    Correct answer:{" "}
-                    <span
-                      dir={question.type === "word-meaning-mc" ? "ltr" : "rtl"}
-                      lang={question.type === "word-meaning-mc" ? undefined : "ar"}
-                      translate={question.type === "word-meaning-mc" ? undefined : "no"}
-                      className="font-amiri text-gray-300"
-                    >
-                      {question.type === "word-meaning-mc"
-                        ? question.options[question.correctIndex].meaning
-                        : question.options[question.correctIndex].text_uthmani}
-                    </span>
-                  </p>
-                )}
-                <button
-                  onClick={handleNext}
-                  className="mt-4 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
-                >
-                  {questionNum >= settings.numQuestions ? "See Results" : "Next Question"}
-                </button>
-              </div>
-            )}
-          </>
+        {answered && !result && (
+          <p className="mt-4 text-center text-sm text-gray-500">
+            Waiting for other players...
+          </p>
         )}
       </div>
     </div>
