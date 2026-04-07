@@ -10,16 +10,84 @@ interface FlashcardReviewProps {
   onReview: (rating: Rating, durationMs: number) => void;
   showRoot?: boolean;
   showExamples?: boolean;
+  showHansWehr?: boolean;
 }
+
+// Simple module-level cache so we don't re-fetch the same verse across cards
+const verseTextCache = new Map<string, string>();
 
 export function FlashcardReview({
   word,
   onReview,
   showRoot = true,
   showExamples = true,
+  showHansWehr = false,
 }: FlashcardReviewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [startTime] = useState(Date.now());
+  const [hansWehrDef, setHansWehrDef] = useState<string | null>(null);
+  const [hansWehrLoading, setHansWehrLoading] = useState(false);
+  const [verseTexts, setVerseTexts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!showHansWehr || !word.root) {
+      setHansWehrDef(null);
+      return;
+    }
+    setHansWehrLoading(true);
+    fetch(`/api/hanswehr?root=${encodeURIComponent(word.root)}`)
+      .then((r) => r.json())
+      .then((data) => setHansWehrDef(data.definition ?? null))
+      .catch(() => setHansWehrDef(null))
+      .finally(() => setHansWehrLoading(false));
+  }, [showHansWehr, word.root]);
+
+  // Fetch verse texts for examples when card is flipped
+  useEffect(() => {
+    if (!isFlipped || !showExamples || word.examples.length === 0) return;
+
+    const toFetch = word.examples.slice(0, 3).filter((ex) => {
+      const key = `${ex.surah}:${ex.ayah}`;
+      return !verseTextCache.has(key);
+    });
+
+    if (toFetch.length === 0) {
+      // All already cached, populate local state
+      const texts: Record<string, string> = {};
+      word.examples.slice(0, 3).forEach((ex) => {
+        const key = `${ex.surah}:${ex.ayah}`;
+        if (verseTextCache.has(key)) texts[key] = verseTextCache.get(key)!;
+      });
+      setVerseTexts(texts);
+      return;
+    }
+
+    Promise.all(
+      toFetch.map((ex) =>
+        fetch(
+          `https://api.quran.com/api/v4/verses/by_key/${ex.surah}:${ex.ayah}?fields=text_uthmani`
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            const text: string = data?.verse?.text_uthmani ?? "";
+            const key = `${ex.surah}:${ex.ayah}`;
+            verseTextCache.set(key, text);
+            return { key, text };
+          })
+          .catch(() => null)
+      )
+    ).then((results) => {
+      const texts: Record<string, string> = {};
+      word.examples.slice(0, 3).forEach((ex) => {
+        const key = `${ex.surah}:${ex.ayah}`;
+        if (verseTextCache.has(key)) texts[key] = verseTextCache.get(key)!;
+      });
+      results.forEach((r) => {
+        if (r) texts[r.key] = r.text;
+      });
+      setVerseTexts(texts);
+    });
+  }, [isFlipped, showExamples, word.examples]);
 
   const handleFlip = useCallback(() => {
     setIsFlipped((prev) => !prev);
@@ -71,31 +139,22 @@ export function FlashcardReview({
 
   const renderVerbForms = () => {
     if (word.type !== CardType.VERB) return null;
-    
-    // Ensure all verb forms are present, generating missing ones if needed
+
     const forms = ensureCompleteVerbForms(
       word.root,
       word.forms && "past" in word.forms ? word.forms : undefined
     );
 
-    const renderForm = (label: string, value: string) => {
-      const isMissing = !value || value === "-";
-      return (
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <div className="mb-2 text-xs font-medium text-gray-500">{label}</div>
-          <div className={`font-amiri text-2xl ${isMissing ? "text-gray-600 italic" : "text-white"}`}>
-            {isMissing ? "غير متوفر" : value}
-          </div>
-        </div>
-      );
-    };
+    const val = (v: string) => (!v || v === "-" ? "—" : v);
 
     return (
-      <div className="grid grid-cols-2 gap-4">
-        {renderForm("ماضي / Past", forms.past)}
-        {renderForm("مضارع / Present", forms.present)}
-        {renderForm("أمر / Command", forms.imperative)}
-        {renderForm("مصدر / Verbal Noun", forms.verbal_noun)}
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+        <div className="mb-3 text-xs font-medium text-gray-500 text-center">
+          ماضي / مضارع / أمر — مصدر
+        </div>
+        <div dir="rtl" className="font-amiri text-2xl text-white text-center whitespace-nowrap">
+          {val(forms.past)} / {val(forms.present)} / {val(forms.imperative)}{forms.verbal_noun && forms.verbal_noun !== "-" ? ` — ${forms.verbal_noun}` : ""}
+        </div>
       </div>
     );
   };
@@ -106,35 +165,36 @@ export function FlashcardReview({
     const hasPlural = forms.plural && forms.plural !== "-";
 
     return (
-      <div className="space-y-2 text-center">
-        <div className="font-amiri text-4xl text-white">{forms.singular}</div>
-        {hasPlural ? (
-          <div className="font-amiri text-2xl text-gray-400">({forms.plural})</div>
-        ) : (
-          <div className="text-sm text-gray-600 italic">(الجمع غير متوفر)</div>
-        )}
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+        <div dir="rtl" className="font-amiri text-2xl text-white text-center whitespace-nowrap">
+          {forms.singular}
+          {hasPlural ? ` (${forms.plural})` : " (غير متوفر)"}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="flex min-h-[500px] w-full max-w-2xl flex-col">
+    <div className="w-full max-w-2xl">
+      {/* Card flip wrapper — uses CSS grid so both faces share the same cell
+          and the container naturally sizes to content height */}
       <div
-        className="perspective-1000 relative flex-1 cursor-pointer"
+        className="cursor-pointer"
+        style={{ perspective: "1000px" }}
         onClick={handleFlip}
       >
         <div
-          className={`preserve-3d relative h-full w-full transition-transform duration-600 ${
-            isFlipped ? "rotate-y-180" : ""
-          }`}
           style={{
+            display: "grid",
             transformStyle: "preserve-3d",
+            transition: "transform 600ms",
             transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
           }}
         >
+          {/* Front face */}
           <div
-            className="backface-hidden absolute inset-0 flex flex-col items-center justify-center rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-12 shadow-2xl"
-            style={{ backfaceVisibility: "hidden" }}
+            className="flex flex-col items-center justify-center rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-12 shadow-2xl"
+            style={{ gridArea: "1/1", backfaceVisibility: "hidden", minHeight: "260px" }}
           >
             <div className="mb-6">{getCardTypeBadge()}</div>
             <div className="mb-8 font-amiri text-6xl font-bold text-white">
@@ -145,9 +205,11 @@ export function FlashcardReview({
             </div>
           </div>
 
+          {/* Back face */}
           <div
-            className="backface-hidden absolute inset-0 flex flex-col rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-gray-900 to-gray-950 p-8 shadow-2xl shadow-emerald-500/10"
+            className="flex flex-col rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-gray-900 to-gray-950 p-8 shadow-2xl shadow-emerald-500/10"
             style={{
+              gridArea: "1/1",
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
             }}
@@ -161,7 +223,7 @@ export function FlashcardReview({
               )}
             </div>
 
-            <div className="mb-6 flex-1 space-y-6">
+            <div className="space-y-6">
               {word.type === CardType.VERB && renderVerbForms()}
               {word.type === CardType.NOUN && renderNounForms()}
               {word.type === CardType.PARTICLE && (
@@ -174,15 +236,59 @@ export function FlashcardReview({
                 {word.translation}
               </div>
 
+              {showHansWehr && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                  <div className="mb-2 text-xs font-medium text-amber-500/70">Hans Wehr</div>
+                  {hansWehrLoading ? (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  ) : hansWehrDef ? (
+                    <div
+                      className="max-h-32 overflow-y-auto text-sm leading-relaxed text-gray-300"
+                      dangerouslySetInnerHTML={{
+                          __html: hansWehrDef
+                          // already bold: <b>IV</b> → <br><b>IV</b>
+                          .replace(
+                            /<b>(II|III|IV|VI|VII|VIII|IX|X|V)<\/b>/g,
+                            "<br><b>$1</b>"
+                          )
+                          // plain text: " IV " → <br><b>IV</b>
+                          .replace(
+                            /(?<![<>/\w])(II|III|IV|VI|VII|VIII|IX|X|V)(?=\s)/g,
+                            "<br><b>$1</b>"
+                          ),
+                      }}
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-600 italic">No entry found</div>
+                  )}
+                </div>
+              )}
+
               {showExamples && word.examples.length > 0 && (
                 <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
                   <div className="mb-2 text-xs font-medium text-gray-500">Examples</div>
-                  <div className="space-y-1">
-                    {word.examples.slice(0, 3).map((ex, idx) => (
-                      <div key={idx} className="text-sm text-gray-400">
-                        Surah {ex.surah}:{ex.ayah}
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {word.examples.slice(0, 3).map((ex, idx) => {
+                      const key = `${ex.surah}:${ex.ayah}`;
+                      const text = verseTexts[key];
+                      return (
+                        <div key={idx}>
+                          <div className="text-xs text-gray-500 mb-1">
+                            Surah {ex.surah}:{ex.ayah}
+                          </div>
+                          {text ? (
+                            <div
+                              dir="rtl"
+                              className="font-amiri text-sm leading-loose text-gray-300"
+                            >
+                              {text}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-600 italic">Loading...</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -223,24 +329,6 @@ export function FlashcardReview({
           </button>
         </div>
       )}
-
-      <style jsx>{`
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-        .preserve-3d {
-          transform-style: preserve-3d;
-        }
-        .backface-hidden {
-          backface-visibility: hidden;
-        }
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
-        .duration-600 {
-          transition-duration: 600ms;
-        }
-      `}</style>
     </div>
   );
 }

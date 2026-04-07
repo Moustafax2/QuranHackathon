@@ -64,6 +64,20 @@ export async function getWordById(id: string): Promise<LexicalEntry | null> {
     }
   }
 
+  // Last resort: check mock data (covers cards saved when sample DB was active)
+  const mockEntry = getMockData().find((entry) => entry.id === id);
+  if (mockEntry) {
+    // Try to find the equivalent real entry by root + type
+    if (mockEntry.root) {
+      const rootNoSep = mockEntry.root.replace(/[\s_]/g, "");
+      const realEntry = cachedDB.find(
+        (e) => e.type === mockEntry.type && e.root && e.root.replace(/[\s_]/g, "") === rootNoSep
+      );
+      if (realEntry) return realEntry;
+    }
+    return mockEntry;
+  }
+
   return null;
 }
 
@@ -128,6 +142,37 @@ function getMockData(): LexicalEntry[] {
       examples: [{ surah: 1, ayah: 1, position: 1 }],
       source: "mock",
       frequency: 200,
+    },
+    {
+      id: "v_kataba_001",
+      type: CardType.VERB,
+      canonical_form: "كَتَبَ",
+      root: "ك ت ب",
+      forms: {
+        past: "كَتَبَ",
+        present: "يَكْتُبُ",
+        imperative: "اكْتُبْ",
+        verbal_noun: "كِتَابَةٌ",
+      },
+      translation: "to write",
+      examples: [{ surah: 2, ayah: 282, position: 5 }],
+      source: "mock",
+      frequency: 50,
+    },
+    {
+      id: "n_salat_001",
+      type: CardType.NOUN,
+      canonical_form: "صَلَاةٌ",
+      root: "ص ل و",
+      lemma: "صلاة",
+      forms: {
+        singular: "صَلَاةٌ",
+        plural: "صَلَوَاتٌ",
+      },
+      translation: "prayer",
+      examples: [{ surah: 2, ayah: 3, position: 5 }],
+      source: "mock",
+      frequency: 70,
     },
   ];
 }

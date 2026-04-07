@@ -21,6 +21,7 @@ export default function ReviewPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentWord, setCurrentWord] = useState<any>(null);
+  const [showHansWehr, setShowHansWehr] = useState(false);
 
   useEffect(() => {
     async function initSession() {
@@ -218,6 +219,30 @@ export default function ReviewPage() {
           </div>
         </div>
 
+        <div className="mb-4 flex items-center justify-end">
+          <button
+            onClick={() => setShowHansWehr((prev) => !prev)}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+              showHansWehr
+                ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
+                : "border-gray-700 bg-gray-900 text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <span>Hans Wehr</span>
+            <span
+              className={`h-4 w-7 rounded-full transition-colors ${
+                showHansWehr ? "bg-amber-500" : "bg-gray-700"
+              } relative`}
+            >
+              <span
+                className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
+                  showHansWehr ? "translate-x-3.5" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          </button>
+        </div>
+
         <div className="mb-6 flex items-center justify-center">
           {currentWord ? (
             <FlashcardReview
@@ -225,6 +250,7 @@ export default function ReviewPage() {
               onReview={handleReview}
               showRoot={true}
               showExamples={true}
+              showHansWehr={showHansWehr}
             />
           ) : (
             <div className="text-center text-gray-400">
