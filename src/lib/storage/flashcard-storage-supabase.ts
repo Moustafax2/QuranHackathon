@@ -375,6 +375,24 @@ export async function getFSRSState(cardId: string): Promise<FSRSCard | null> {
   return convertFSRSCardFromDB(data.fsrs_state);
 }
 
+export async function deleteReviewLogEntry(logId: string): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+  if (isDummyUser(userId)) {
+    // localStorage-based fallback: filter it out
+    try {
+      const raw = localStorage.getItem("qalamspace_reviews");
+      if (raw) {
+        const entries = JSON.parse(raw) as { id: string }[];
+        localStorage.setItem("qalamspace_reviews", JSON.stringify(entries.filter((e) => e.id !== logId)));
+      }
+    } catch { /* ignore */ }
+    return;
+  }
+  const supabase = createClient();
+  await supabase.from("review_log").delete().eq("id", logId).eq("user_id", userId);
+}
+
 export async function saveReviewLog(log: ReviewLogEntry): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) {

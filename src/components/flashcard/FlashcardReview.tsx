@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import type { LexicalEntry, Rating } from "@/lib/types/flashcard";
 import { CardType } from "@/lib/types/flashcard";
 import { ensureCompleteVerbForms } from "@/lib/corpus/verb-generator";
+import type { MuyassarParsedEntry } from "@/app/api/muyassar/route";
+
+interface MuyassarMatch extends MuyassarParsedEntry {
+  surah: number;
+  ayah: number;
+}
 
 interface FlashcardReviewProps {
   word: LexicalEntry;
@@ -11,6 +17,86 @@ interface FlashcardReviewProps {
   showRoot?: boolean;
   showExamples?: boolean;
   showHansWehr?: boolean;
+  showMuyassar?: boolean;
+  onMuyassarAvailable?: (available: boolean) => void;
+}
+
+// ── Arabic normalization helpers ──────────────────────────────────────────────
+
+function stripDiacritics(s: string): string {
+  return s
+    .replace(/\u0670/g, "\u0627") // superscript alef → regular alef
+    .replace(/[\u064B-\u065F\u0610-\u061A\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u08D3-\u08FF]/g, "")
+    .replace(/\u0640/g, ""); // tatweel
+}
+
+function normalizeArabic(s: string): string {
+  return s
+    .replace(/[\u0623\u0625\u0622\u0671]/g, "\u0627") // أ إ آ ٱ → ا
+    .replace(/\u0649/g, "\u064A") // ى → ي
+    .replace(/\u0629/g, "\u0647"); // ة → ه
+}
+
+function normalizeWord(s: string): string {
+  return normalizeArabic(stripDiacritics(s.trim()))
+    .replace(/^ال/, ""); // strip definite article
+}
+
+function highlightWordInVerse(verseText: string, canonicalForm: string): React.ReactNode {
+  const words = verseText.split(" ");
+  const nodes: React.ReactNode[] = [];
+  words.forEach((word, i) => {
+    if (wordMatchesCanonical(word, canonicalForm)) {
+      nodes.push(<strong key={i} className="text-white font-bold">{word}</strong>);
+    } else {
+      nodes.push(word);
+    }
+    if (i < words.length - 1) nodes.push(" ");
+  });
+  return <>{nodes}</>;
+}
+
+function wordMatchesCanonical(quranicWord: string, canonicalForm: string): boolean {
+  const q = normalizeWord(quranicWord);
+  const c = normalizeWord(canonicalForm);
+  if (!q || !c || c.length < 2) return false;
+  if (q === c) return true;
+  // Substring match: canonical contained in quranic (handles case/number inflections)
+  if (c.length >= 3 && q.includes(c)) return true;
+  if (q.length >= 3 && c.includes(q)) return true;
+  return false;
+}
+
+// Surah names (1-indexed)
+const SURAH_NAMES: Record<number, string> = {
+  1:"Al-Fatihah",2:"Al-Baqarah",3:"Ali 'Imran",4:"An-Nisa",5:"Al-Ma'idah",
+  6:"Al-An'am",7:"Al-A'raf",8:"Al-Anfal",9:"At-Tawbah",10:"Yunus",
+  11:"Hud",12:"Yusuf",13:"Ar-Ra'd",14:"Ibrahim",15:"Al-Hijr",
+  16:"An-Nahl",17:"Al-Isra",18:"Al-Kahf",19:"Maryam",20:"Ta-Ha",
+  21:"Al-Anbiya",22:"Al-Hajj",23:"Al-Mu'minun",24:"An-Nur",25:"Al-Furqan",
+  26:"Ash-Shu'ara",27:"An-Naml",28:"Al-Qasas",29:"Al-'Ankabut",30:"Ar-Rum",
+  31:"Luqman",32:"As-Sajdah",33:"Al-Ahzab",34:"Saba",35:"Fatir",
+  36:"Ya-Sin",37:"As-Saffat",38:"Sad",39:"Az-Zumar",40:"Ghafir",
+  41:"Fussilat",42:"Ash-Shura",43:"Az-Zukhruf",44:"Ad-Dukhan",45:"Al-Jathiyah",
+  46:"Al-Ahqaf",47:"Muhammad",48:"Al-Fath",49:"Al-Hujurat",50:"Qaf",
+  51:"Adh-Dhariyat",52:"At-Tur",53:"An-Najm",54:"Al-Qamar",55:"Ar-Rahman",
+  56:"Al-Waqi'ah",57:"Al-Hadid",58:"Al-Mujadila",59:"Al-Hashr",60:"Al-Mumtahanah",
+  61:"As-Saf",62:"Al-Jumu'ah",63:"Al-Munafiqun",64:"At-Taghabun",65:"At-Talaq",
+  66:"At-Tahrim",67:"Al-Mulk",68:"Al-Qalam",69:"Al-Haqqah",70:"Al-Ma'arij",
+  71:"Nuh",72:"Al-Jinn",73:"Al-Muzzammil",74:"Al-Muddaththir",75:"Al-Qiyamah",
+  76:"Al-Insan",77:"Al-Mursalat",78:"An-Naba",79:"An-Nazi'at",80:"'Abasa",
+  81:"At-Takwir",82:"Al-Infitar",83:"Al-Mutaffifin",84:"Al-Inshiqaq",85:"Al-Buruj",
+  86:"At-Tariq",87:"Al-A'la",88:"Al-Ghashiyah",89:"Al-Fajr",90:"Al-Balad",
+  91:"Ash-Shams",92:"Al-Layl",93:"Ad-Duhah",94:"Ash-Sharh",95:"At-Tin",
+  96:"Al-'Alaq",97:"Al-Qadr",98:"Al-Bayyinah",99:"Az-Zalzalah",100:"Al-'Adiyat",
+  101:"Al-Qari'ah",102:"At-Takathur",103:"Al-'Asr",104:"Al-Humazah",105:"Al-Fil",
+  106:"Quraysh",107:"Al-Ma'un",108:"Al-Kawthar",109:"Al-Kafirun",110:"An-Nasr",
+  111:"Al-Masad",112:"Al-Ikhlas",113:"Al-Falaq",114:"An-Nas",
+};
+
+function surahRef(surah: number, ayah: number): string {
+  const name = SURAH_NAMES[surah] ?? `Surah ${surah}`;
+  return `Surah ${name} ${ayah}`;
 }
 
 // Simple module-level cache so we don't re-fetch the same verse across cards
@@ -22,6 +108,8 @@ export function FlashcardReview({
   showRoot = true,
   showExamples = true,
   showHansWehr = false,
+  showMuyassar = false,
+  onMuyassarAvailable,
 }: FlashcardReviewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAlternateMeanings, setShowAlternateMeanings] = useState(false);
@@ -29,6 +117,8 @@ export function FlashcardReview({
   const [hansWehrDef, setHansWehrDef] = useState<string | null>(null);
   const [hansWehrLoading, setHansWehrLoading] = useState(false);
   const [verseTexts, setVerseTexts] = useState<Record<string, string>>({});
+  const [muyassarMatch, setMuyassarMatch] = useState<MuyassarMatch | null>(null);
+  const [muyassarVerseText, setMuyassarVerseText] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showHansWehr || !word.root) {
@@ -42,6 +132,60 @@ export function FlashcardReview({
       .catch(() => setHansWehrDef(null))
       .finally(() => setHansWehrLoading(false));
   }, [showHansWehr, word.root]);
+
+  // Fetch muyassar match whenever the word changes
+  useEffect(() => {
+    setMuyassarMatch(null);
+    setMuyassarVerseText(null);
+    if (!word.examples || word.examples.length === 0) return;
+
+    let cancelled = false;
+
+    async function findMatch() {
+      for (const ex of word.examples.slice(0, 8)) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(`/api/muyassar?surah=${ex.surah}&ayah=${ex.ayah}`);
+          const data = await res.json();
+          const entries: MuyassarParsedEntry[] = data.entries ?? [];
+          for (const entry of entries) {
+            if (!entry.isSingleWord) continue;
+            if (wordMatchesCanonical(entry.quranicWord, word.canonical_form)) {
+              if (!cancelled) {
+                setMuyassarMatch({ ...entry, surah: ex.surah, ayah: ex.ayah });
+                onMuyassarAvailable?.(true);
+              }
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (!cancelled) onMuyassarAvailable?.(false);
+    }
+
+    findMatch();
+    return () => { cancelled = true; };
+  }, [word]);
+
+  // Fetch the verse text for the muyassar match
+  useEffect(() => {
+    if (!muyassarMatch) return;
+    const key = `${muyassarMatch.surah}:${muyassarMatch.ayah}`;
+    if (verseTextCache.has(key)) {
+      setMuyassarVerseText(verseTextCache.get(key)!);
+      return;
+    }
+    fetch(`https://api.quran.com/api/v4/verses/by_key/${key}?fields=text_uthmani`)
+      .then((r) => r.json())
+      .then((data) => {
+        const text: string = data?.verse?.text_uthmani ?? "";
+        verseTextCache.set(key, text);
+        setMuyassarVerseText(text);
+      })
+      .catch(() => {});
+  }, [muyassarMatch]);
 
   // Fetch verse texts for examples when card is flipped
   useEffect(() => {
@@ -290,6 +434,34 @@ export function FlashcardReview({
                 </div>
               )}
 
+              {showMuyassar && muyassarMatch && (
+                <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-xs font-medium text-teal-400/80">Muyassar Gharib</div>
+                    <div className="text-xs text-gray-500">
+                      {surahRef(muyassarMatch.surah, muyassarMatch.ayah)}
+                    </div>
+                  </div>
+                  <div dir="rtl" className="mb-2 font-amiri text-teal-300" style={{ fontSize: "1.2em" }}>
+                    ﴿{muyassarMatch.quranicWord}﴾
+                  </div>
+                  <div className="mb-2 text-xs text-gray-500 italic">
+                    Explanation of the word ﴾{muyassarMatch.quranicWord}﴿ in this specific context
+                  </div>
+                  <div dir="rtl" className="mb-3 leading-relaxed text-gray-300 font-amiri" style={{ fontSize: "1.2em" }}>
+                    {muyassarMatch.explanation}
+                  </div>
+                  {muyassarVerseText && (
+                    <div className="rounded-lg border border-teal-500/10 bg-teal-950/30 p-3">
+                      <div className="mb-1 text-xs text-gray-500">{surahRef(muyassarMatch.surah, muyassarMatch.ayah)}</div>
+                      <div dir="rtl" className="font-amiri leading-loose text-gray-300" style={{ fontSize: "1.2em" }}>
+                        {highlightWordInVerse(muyassarVerseText, word.canonical_form)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {showExamples && word.examples.length > 0 && (
                 <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
                   <div className="mb-2 text-xs font-medium text-gray-500">Examples</div>
@@ -300,14 +472,15 @@ export function FlashcardReview({
                       return (
                         <div key={idx}>
                           <div className="text-xs text-gray-500 mb-1">
-                            Surah {ex.surah}:{ex.ayah}
+                            {surahRef(ex.surah, ex.ayah)}
                           </div>
                           {text ? (
                             <div
                               dir="rtl"
-                              className="font-amiri text-sm leading-loose text-gray-300"
+                              className="font-amiri leading-loose text-gray-300"
+                              style={{ fontSize: "1.2em" }}
                             >
-                              {text}
+                              {highlightWordInVerse(text, word.canonical_form)}
                             </div>
                           ) : (
                             <div className="text-xs text-gray-600 italic">Loading...</div>

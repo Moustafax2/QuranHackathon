@@ -3,16 +3,41 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FlashcardReview } from "@/components/flashcard/FlashcardReview";
-import type { FlashcardSession, Rating } from "@/lib/types/flashcard";
+import type { FlashcardSession, Rating, FSRSCard } from "@/lib/types/flashcard";
 import {
   createReviewSession,
   reviewCard,
+  undoReview,
   getCurrentCard,
   isSessionComplete,
   getSessionProgress,
-  getSessionSummary,
 } from "@/lib/flashcard/session-manager";
 import { getWordById } from "@/lib/corpus/lexical-db";
+
+// ── Flagged words (localStorage) ─────────────────────────────────
+const FLAGGED_KEY = "qalamspace_flagged_words";
+
+function getFlaggedWords(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(FLAGGED_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFlaggedWords(set: Set<string>): void {
+  localStorage.setItem(FLAGGED_KEY, JSON.stringify([...set]));
+}
+
+// ── Undo snapshot type ───────────────────────────────────────────
+interface UndoEntry {
+  session: FlashcardSession;
+  cardId: string;
+  prevFsrsState: FSRSCard;
+  logId: string;
+}
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -22,20 +47,20 @@ export default function ReviewPage() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentWord, setCurrentWord] = useState<any>(null);
   const [showHansWehr, setShowHansWehr] = useState(false);
+  const [showMuyassar, setShowMuyassar] = useState(false);
+  const [muyassarAvailable, setMuyassarAvailable] = useState(false);
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [flaggedWords, setFlaggedWords] = useState<Set<string>>(new Set());
+  const [justFlagged, setJustFlagged] = useState(false);
+
+  useEffect(() => {
+    setFlaggedWords(getFlaggedWords());
+  }, []);
 
   useEffect(() => {
     async function initSession() {
-      // #region agent log
-      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:27',message:'initSession called',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       const newSession = await createReviewSession();
-      // #region agent log
-      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:32',message:'createReviewSession result',data:{hasSession:!!newSession,sessionId:newSession?.id,cardsCount:newSession?.cards.length},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       if (!newSession) {
-        // #region agent log
-        fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:37',message:'No session - redirecting',data:{},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         router.push("/train/flashcards");
         return;
       }
@@ -47,36 +72,21 @@ export default function ReviewPage() {
 
   useEffect(() => {
     if (!session || showSummary) return;
-    
     const interval = setInterval(() => {
-      const elapsed = Date.now() - session.start_time.getTime();
-      setElapsedTime(elapsed);
+      setElapsedTime(Date.now() - session.start_time.getTime());
     }, 1000);
-
     return () => clearInterval(interval);
   }, [session, showSummary]);
 
   useEffect(() => {
     async function loadWord() {
-      if (!session) {
-        setCurrentWord(null);
-        return;
-      }
-
-      const currentCard = getCurrentCard(session);
-      // #region agent log
-      fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:58',message:'getCurrentCard result',data:{hasCard:!!currentCard,cardId:currentCard?.id,wordId:currentCard?.word_id,currentIndex:session.current_index,totalCards:session.cards.length},timestamp:Date.now(),hypothesisId:'D,E'})}).catch(()=>{});
-      // #endregion
-      if (currentCard) {
-        const word = await getWordById(currentCard.word_id);
-        // #region agent log
-        fetch('http://127.0.0.1:7416/ingest/1edaefa5-f6b3-407e-a724-c5352cdc9880',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b6417a'},body:JSON.stringify({sessionId:'b6417a',location:'review/page.tsx:64',message:'getWordById result',data:{hasWord:!!word,wordId:currentCard.word_id},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        if (word) {
-          setCurrentWord(word);
-        } else {
-          console.error(`Word not found in lexical DB for id: ${currentCard.word_id}`);
-        }
+      if (!session) { setCurrentWord(null); return; }
+      const card = getCurrentCard(session);
+      if (card) {
+        setMuyassarAvailable(false);
+        const word = await getWordById(card.word_id);
+        if (word) setCurrentWord(word);
+        else console.error(`Word not found for id: ${card.word_id}`);
       } else {
         setCurrentWord(null);
       }
@@ -86,48 +96,70 @@ export default function ReviewPage() {
 
   const handleReview = async (rating: Rating, durationMs: number) => {
     if (!session) return;
+    const card = getCurrentCard(session);
+    if (!card) return;
 
-    const currentCard = getCurrentCard(session);
-    if (!currentCard) return;
-
-    const updatedSession = await reviewCard(
+    const undoEntry: UndoEntry = {
       session,
-      currentCard.id,
-      rating,
-      durationMs
-    );
+      cardId: card.id,
+      prevFsrsState: { ...card.fsrs_state },
+      logId: "",
+    };
 
-    if (isSessionComplete(updatedSession)) {
-      setShowSummary(true);
-    }
+    const { updatedSession, logId } = await reviewCard(session, card.id, rating, durationMs);
+    undoEntry.logId = logId;
+    setUndoStack((prev) => [...prev.slice(-9), undoEntry]);
 
+    if (isSessionComplete(updatedSession)) setShowSummary(true);
     setSession(updatedSession);
   };
 
+  const handleUndo = async () => {
+    const last = undoStack[undoStack.length - 1];
+    if (!last) return;
+    await undoReview(last.cardId, last.prevFsrsState, last.logId);
+    setUndoStack((prev) => prev.slice(0, -1));
+    setSession(last.session);
+    setShowSummary(false);
+  };
+
+  const handleFlag = () => {
+    if (!session) return;
+    const card = getCurrentCard(session);
+    if (!card) return;
+    const updated = new Set(flaggedWords);
+    if (updated.has(card.word_id)) {
+      updated.delete(card.word_id);
+    } else {
+      updated.add(card.word_id);
+      setJustFlagged(true);
+      setTimeout(() => setJustFlagged(false), 1500);
+    }
+    setFlaggedWords(updated);
+    saveFlaggedWords(updated);
+  };
+
   const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   };
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
           <p className="text-gray-400">Loading your review session...</p>
         </div>
       </div>
     );
   }
 
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   const progress = getSessionProgress(session);
   const currentCard = getCurrentCard(session);
+  const isFlagged = flaggedWords.has(currentCard?.word_id ?? "");
 
   if (showSummary) {
     return (
@@ -135,9 +167,7 @@ export default function ReviewPage() {
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 text-center">
             <div className="mb-4 text-6xl">🎉</div>
-            <h1 className="mb-2 text-3xl font-bold text-white">
-              Session Complete!
-            </h1>
+            <h1 className="mb-2 text-3xl font-bold text-white">Session Complete!</h1>
             <p className="text-gray-400">Great work on your review session</p>
           </div>
 
@@ -145,47 +175,41 @@ export default function ReviewPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
                 <div className="mb-2 text-sm text-gray-500">Cards Reviewed</div>
-                <div className="text-3xl font-bold text-white">
-                  {session.stats.cards_reviewed}
-                </div>
+                <div className="text-3xl font-bold text-white">{session.stats.cards_reviewed}</div>
               </div>
               <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
                 <div className="mb-2 text-sm text-gray-500">Time Spent</div>
-                <div className="text-3xl font-bold text-white">
-                  {formatTime(session.stats.total_time_ms)}
-                </div>
+                <div className="text-3xl font-bold text-white">{formatTime(session.stats.total_time_ms)}</div>
               </div>
             </div>
 
             <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
               <div className="mb-4 text-sm text-gray-500">Performance</div>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="text-center">
-                  <div className="mb-1 text-2xl font-bold text-red-400">
-                    {session.stats.again_count}
-                  </div>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div>
+                  <div className="mb-1 text-2xl font-bold text-red-400">{session.stats.again_count}</div>
                   <div className="text-xs text-gray-500">Again</div>
                 </div>
-                <div className="text-center">
-                  <div className="mb-1 text-2xl font-bold text-orange-400">
-                    {session.stats.hard_count}
-                  </div>
+                <div>
+                  <div className="mb-1 text-2xl font-bold text-orange-400">{session.stats.hard_count}</div>
                   <div className="text-xs text-gray-500">Hard</div>
                 </div>
-                <div className="text-center">
-                  <div className="mb-1 text-2xl font-bold text-emerald-400">
-                    {session.stats.good_count}
-                  </div>
+                <div>
+                  <div className="mb-1 text-2xl font-bold text-emerald-400">{session.stats.good_count}</div>
                   <div className="text-xs text-gray-500">Good</div>
                 </div>
-                <div className="text-center">
-                  <div className="mb-1 text-2xl font-bold text-blue-400">
-                    {session.stats.easy_count}
-                  </div>
+                <div>
+                  <div className="mb-1 text-2xl font-bold text-blue-400">{session.stats.easy_count}</div>
                   <div className="text-xs text-gray-500">Easy</div>
                 </div>
               </div>
             </div>
+
+            {flaggedWords.size > 0 && (
+              <div className="rounded-2xl border border-yellow-800/40 bg-yellow-950/30 p-4 text-sm text-yellow-300">
+                ⚑ {flaggedWords.size} word{flaggedWords.size !== 1 ? "s" : ""} flagged for translation review
+              </div>
+            )}
 
             <button
               onClick={() => router.push("/train/flashcards")}
@@ -202,14 +226,11 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
       <div className="mx-auto max-w-4xl">
+        {/* Progress */}
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-gray-400">
-              {progress.current} / {progress.total} cards
-            </span>
-            <span className="text-sm text-gray-400">
-              {formatTime(elapsedTime)}
-            </span>
+            <span className="text-sm text-gray-400">{progress.current} / {progress.total} cards</span>
+            <span className="text-sm text-gray-400">{formatTime(elapsedTime)}</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-gray-800">
             <div
@@ -219,30 +240,69 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        <div className="mb-4 flex items-center justify-end">
+        {/* Controls row */}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          {/* Undo */}
           <button
-            onClick={() => setShowHansWehr((prev) => !prev)}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-              showHansWehr
-                ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                : "border-gray-700 bg-gray-900 text-gray-500 hover:text-gray-300"
-            }`}
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            title="Undo last rating (Z)"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-gray-500 transition-colors hover:border-gray-600 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
           >
-            <span>Hans Wehr</span>
-            <span
-              className={`h-4 w-7 rounded-full transition-colors ${
-                showHansWehr ? "bg-amber-500" : "bg-gray-700"
-              } relative`}
-            >
-              <span
-                className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
-                  showHansWehr ? "translate-x-3.5" : "translate-x-0.5"
-                }`}
-              />
-            </span>
+            <span className="text-base leading-none">↩</span>
+            <span>Undo</span>
           </button>
+
+          <div className="flex items-center gap-3">
+            {/* Flag button */}
+            <button
+              onClick={handleFlag}
+              title="Flag word as incorrect translation"
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                isFlagged
+                  ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400"
+                  : "border-gray-700 bg-gray-900 text-gray-500 hover:border-yellow-500/40 hover:text-yellow-400"
+              }`}
+            >
+              <span>{isFlagged ? "⚑" : "⚐"}</span>
+              <span>{justFlagged ? "Flagged!" : isFlagged ? "Flagged" : "Flag"}</span>
+            </button>
+
+            {/* Hans Wehr toggle */}
+            <button
+              onClick={() => setShowHansWehr((prev) => !prev)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                showHansWehr
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
+                  : "border-gray-700 bg-gray-900 text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <span>Hans Wehr</span>
+              <span className={`relative h-4 w-7 rounded-full transition-colors ${showHansWehr ? "bg-amber-500" : "bg-gray-700"}`}>
+                <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all duration-200 ${showHansWehr ? "left-3.5" : "left-0.5"}`} />
+              </span>
+            </button>
+
+            {/* Muyassar Gharib toggle — only shown when current word has a single-word entry */}
+            {muyassarAvailable && (
+              <button
+                onClick={() => setShowMuyassar((prev) => !prev)}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  showMuyassar
+                    ? "border-teal-500/50 bg-teal-500/10 text-teal-400"
+                    : "border-gray-700 bg-gray-900 text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <span>Muyassar</span>
+                <span className={`relative h-4 w-7 rounded-full transition-colors ${showMuyassar ? "bg-teal-500" : "bg-gray-700"}`}>
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all duration-200 ${showMuyassar ? "left-3.5" : "left-0.5"}`} />
+                </span>
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Card */}
         <div className="mb-6 flex items-center justify-center">
           {currentWord ? (
             <FlashcardReview
@@ -251,37 +311,36 @@ export default function ReviewPage() {
               showRoot={true}
               showExamples={true}
               showHansWehr={showHansWehr}
+              showMuyassar={showMuyassar}
+              onMuyassarAvailable={setMuyassarAvailable}
             />
           ) : (
-            <div className="text-center text-gray-400">
-              No more cards to review
-            </div>
+            <div className="text-center text-gray-400">No more cards to review</div>
           )}
         </div>
 
+        {/* Desktop session stats */}
         <div className="fixed right-4 top-20 hidden rounded-2xl border border-gray-800 bg-gray-900/95 p-4 backdrop-blur-sm lg:block">
-          <div className="mb-4 text-sm font-medium text-gray-400">
-            Session Stats
-          </div>
+          <div className="mb-4 text-sm font-medium text-gray-400">Session Stats</div>
           <div className="space-y-3">
             <div>
               <div className="text-xs text-gray-500">New Cards</div>
-              <div className="text-lg font-bold text-blue-400">
-                {session.stats.new_cards}
-              </div>
+              <div className="text-lg font-bold text-blue-400">{session.stats.new_cards}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500">Review Cards</div>
-              <div className="text-lg font-bold text-purple-400">
-                {session.stats.review_cards}
-              </div>
+              <div className="text-lg font-bold text-purple-400">{session.stats.review_cards}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500">Reviewed</div>
-              <div className="text-lg font-bold text-emerald-400">
-                {session.stats.cards_reviewed}
-              </div>
+              <div className="text-lg font-bold text-emerald-400">{session.stats.cards_reviewed}</div>
             </div>
+            {flaggedWords.size > 0 && (
+              <div>
+                <div className="text-xs text-gray-500">Flagged</div>
+                <div className="text-lg font-bold text-yellow-400">{flaggedWords.size}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>

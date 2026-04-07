@@ -10,6 +10,7 @@ import {
   getFlashcards,
   updateFlashcard,
   saveReviewLog,
+  deleteReviewLogEntry,
   getPreferences,
   getFSRSParameters,
   getAllSM2States,
@@ -83,12 +84,23 @@ export async function createReviewSession(): Promise<FlashcardSession | null> {
   return session;
 }
 
+export async function undoReview(
+  cardId: string,
+  prevFsrsState: import("@/lib/types/flashcard").FSRSCard,
+  logId: string
+): Promise<void> {
+  await Promise.all([
+    updateFlashcard(cardId, { fsrs_state: prevFsrsState }),
+    deleteReviewLogEntry(logId),
+  ]);
+}
+
 export async function reviewCard(
   session: FlashcardSession,
   cardId: string,
   rating: Rating,
   reviewDurationMs: number = 0
-): Promise<FlashcardSession> {
+): Promise<{ updatedSession: FlashcardSession; logId: string }> {
   const card = session.cards.find((c) => c.id === cardId);
   if (!card) throw new Error("Card not found in session");
 
@@ -156,12 +168,14 @@ export async function reviewCard(
     nextIndex = session.current_index; // next card is now at the same index
   }
 
-  return {
+  const updatedSession: FlashcardSession = {
     ...session,
     cards: updatedCards,
     current_index: nextIndex,
     stats: updatedStats,
   };
+
+  return { updatedSession, logId: reviewLog.id };
 }
 
 export function isSessionComplete(session: FlashcardSession): boolean {

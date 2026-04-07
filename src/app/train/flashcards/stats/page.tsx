@@ -145,6 +145,115 @@ export default function StatsPage() {
           </div>
         </div>
 
+        {/* ── Review Heatmap ──────────────────────────────────── */}
+        {(() => {
+          const WEEKS = 52;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          // Start from the Sunday of the week 52 weeks ago
+          const startDay = new Date(today);
+          startDay.setDate(today.getDate() - WEEKS * 7 + 1);
+
+          // Count reviews per day
+          const countByDay = new Map<string, number>();
+          reviews.forEach((r) => {
+            const d = new Date(r.timestamp);
+            d.setHours(0, 0, 0, 0);
+            const key = d.toISOString().slice(0, 10);
+            countByDay.set(key, (countByDay.get(key) ?? 0) + 1);
+          });
+
+          const maxCount = Math.max(...Array.from(countByDay.values()), 1);
+
+          // Build array of WEEKS*7 cells
+          const cells: { date: Date; count: number }[] = [];
+          for (let i = 0; i < WEEKS * 7; i++) {
+            const d = new Date(startDay);
+            d.setDate(startDay.getDate() + i);
+            const key = d.toISOString().slice(0, 10);
+            cells.push({ date: d, count: countByDay.get(key) ?? 0 });
+          }
+
+          // Colour levels: 0=empty, 1=light, 2=med, 3=dark, 4=full
+          const colourClass = (count: number) => {
+            if (count === 0) return "bg-gray-800";
+            const pct = count / maxCount;
+            if (pct < 0.25) return "bg-emerald-900";
+            if (pct < 0.5)  return "bg-emerald-700";
+            if (pct < 0.75) return "bg-emerald-500";
+            return "bg-emerald-400";
+          };
+
+          // Group into columns (weeks)
+          const weekColumns: typeof cells[] = [];
+          for (let w = 0; w < WEEKS; w++) {
+            weekColumns.push(cells.slice(w * 7, w * 7 + 7));
+          }
+
+          const monthLabels: { label: string; col: number }[] = [];
+          weekColumns.forEach((week, wi) => {
+            const firstOfWeek = week[0].date;
+            if (firstOfWeek.getDate() <= 7) {
+              monthLabels.push({
+                label: firstOfWeek.toLocaleString("default", { month: "short" }),
+                col: wi,
+              });
+            }
+          });
+
+          return (
+            <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+              <h2 className="mb-1 text-lg font-semibold text-white">Activity</h2>
+              <p className="mb-4 text-xs text-gray-500">Reviews per day over the past year</p>
+              <div className="overflow-x-auto">
+                <div style={{ minWidth: "680px" }}>
+                  {/* Month labels */}
+                  <div className="mb-1 flex" style={{ paddingLeft: "20px" }}>
+                    {weekColumns.map((_, wi) => {
+                      const label = monthLabels.find((m) => m.col === wi);
+                      return (
+                        <div key={wi} style={{ width: "11px", marginRight: "2px", flexShrink: 0 }}>
+                          {label && <span className="text-[9px] text-gray-600">{label.label}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-0.5">
+                    {/* Day labels */}
+                    <div className="mr-1 flex flex-col gap-0.5">
+                      {["", "M", "", "W", "", "F", ""].map((d, i) => (
+                        <div key={i} className="flex h-[11px] items-center justify-end text-[9px] text-gray-600">
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Grid */}
+                    {weekColumns.map((week, wi) => (
+                      <div key={wi} className="flex flex-col gap-0.5">
+                        {week.map((cell, di) => (
+                          <div
+                            key={di}
+                            title={`${cell.date.toLocaleDateString()}: ${cell.count} review${cell.count !== 1 ? "s" : ""}`}
+                            className={`h-[11px] w-[11px] rounded-sm ${colourClass(cell.count)}`}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Legend */}
+                  <div className="mt-2 flex items-center gap-1 justify-end">
+                    <span className="text-[10px] text-gray-600">Less</span>
+                    {["bg-gray-800", "bg-emerald-900", "bg-emerald-700", "bg-emerald-500", "bg-emerald-400"].map((c) => (
+                      <div key={c} className={`h-[11px] w-[11px] rounded-sm ${c}`} />
+                    ))}
+                    <span className="text-[10px] text-gray-600">More</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="mb-8 grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
             <h2 className="mb-4 text-lg font-semibold text-white">

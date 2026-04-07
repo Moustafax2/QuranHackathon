@@ -29,6 +29,7 @@ export interface Database {
           total_wins?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       rooms: {
         Row: {
@@ -58,6 +59,7 @@ export interface Database {
           settings?: RoomSettings;
           created_at?: string;
         };
+        Relationships: [];
       };
       room_players: {
         Row: {
@@ -78,6 +80,7 @@ export interface Database {
           score?: number;
           joined_at?: string;
         };
+        Relationships: [];
       };
       games: {
         Row: {
@@ -104,6 +107,7 @@ export interface Database {
           total_rounds?: number;
           winner_id?: string | null;
         };
+        Relationships: [];
       };
       game_rounds: {
         Row: {
@@ -142,6 +146,7 @@ export interface Database {
           started_at?: string | null;
           ended_at?: string | null;
         };
+        Relationships: [];
       };
       round_answers: {
         Row: {
@@ -171,6 +176,7 @@ export interface Database {
           server_received_at?: string;
           points_awarded?: number;
         };
+        Relationships: [];
       };
       friends: {
         Row: {
@@ -191,6 +197,7 @@ export interface Database {
           status?: "pending" | "accepted";
           created_at?: string;
         };
+        Relationships: [];
       };
       verse_mistakes: {
         Row: {
@@ -211,6 +218,7 @@ export interface Database {
           mistake_count?: number;
           last_mistake_at?: string;
         };
+        Relationships: [];
       };
       lexical_entries: {
         Row: {
@@ -258,6 +266,7 @@ export interface Database {
           frequency?: number | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       user_flashcards: {
         Row: {
@@ -284,6 +293,7 @@ export interface Database {
           fsrs_state?: FSRSCard;
           created_at?: string;
         };
+        Relationships: [];
       };
       review_log: {
         Row: {
@@ -322,6 +332,7 @@ export interface Database {
           state_before?: number;
           state_after?: number;
         };
+        Relationships: [];
       };
       user_preferences: {
         Row: {
@@ -369,8 +380,13 @@ export interface Database {
           normalization_level?: "strict" | "moderate" | "broad";
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }
 
