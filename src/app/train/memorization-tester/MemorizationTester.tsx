@@ -55,6 +55,7 @@ export function MemorizationTester() {
   const [surahScores, setSurahScores] = useState<Record<number, number>>({});
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [areSettingsMinimized, setAreSettingsMinimized] = useState(true);
 
   // Load heat map data on mount and after ratings
   useEffect(() => {
@@ -391,25 +392,42 @@ export function MemorizationTester() {
 
         {/* Settings */}
         <section className="mb-8">
-          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wider ${subtleTextClass}`}>Settings</h2>
-          <div className="space-y-3">
-            {mode === "ayah" && (
+          <button
+            type="button"
+            onClick={() => setAreSettingsMinimized((prev) => !prev)}
+            aria-expanded={!areSettingsMinimized}
+            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
+              isDarkMode
+                ? "border-gray-800 bg-gray-900 hover:bg-gray-800"
+                : "border-stone-200 bg-white hover:bg-stone-50"
+            }`}
+          >
+            <h2 className={`text-sm font-semibold uppercase tracking-wider ${subtleTextClass}`}>Settings</h2>
+            <span className={`text-xs ${mutedTextClass}`}>
+              {areSettingsMinimized ? "Show" : "Hide"}
+            </span>
+          </button>
+
+          {!areSettingsMinimized && (
+            <div className="space-y-3 pt-3">
+              {mode === "ayah" && (
+                <ToggleRow
+                  isDarkMode={isDarkMode}
+                  label="Show full ayah"
+                  description="Default: show only the first half"
+                  value={showFullAyah}
+                  onChange={setShowFullAyah}
+                />
+              )}
               <ToggleRow
                 isDarkMode={isDarkMode}
-                label="Show full ayah"
-                description="Default: show only the first half"
-                value={showFullAyah}
-                onChange={setShowFullAyah}
+                label="Show reference info"
+                description="Show surah name and ayah number"
+                value={showReference}
+                onChange={setShowReference}
               />
-            )}
-            <ToggleRow
-              isDarkMode={isDarkMode}
-              label="Show reference info"
-              description="Show surah name and ayah number"
-              value={showReference}
-              onChange={setShowReference}
-            />
-          </div>
+            </div>
+          )}
         </section>
 
         {/* Heat map */}
