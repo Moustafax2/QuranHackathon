@@ -84,7 +84,12 @@ export function getQfUserApiBaseUrl(): string {
 }
 
 export function getQfRequestedScopes(): string {
-  return ["openid", "offline_access", "profile", "email", "bookmark", "user"].join(" ");
+  const override = process.env.QF_USER_SCOPES?.trim();
+  if (override) {
+    return override;
+  }
+
+  return ["openid", "offline_access", "bookmark", "user"].join(" ");
 }
 
 export function getQfSessionSecret(): string {
