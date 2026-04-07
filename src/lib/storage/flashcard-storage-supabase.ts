@@ -9,8 +9,84 @@ import type {
   WordStatus,
   Rating,
   FSRSState,
+  FSRSParameters,
+  SM2Card,
 } from "@/lib/types/flashcard";
-import { DEFAULT_PREFERENCES } from "@/lib/types/flashcard";
+import { DEFAULT_PREFERENCES, DEFAULT_FSRS_PARAMETERS } from "@/lib/types/flashcard";
+
+// ──────────────────────────────────────────────────────────────────
+// localStorage keys for client-side-only preferences
+// ──────────────────────────────────────────────────────────────────
+
+const FSRS_PARAMS_KEY    = "qalamspace_fsrs_params";
+const SM2_STATES_KEY     = "qalamspace_sm2_states";
+const ALGORITHM_KEY      = "qalamspace_algorithm";
+
+// ── FSRS parameters ──
+
+export function getFSRSParameters(): FSRSParameters {
+  if (typeof window === "undefined") return DEFAULT_FSRS_PARAMETERS;
+  try {
+    const json = localStorage.getItem(FSRS_PARAMS_KEY);
+    if (!json) return DEFAULT_FSRS_PARAMETERS;
+    return { ...DEFAULT_FSRS_PARAMETERS, ...JSON.parse(json) };
+  } catch {
+    return DEFAULT_FSRS_PARAMETERS;
+  }
+}
+
+export function saveFSRSParameters(params: FSRSParameters): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(FSRS_PARAMS_KEY, JSON.stringify(params));
+}
+
+// ── Algorithm preference ──
+
+export function getAlgorithmPreference(): "fsrs" | "sm2" {
+  if (typeof window === "undefined") return "fsrs";
+  return (localStorage.getItem(ALGORITHM_KEY) as "fsrs" | "sm2") ?? "fsrs";
+}
+
+export function saveAlgorithmPreference(algo: "fsrs" | "sm2"): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ALGORITHM_KEY, algo);
+}
+
+// ── SM-2 card states (keyed by card id) ──
+
+export function getAllSM2States(): Record<string, SM2Card> {
+  if (typeof window === "undefined") return {};
+  try {
+    const json = localStorage.getItem(SM2_STATES_KEY);
+    if (!json) return {};
+    const raw = JSON.parse(json) as Record<string, SM2Card & { due: string; last_review?: string }>;
+    // Hydrate Date fields
+    const result: Record<string, SM2Card> = {};
+    for (const [id, state] of Object.entries(raw)) {
+      result[id] = {
+        ...state,
+        due: new Date(state.due),
+        last_review: state.last_review ? new Date(state.last_review) : undefined,
+      };
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+export function saveSM2State(cardId: string, state: SM2Card): void {
+  if (typeof window === "undefined") return;
+  const all = getAllSM2States();
+  all[cardId] = state;
+  localStorage.setItem(SM2_STATES_KEY, JSON.stringify(all));
+}
+
+export function clearAllSM2States(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(SM2_STATES_KEY);
+}
+
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import * as localFlashcardStorage from "@/lib/storage/flashcard-storage";
@@ -65,6 +141,8 @@ function convertFSRSCardFromDB(fsrsState: UserFlashcardRow["fsrs_state"]): FSRSC
     ...fsrsState,
     due: new Date(fsrsState.due),
     last_review: fsrsState.last_review ? new Date(fsrsState.last_review) : undefined,
+    // learning_steps was added in ts-fsrs v5; default to 0 for cards created before this field existed
+    learning_steps: ((fsrsState as unknown) as FSRSCard).learning_steps ?? 0,
   };
 }
 
@@ -445,6 +523,8 @@ export async function getPreferences(): Promise<UserPreferences> {
     daily_review_cards_limit: prefs.daily_review_cards_limit,
     session_size: prefs.session_size,
     normalization_level: prefs.normalization_level,
+    // algorithm is stored in localStorage, not Supabase
+    algorithm: getAlgorithmPreference(),
   };
 }
 

@@ -1,10 +1,11 @@
 import { FSRS, Rating as FSRSRating, Card, State } from "ts-fsrs";
-import type { FSRSCard, UserFlashcard, Rating } from "@/lib/types/flashcard";
+import type { FSRSCard, UserFlashcard, Rating, FSRSParameters } from "@/lib/types/flashcard";
 import { FSRSState } from "@/lib/types/flashcard";
 
 const fsrs = new FSRS({
   request_retention: 0.9,
   maximum_interval: 365,
+  enable_fuzz: true,
   w: [
     0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722,
     0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425,
@@ -14,60 +15,46 @@ const fsrs = new FSRS({
 
 function mapRatingToGrade(rating: Rating): FSRSRating {
   switch (rating) {
-    case 1:
-      return FSRSRating.Again;
-    case 2:
-      return FSRSRating.Hard;
-    case 3:
-      return FSRSRating.Good;
-    case 4:
-      return FSRSRating.Easy;
-    default:
-      return FSRSRating.Good;
+    case 1: return FSRSRating.Again;
+    case 2: return FSRSRating.Hard;
+    case 3: return FSRSRating.Good;
+    case 4: return FSRSRating.Easy;
+    default: return FSRSRating.Good;
   }
 }
 
 function mapStateToFSRSState(state: State): FSRSState {
   switch (state) {
-    case State.New:
-      return FSRSState.New;
-    case State.Learning:
-      return FSRSState.Learning;
-    case State.Review:
-      return FSRSState.Review;
-    case State.Relearning:
-      return FSRSState.Relearning;
-    default:
-      return FSRSState.New;
+    case State.New:        return FSRSState.New;
+    case State.Learning:   return FSRSState.Learning;
+    case State.Review:     return FSRSState.Review;
+    case State.Relearning: return FSRSState.Relearning;
+    default:               return FSRSState.New;
   }
 }
 
 function mapFSRSStateToState(state: FSRSState): State {
   switch (state) {
-    case FSRSState.New:
-      return State.New;
-    case FSRSState.Learning:
-      return State.Learning;
-    case FSRSState.Review:
-      return State.Review;
-    case FSRSState.Relearning:
-      return State.Relearning;
-    default:
-      return State.New;
+    case FSRSState.New:        return State.New;
+    case FSRSState.Learning:   return State.Learning;
+    case FSRSState.Review:     return State.Review;
+    case FSRSState.Relearning: return State.Relearning;
+    default:                   return State.New;
   }
 }
 
 function fsrsCardToCard(fsrsCard: FSRSCard): Card {
   return {
-    due: fsrsCard.due,
+    due: new Date(fsrsCard.due),
     stability: fsrsCard.stability,
     difficulty: fsrsCard.difficulty,
     elapsed_days: fsrsCard.elapsed_days,
     scheduled_days: fsrsCard.scheduled_days,
+    learning_steps: fsrsCard.learning_steps ?? 0,
     reps: fsrsCard.reps,
     lapses: fsrsCard.lapses,
     state: mapFSRSStateToState(fsrsCard.state),
-    last_review: fsrsCard.last_review,
+    last_review: fsrsCard.last_review ? new Date(fsrsCard.last_review) : undefined,
   } as Card;
 }
 
@@ -78,6 +65,7 @@ function cardToFSRSCard(card: Card): FSRSCard {
     difficulty: card.difficulty,
     elapsed_days: card.elapsed_days,
     scheduled_days: card.scheduled_days,
+    learning_steps: card.learning_steps ?? 0,
     reps: card.reps,
     lapses: card.lapses,
     state: mapStateToFSRSState(card.state),
@@ -92,6 +80,7 @@ export function createNewCard(): FSRSCard {
     difficulty: 0,
     elapsed_days: 0,
     scheduled_days: 0,
+    learning_steps: 0,
     reps: 0,
     lapses: 0,
     state: FSRSState.New,
@@ -99,38 +88,54 @@ export function createNewCard(): FSRSCard {
   };
 }
 
+function doScheduleReview(
+  scheduler: FSRS,
+  card: FSRSCard,
+  rating: Rating,
+  reviewDate: Date
+): { card: FSRSCard } {
+  const tsCard = fsrsCardToCard(card);
+  const grade = mapRatingToGrade(rating);
+  const schedulingInfo = scheduler.repeat(tsCard, reviewDate);
+
+  let result;
+  if (grade === FSRSRating.Again)     result = schedulingInfo[FSRSRating.Again];
+  else if (grade === FSRSRating.Hard) result = schedulingInfo[FSRSRating.Hard];
+  else if (grade === FSRSRating.Good) result = schedulingInfo[FSRSRating.Good];
+  else                                result = schedulingInfo[FSRSRating.Easy];
+
+  return { card: cardToFSRSCard(result.card) };
+}
+
 export function scheduleReview(
   card: FSRSCard,
   rating: Rating,
   reviewDate: Date = new Date()
 ): { card: FSRSCard } {
-  const fsrsCard = fsrsCardToCard(card);
-  const grade = mapRatingToGrade(rating);
-  const schedulingInfo = fsrs.repeat(fsrsCard, reviewDate);
-  
-  let result;
-  if (grade === FSRSRating.Again) result = schedulingInfo[FSRSRating.Again];
-  else if (grade === FSRSRating.Hard) result = schedulingInfo[FSRSRating.Hard];
-  else if (grade === FSRSRating.Good) result = schedulingInfo[FSRSRating.Good];
-  else result = schedulingInfo[FSRSRating.Easy];
-  
-  return {
-    card: cardToFSRSCard(result.card),
-  };
+  return doScheduleReview(fsrs, card, rating, reviewDate);
+}
+
+export function scheduleReviewWithParams(
+  card: FSRSCard,
+  rating: Rating,
+  params: FSRSParameters,
+  reviewDate: Date = new Date()
+): { card: FSRSCard } {
+  const scheduler = new FSRS({
+    request_retention: params.request_retention,
+    maximum_interval: params.maximum_interval,
+    enable_fuzz: params.enable_fuzz,
+    w: params.w,
+  });
+  return doScheduleReview(scheduler, card, rating, reviewDate);
 }
 
 export function getDueCards(cards: UserFlashcard[]): UserFlashcard[] {
   const now = new Date();
-  return cards.filter((card) => {
-    const dueDate = new Date(card.fsrs_state.due);
-    return dueDate <= now;
-  });
+  return cards.filter((card) => new Date(card.fsrs_state.due) <= now);
 }
 
-export function getNewCards(
-  cards: UserFlashcard[],
-  limit: number
-): UserFlashcard[] {
+export function getNewCards(cards: UserFlashcard[], limit: number): UserFlashcard[] {
   return cards
     .filter((card) => card.fsrs_state.state === FSRSState.New)
     .slice(0, limit);
@@ -168,16 +173,16 @@ export function getCardsForSession(
     (card) => card.fsrs_state.state !== FSRSState.New
   );
 
-  const selectedReviewCards = reviewCards.slice(0, reviewLimit);
-  const selectedNewCards = newCards.slice(0, newLimit);
-  
-  return [...selectedReviewCards, ...selectedNewCards];
+  return [
+    ...reviewCards.slice(0, reviewLimit),
+    ...newCards.slice(0, newLimit),
+  ];
 }
 
 export function calculateRetention(card: FSRSCard, now: Date = new Date()): number {
-  const fsrsCard = fsrsCardToCard(card);
-  const retrievability = fsrs.get_retrievability(fsrsCard, now);
-  return typeof retrievability === 'string' ? parseFloat(retrievability) : retrievability;
+  const tsCard = fsrsCardToCard(card);
+  // Explicitly pass false to get a number back (not formatted string)
+  return fsrs.get_retrievability(tsCard, now, false);
 }
 
 export function getNextReviewIntervals(card: FSRSCard): {
@@ -186,13 +191,13 @@ export function getNextReviewIntervals(card: FSRSCard): {
   good: number;
   easy: number;
 } {
-  const fsrsCard = fsrsCardToCard(card);
-  const schedulingInfo = fsrs.repeat(fsrsCard, new Date());
-  
+  const tsCard = fsrsCardToCard(card);
+  const schedulingInfo = fsrs.repeat(tsCard, new Date());
+
   return {
     again: schedulingInfo[FSRSRating.Again].card.scheduled_days,
-    hard: schedulingInfo[FSRSRating.Hard].card.scheduled_days,
-    good: schedulingInfo[FSRSRating.Good].card.scheduled_days,
-    easy: schedulingInfo[FSRSRating.Easy].card.scheduled_days,
+    hard:  schedulingInfo[FSRSRating.Hard].card.scheduled_days,
+    good:  schedulingInfo[FSRSRating.Good].card.scheduled_days,
+    easy:  schedulingInfo[FSRSRating.Easy].card.scheduled_days,
   };
 }

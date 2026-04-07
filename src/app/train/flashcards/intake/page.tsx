@@ -26,7 +26,16 @@ function IntakeContent() {
     async function loadWords() {
       const allWords = await getSurahWords(surahNumber);
       const newWords = await filterNewWords(allWords);
-      setWords(newWords);
+
+      // Sort by frequency descending so top words appear first visually
+      const sorted = [...newWords].sort((a, b) => (b.frequency ?? 0) - (a.frequency ?? 0));
+      setWords(sorted);
+
+      // Auto-select top 20 as "learn"
+      const initialActions = new Map<string, WordAction>();
+      sorted.slice(0, 20).forEach((word) => initialActions.set(word.id, "learn"));
+      setWordActions(initialActions);
+
       setLoading(false);
     }
     loadWords();

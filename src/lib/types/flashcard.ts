@@ -57,22 +57,44 @@ export interface LexicalEntry {
   frequency?: number;
 }
 
+// ============================================================
+// FSRS Card State
+// ============================================================
+
 export interface FSRSCard {
   due: Date;
   stability: number;
   difficulty: number;
   elapsed_days: number;
   scheduled_days: number;
+  learning_steps: number;  // required by ts-fsrs v5+
   reps: number;
   lapses: number;
   state: FSRSState;
   last_review?: Date;
 }
 
+// ============================================================
+// SM-2 Card State (SuperMemo 2 legacy algorithm)
+// ============================================================
+
+export interface SM2Card {
+  interval: number;       // days until next review
+  repetitions: number;    // number of successful reviews in a row
+  easiness: number;       // easiness factor (EF), default 2.5
+  due: Date;              // next review date
+  last_review?: Date;
+}
+
+// ============================================================
+// User Flashcard
+// ============================================================
+
 export interface UserFlashcard {
   id: string;
   word_id: string;
   fsrs_state: FSRSCard;
+  sm2_state?: SM2Card;    // populated from localStorage when SM-2 mode is active
   created_at: Date;
   status: WordStatus;
 }
@@ -109,6 +131,7 @@ export interface UserPreferences {
   daily_review_cards_limit: number;
   session_size: number;
   normalization_level: "strict" | "moderate" | "broad";
+  algorithm: "fsrs" | "sm2";
 }
 
 export interface FlashcardSession {
@@ -118,6 +141,7 @@ export interface FlashcardSession {
   start_time: Date;
   end_time?: Date;
   stats: SessionStats;
+  algorithm: "fsrs" | "sm2";
 }
 
 export interface SessionStats {
@@ -132,6 +156,24 @@ export interface SessionStats {
   total_time_ms: number;
 }
 
+export interface FSRSParameters {
+  request_retention: number;
+  maximum_interval: number;
+  enable_fuzz: boolean;
+  w: number[];
+}
+
+export const DEFAULT_FSRS_PARAMETERS: FSRSParameters = {
+  request_retention: 0.9,
+  maximum_interval: 365,
+  enable_fuzz: true,
+  w: [
+    0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722,
+    0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425,
+    0.0912, 0.0658, 0.1542,
+  ],
+};
+
 export const DEFAULT_PREFERENCES: UserPreferences = {
   show_arabic_explanation: false,
   show_root: true,
@@ -144,4 +186,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   daily_review_cards_limit: 100,
   session_size: 20,
   normalization_level: "moderate",
+  algorithm: "fsrs",
 };

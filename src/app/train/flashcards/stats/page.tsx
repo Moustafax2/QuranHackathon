@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFlashcards, getReviewLog } from "@/lib/storage/flashcard-storage-supabase";
+import { getFlashcards, getReviewLog, getPreferences } from "@/lib/storage/flashcard-storage-supabase";
 import { FSRSState } from "@/lib/types/flashcard";
-import type { UserFlashcard, ReviewLogEntry } from "@/lib/types/flashcard";
+import type { UserFlashcard, ReviewLogEntry, UserPreferences } from "@/lib/types/flashcard";
 
 export default function StatsPage() {
   const [cards, setCards] = useState<UserFlashcard[]>([]);
   const [reviews, setReviews] = useState<ReviewLogEntry[]>([]);
+  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
-      const [flashcards, reviewLog] = await Promise.all([
+      const [flashcards, reviewLog, preferences] = await Promise.all([
         getFlashcards(),
         getReviewLog(),
+        getPreferences(),
       ]);
       setCards(flashcards);
       setReviews(reviewLog);
+      setPrefs(preferences);
       setLoading(false);
     }
     loadData();
@@ -35,7 +38,6 @@ export default function StatsPage() {
   }
 
   const totalWords = cards.length;
-  const newCards = cards.filter((c) => c.fsrs_state.state === FSRSState.New).length;
   const learningCards = cards.filter(
     (c) =>
       c.fsrs_state.state === FSRSState.Learning ||
@@ -62,6 +64,42 @@ export default function StatsPage() {
   const goodReviews = reviews.filter((r) => r.rating >= 3).length;
   const retentionRate =
     totalReviews > 0 ? (goodReviews / totalReviews) * 100 : 0;
+
+  // ── Projections ──────────────────────────────────────────────
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // 7-day forecast: how many cards are due each day
+  const forecastDays = 7;
+  const forecast = Array.from({ length: forecastDays }, (_, i) => {
+    const dayStart = new Date(today);
+    dayStart.setDate(today.getDate() + i);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayStart.getDate() + 1);
+    const count = cards.filter((c) => {
+      const due = new Date(c.fsrs_state.due);
+      return due >= dayStart && due < dayEnd;
+    }).length;
+    return { label: i === 0 ? "Today" : i === 1 ? "Tomorrow" : `+${i}d`, count };
+  });
+  const forecastMax = Math.max(...forecast.map((d) => d.count), 1);
+
+  // Reviews due in the next 30 days
+  const in30Days = new Date(today);
+  in30Days.setDate(today.getDate() + 30);
+  const dueIn30 = cards.filter((c) => new Date(c.fsrs_state.due) < in30Days).length;
+
+  // Days to introduce all remaining new cards
+  const dailyNewLimit = prefs?.daily_new_cards_limit ?? 20;
+  const newCards = cards.filter((c) => c.fsrs_state.state === FSRSState.New).length;
+  const daysToLearnAll = newCards > 0 ? Math.ceil(newCards / dailyNewLimit) : 0;
+
+  // Average interval of cards currently in Review state
+  const reviewCards = cards.filter((c) => c.fsrs_state.state === FSRSState.Review);
+  const avgInterval =
+    reviewCards.length > 0
+      ? Math.round(reviewCards.reduce((s, c) => s + c.fsrs_state.scheduled_days, 0) / reviewCards.length)
+      : 0;
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -184,6 +222,49 @@ export default function StatsPage() {
                 <span className="text-emerald-400">
                   {retentionRate.toFixed(1)}%
                 </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+          <h2 className="mb-1 text-lg font-semibold text-white">Forecast</h2>
+          <p className="mb-5 text-xs text-gray-500">Projected reviews based on current due dates</p>
+
+          <div className="mb-6 flex items-end gap-2">
+            {forecast.map((day) => (
+              <div key={day.label} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-xs font-medium text-gray-300">{day.count}</span>
+                <div className="w-full rounded-t-md bg-emerald-500/20 transition-all" style={{ height: `${Math.max((day.count / forecastMax) * 80, day.count > 0 ? 4 : 2)}px` }}>
+                  <div className="h-full w-full rounded-t-md bg-emerald-500" style={{ opacity: day.count > 0 ? 1 : 0.2 }} />
+                </div>
+                <span className="text-[10px] text-gray-500">{day.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-gray-800 bg-gray-950 p-4">
+              <div className="mb-1 text-xs text-gray-500">Due in 30 days</div>
+              <div className="text-2xl font-bold text-white">{dueIn30}</div>
+              <div className="mt-1 text-xs text-gray-600">cards to review</div>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-950 p-4">
+              <div className="mb-1 text-xs text-gray-500">Days to learn all new cards</div>
+              <div className="text-2xl font-bold text-white">
+                {daysToLearnAll > 0 ? daysToLearnAll : "—"}
+              </div>
+              <div className="mt-1 text-xs text-gray-600">
+                {daysToLearnAll > 0 ? `at ${dailyNewLimit}/day` : "no new cards"}
+              </div>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-950 p-4">
+              <div className="mb-1 text-xs text-gray-500">Avg review interval</div>
+              <div className="text-2xl font-bold text-white">
+                {avgInterval > 0 ? `${avgInterval}d` : "—"}
+              </div>
+              <div className="mt-1 text-xs text-gray-600">
+                {reviewCards.length > 0 ? `across ${reviewCards.length} review cards` : "no review cards yet"}
               </div>
             </div>
           </div>

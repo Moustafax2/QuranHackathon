@@ -6,12 +6,105 @@ import { getFlashcards, getReviewLog, migrateFromLocalStorage } from "@/lib/stor
 import { getDueCardsCount, getNewCardsCount } from "@/lib/flashcard/session-manager";
 import { addDemoCards } from "@/lib/flashcard/demo-helper";
 
+function SRExplainerModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-gray-900 p-8 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-2 text-2xl font-bold text-white">What is Spaced Repetition?</h2>
+        <p className="mb-5 text-sm text-gray-500">The science behind how this app helps you memorize Quranic vocabulary</p>
+
+        <div className="space-y-4 text-sm text-gray-300">
+          <p>
+            <strong className="text-white">Spaced repetition</strong> is a learning technique that shows you
+            flashcards at increasing intervals over time — right before you would forget them. By reviewing at the{" "}
+            <em>optimal moment</em>, you spend less time studying while retaining more.
+          </p>
+          <p>
+            The key insight is the <strong className="text-white">forgetting curve</strong>: memory decays
+            exponentially after learning. If you review just before forgetting, your memory is strengthened and
+            the next interval can be longer. Over weeks and months, you build durable long-term memory with
+            minimal effort.
+          </p>
+
+          <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
+            <p className="mb-2 font-semibold text-white">How ratings work</p>
+            <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+              <div className="rounded-lg bg-red-500/10 p-3">
+                <div className="mb-1 font-bold text-red-400">Again</div>
+                <div className="text-gray-400">Complete forget — card is re-shown this session and scheduled soon</div>
+              </div>
+              <div className="rounded-lg bg-orange-500/10 p-3">
+                <div className="mb-1 font-bold text-orange-400">Hard</div>
+                <div className="text-gray-400">Recalled with difficulty — short interval, easiness decreases</div>
+              </div>
+              <div className="rounded-lg bg-emerald-500/10 p-3">
+                <div className="mb-1 font-bold text-emerald-400">Good</div>
+                <div className="text-gray-400">Correct recall — interval grows normally</div>
+              </div>
+              <div className="rounded-lg bg-blue-500/10 p-3">
+                <div className="mb-1 font-bold text-blue-400">Easy</div>
+                <div className="text-gray-400">Instant recall — interval grows quickly</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
+            <p className="mb-3 font-semibold text-white">Algorithms used</p>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="font-semibold text-emerald-400">FSRS</span>{" "}
+                <span className="text-gray-500">(default)</span> — Free Spaced Repetition Scheduler by Jarrett Ye
+                et al. (2022). A state-of-the-art algorithm based on the{" "}
+                <em>DSR model</em> (Difficulty, Stability, Retrievability). Significantly outperforms SM-2 in
+                predicting the optimal review time.{" "}
+                <a
+                  href="https://github.com/open-spaced-repetition/fsrs4anki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 underline"
+                >
+                  GitHub
+                </a>
+              </div>
+              <div>
+                <span className="font-semibold text-amber-400">SM-2</span>{" "}
+                <span className="text-gray-500">(legacy)</span> — SuperMemo 2 by Piotr Wozniak (1987). The
+                original spaced repetition algorithm, popularized by Anki. Uses a fixed easiness factor per
+                card to determine intervals. Simpler but less accurate than FSRS.{" "}
+                <a
+                  href="https://github.com/ankitects/anki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-400 underline"
+                >
+                  Anki (GitHub)
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition-all hover:bg-emerald-500"
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FlashcardsHubPage() {
   const [dueCount, setDueCount] = useState(0);
   const [newCount, setNewCount] = useState(0);
   const [totalCards, setTotalCards] = useState(0);
   const [loading, setLoading] = useState(true);
   const [addingDemo, setAddingDemo] = useState(false);
+  const [showSRExplainer, setShowSRExplainer] = useState(false);
 
   useEffect(() => {
     async function initializeAndLoad() {
@@ -60,14 +153,22 @@ export default function FlashcardsHubPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 px-4 py-12">
+      {showSRExplainer && <SRExplainerModal onClose={() => setShowSRExplainer(false)} />}
       <div className="mx-auto max-w-4xl">
         <div className="mb-12 text-center">
           <h1 className="mb-3 text-4xl font-bold text-white">
             Ready to learn?
           </h1>
-          <p className="text-gray-400">
+          <p className="mb-4 text-gray-400">
             Master Quranic vocabulary with spaced repetition
           </p>
+          <button
+            onClick={() => setShowSRExplainer(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800/60 px-4 py-1.5 text-xs text-gray-400 transition-all hover:border-emerald-500/50 hover:text-emerald-400"
+          >
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-bold">i</span>
+            What is spaced repetition?
+          </button>
         </div>
 
         {hasCards ? (
