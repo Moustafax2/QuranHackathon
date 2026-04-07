@@ -15,8 +15,19 @@ function buildLoginRedirect(message: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const oauthError = request.nextUrl.searchParams.get("error");
+  const oauthErrorDescription =
+    request.nextUrl.searchParams.get("error_description") ||
+    request.nextUrl.searchParams.get("error_details");
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
+
+  if (oauthError) {
+    const message = oauthErrorDescription
+      ? `${oauthError}: ${oauthErrorDescription}`
+      : oauthError;
+    return NextResponse.redirect(buildLoginRedirect(message));
+  }
 
   if (!code || !state) {
     return NextResponse.redirect(buildLoginRedirect("Missing authorization code or state."));
