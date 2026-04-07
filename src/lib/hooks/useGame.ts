@@ -52,14 +52,14 @@ export function useGame(
     async (roundId: string, answerVerseKey: string) => {
       if (!gameId || !playerId) return;
 
-      const supabase = createClient();
-      await supabase.functions.invoke("submit-answer", {
-        body: {
+      await fetch("/api/multiplayer/submit-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           game_id: gameId,
           round_id: roundId,
-          player_id: playerId,
           answer_verse_key: answerVerseKey,
-        },
+        }),
       });
     },
     [gameId, playerId]
@@ -69,14 +69,14 @@ export function useGame(
     async (roundId: string) => {
       if (!gameId || !playerId) return;
 
-      const supabase = createClient();
-      await supabase.functions.invoke("submit-answer", {
-        body: {
+      await fetch("/api/multiplayer/submit-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           game_id: gameId,
           round_id: roundId,
-          player_id: playerId,
           is_buzzer: true,
-        },
+        }),
       });
     },
     [gameId, playerId]

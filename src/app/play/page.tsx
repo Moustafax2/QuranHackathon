@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { createClient } from "@/lib/supabase/client";
 
 const gameModes = [
   {
@@ -67,18 +66,15 @@ export default function PlayPage() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "create-room",
-        {
-          body: {
-            player_id: player.id,
-            game_mode: selectedMode,
-          },
-        }
-      );
-
-      if (fnError) throw new Error(fnError.message);
+      const response = await fetch("/api/multiplayer/create-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          game_mode: selectedMode,
+        }),
+      });
+      const data = (await response.json()) as { code?: string; error?: string };
+      if (!response.ok || !data.code) throw new Error(data.error ?? "Failed to create room.");
       router.push(`/play/${data.code}?mode=${selectedMode}`);
     } catch (err) {
       setError((err as Error).message);
@@ -93,18 +89,15 @@ export default function PlayPage() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "join-room",
-        {
-          body: {
-            player_id: player.id,
-            room_code: roomCode,
-          },
-        }
-      );
-
-      if (fnError) throw new Error(fnError.message);
+      const response = await fetch("/api/multiplayer/join-room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_code: roomCode,
+        }),
+      });
+      const data = (await response.json()) as { code?: string; game_mode?: string; error?: string };
+      if (!response.ok || !data.code) throw new Error(data.error ?? "Failed to join room.");
       router.push(`/play/${data.code}?mode=${data.game_mode}`);
     } catch (err) {
       setError((err as Error).message);
@@ -171,6 +164,12 @@ export default function PlayPage() {
         {!authLoading && !player && selectedMode && (
           <div className="mt-8 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
             <p className="text-gray-400">Sign in to create or join a room</p>
+            <a
+              href="/login?next=/play"
+              className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            >
+              Continue with Quran.com
+            </a>
           </div>
         )}
 

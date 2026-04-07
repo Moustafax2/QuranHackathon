@@ -5,28 +5,34 @@ export interface Database {
         Row: {
           id: string;
           quran_foundation_uid: string | null;
+          qf_email: string | null;
           display_name: string;
           avatar_url: string | null;
           total_points: number;
           total_wins: number;
+          last_login_at: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           quran_foundation_uid?: string | null;
+          qf_email?: string | null;
           display_name: string;
           avatar_url?: string | null;
           total_points?: number;
           total_wins?: number;
+          last_login_at?: string;
           created_at?: string;
         };
         Update: {
           id?: string;
           quran_foundation_uid?: string | null;
+          qf_email?: string | null;
           display_name?: string;
           avatar_url?: string | null;
           total_points?: number;
           total_wins?: number;
+          last_login_at?: string;
           created_at?: string;
         };
       };

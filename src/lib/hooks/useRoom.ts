@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -69,7 +69,7 @@ export function useRoom(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomCode, currentPlayer?.id, currentPlayer?.display_name, hostId]);
+  }, [roomCode, currentPlayer, hostId]);
 
   return { players, isConnected, error };
 }

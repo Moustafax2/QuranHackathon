@@ -47,8 +47,6 @@ function shuffle<T>(arr: T[]): T[] {
 
 // Short surahs (Juz 30) are easier — weight them higher for casual play
 const SHORT_SURAHS = Array.from({ length: 37 }, (_, i) => 78 + i); // 78-114
-const ALL_SURAHS = Array.from({ length: 114 }, (_, i) => i + 1);
-
 /**
  * Generate questions for a game.
  *
