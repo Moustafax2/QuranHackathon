@@ -2221,7 +2221,7 @@
       "lemma": "عَٰلَمِين",
       "forms": {
         "singular": "عَٰلَمِين",
-        "plural": "عَٰلَمِينَ"
+        "plural": "عَٰلَمُونَ"
       },
       "translation": "(of) the worlds",
       "examples": [
@@ -3820,7 +3820,10 @@
         }
       ],
       "source": "corpus",
-      "frequency": 92
+      "frequency": 92,
+      "alternate_meanings": [
+        "Recompense / judgment: يَوْمُ الدِّين = \"the Day of Recompense / Judgment\" — not the religion itself but its outcome"
+      ]
     },
     {
       "id": "p_إِيَّ_001",
@@ -9121,7 +9124,7 @@
       "lemma": "ضَآلّ",
       "forms": {
         "singular": "ضَآلّ",
-        "plural": "ضَّآلِّينَ"
+        "plural": "ضَّآلُّونَ"
       },
       "translation": "astray",
       "examples": [
@@ -11615,7 +11618,7 @@
       "lemma": "مُتَّق",
       "forms": {
         "singular": "مُتَّق",
-        "plural": "مُتَّقِينَ"
+        "plural": "مُتَّقُونَ"
       },
       "translation": "the righteous",
       "examples": [
@@ -13559,7 +13562,10 @@
         }
       ],
       "source": "corpus",
-      "frequency": 83
+      "frequency": 83,
+      "alternate_meanings": [
+        "Blessings / mercy / praise — when Allah or the angels perform صلاة it means sending blessings, not performing ritual prayer"
+      ]
     },
     {
       "id": "p_مِن_001",
@@ -15864,7 +15870,12 @@
         }
       ],
       "source": "corpus",
-      "frequency": 705
+      "frequency": 705,
+      "alternate_meanings": [
+        "Relative pronoun: \"that which\", \"what\" (ما الموصولة) — refers to a thing",
+        "Interrogative: \"what?\" (ما الاستفهامية)",
+        "Masdariyya: nominalises the following verb (ما المصدرية)"
+      ]
     },
     {
       "id": "p_مَا_001",
@@ -16449,7 +16460,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 162
+      "frequency": 162,
+      "alternate_meanings": [
+        "Negation: \"not\", \"never\" (ما النافية) — contradicts the relative/interrogative uses",
+        "Kaffa: silences the following word from governing (ما الكافة)"
+      ]
     },
     {
       "id": "v_رزق_رَز",
@@ -19224,7 +19239,7 @@
       "lemma": "آخِر",
       "forms": {
         "singular": "آخِر",
-        "plural": "ءَاخِرِينَ"
+        "plural": "ءَاخِرُونَ"
       },
       "translation": "the Hereafter",
       "examples": [
@@ -28130,7 +28145,7 @@
       "lemma": "مُؤْمِن",
       "forms": {
         "singular": "مُؤْمِن",
-        "plural": "مُؤْمِنِينَ"
+        "plural": "مُؤْمِنُونَ"
       },
       "translation": "believers",
       "examples": [
@@ -29385,7 +29400,12 @@
         }
       ],
       "source": "corpus",
-      "frequency": 295
+      "frequency": 295,
+      "alternate_meanings": [
+        "Self / same person (reflexive): نَفْسُهُ = \"he himself\"",
+        "A single individual / person",
+        "Soul / spirit (the inner self that survives death)"
+      ]
     },
     {
       "id": "v_شعر_شَع",
@@ -36231,7 +36251,7 @@
       "lemma": "مُّهْتَد",
       "forms": {
         "singular": "مُّهْتَد",
-        "plural": "مُهْتَدِينَ"
+        "plural": "مُهْتَدُونَ"
       },
       "translation": "guided-ones",
       "examples": [
@@ -41280,7 +41300,7 @@
       "lemma": "كَٰفِر",
       "forms": {
         "singular": "كَٰفِر",
-        "plural": "كَٰفِرِينَ"
+        "plural": "كَٰفِرُونَ"
       },
       "translation": "the disbelievers",
       "examples": [
@@ -50084,7 +50104,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 114
+      "frequency": 114,
+      "alternate_meanings": [
+        "Conditional \"if\" (إِن الشرطية) — implies doubt / contingency",
+        "Negation \"not\" (إِن النافية) — direct opposite of affirmation"
+      ]
     },
     {
       "id": "v_نزل_نَز",
@@ -52833,7 +52857,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 56
+      "frequency": 56,
+      "alternate_meanings": [
+        "Witness / testifier (alive, present, observing) — شَاهِد",
+        "Martyr (one who died in the cause of Allah) — opposite state: death vs. living testimony"
+      ]
     },
     {
       "id": "n_دُون_دون",
@@ -53344,7 +53372,7 @@
       "lemma": "صَادِق",
       "forms": {
         "singular": "صَادِق",
-        "plural": "صَٰدِقِينَ"
+        "plural": "صَٰدِقُونَ"
       },
       "translation": "truthful",
       "examples": [
@@ -60472,7 +60500,7 @@
       "lemma": "فَاسِق",
       "forms": {
         "singular": "فَاسِق",
-        "plural": "فَٰسِقِينَ"
+        "plural": "فَٰسِقُونَ"
       },
       "translation": "the defiantly disobedient",
       "examples": [
@@ -64380,7 +64408,7 @@
       "lemma": "سَبْع",
       "forms": {
         "singular": "سَبْع",
-        "plural": "سَبْعِينَ"
+        "plural": "سَبْعُونَ"
       },
       "translation": "seven",
       "examples": [
@@ -69433,7 +69461,7 @@
       "lemma": "ظَالِم",
       "forms": {
         "singular": "ظَالِم",
-        "plural": "ظَّٰلِمِينَ"
+        "plural": "ظَّٰلِمُونَ"
       },
       "translation": "the wrongdoers",
       "examples": [
@@ -72537,7 +72565,7 @@
       "lemma": "تَوَّاب",
       "forms": {
         "singular": "تَوَّاب",
-        "plural": "تَّوَّٰبِينَ"
+        "plural": "تَّوَّٰبُونَ"
       },
       "translation": "the Oft-returning",
       "examples": [
@@ -75715,7 +75743,7 @@
       "lemma": "مُصَدِّق",
       "forms": {
         "singular": "مُصَدِّق",
-        "plural": "مُصَدِّقِينَ"
+        "plural": "مُصَدِّقُونَ"
       },
       "translation": "confirming",
       "examples": [
@@ -75811,7 +75839,7 @@
       "lemma": "أَوَّل",
       "forms": {
         "singular": "أَوَّل",
-        "plural": "أَوَّلِينَ"
+        "plural": "أَوَّلُونَ"
       },
       "translation": "(of) the former (people)",
       "examples": [
@@ -77776,7 +77804,7 @@
       "lemma": "رَاكِع",
       "forms": {
         "singular": "رَاكِع",
-        "plural": "رَّٰكِعِينَ"
+        "plural": "رَّٰكِعُونَ"
       },
       "translation": "those who bow down",
       "examples": [
@@ -78864,7 +78892,7 @@
       "lemma": "خَاشِع",
       "forms": {
         "singular": "خَاشِع",
-        "plural": "خَٰشِعِينَ"
+        "plural": "خَٰشِعُونَ"
       },
       "translation": "humbled",
       "examples": [
@@ -82017,7 +82045,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 6
+      "frequency": 6,
+      "alternate_meanings": [
+        "Grace / blessing / divine favour (بَلَاءٌ حَسَن = a fine boon) — positive",
+        "Affliction / hardship / calamity — negative; same word, opposite valence"
+      ]
     },
     {
       "id": "v_فرق_فَر",
@@ -83314,7 +83346,7 @@
       "lemma": "أَرْبَع",
       "forms": {
         "singular": "أَرْبَع",
-        "plural": "أَرْبَعِينَ"
+        "plural": "أَرْبَعُونَ"
       },
       "translation": "four",
       "examples": [
@@ -90319,7 +90351,7 @@
       "lemma": "مُحْسِن",
       "forms": {
         "singular": "مُحْسِن",
-        "plural": "مُحْسِنِينَ"
+        "plural": "مُحْسِنُونَ"
       },
       "translation": "the good-doers",
       "examples": [
@@ -94450,7 +94482,7 @@
       "lemma": "صَٰلِح",
       "forms": {
         "singular": "صَٰلِح",
-        "plural": "صَّٰلِحِينَ"
+        "plural": "صَّٰلِحُونَ"
       },
       "translation": "the righteous",
       "examples": [
@@ -96714,7 +96746,7 @@
       "lemma": "خَاسِئ",
       "forms": {
         "singular": "خَاسِئ",
-        "plural": "خَٰسِـِٔينَ"
+        "plural": "خَٰسِـُٔونَ"
       },
       "translation": "despised",
       "examples": [
@@ -97758,7 +97790,7 @@
       "lemma": "جَاهِل",
       "forms": {
         "singular": "جَاهِل",
-        "plural": "جَٰهِلِينَ"
+        "plural": "جَٰهِلُونَ"
       },
       "translation": "the ignorant",
       "examples": [
@@ -98487,7 +98519,7 @@
       "lemma": "نَٰظِر",
       "forms": {
         "singular": "نَٰظِر",
-        "plural": "نَّٰظِرِينَ"
+        "plural": "نَّٰظِرُونَ"
       },
       "translation": "for the observers",
       "examples": [
@@ -113514,7 +113546,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 34
+      "frequency": 34,
+      "alternate_meanings": [
+        "Discord, strife, persecution, civil war (negative chaos caused by people)",
+        "Divine trial / test (positive purpose: Allah tests the believers)"
+      ]
     },
     {
       "id": "n_مَرْء_مرا",
@@ -113560,7 +113596,7 @@
       "lemma": "ضَآرّ",
       "forms": {
         "singular": "ضَآرّ",
-        "plural": "ضَآرِّينَ"
+        "plural": "ضَآرُّونَ"
       },
       "translation": "he (can) harm them",
       "examples": [
@@ -115122,7 +115158,7 @@
       "lemma": "مُشْرِك",
       "forms": {
         "singular": "مُشْرِك",
-        "plural": "مُشْرِكِينَ"
+        "plural": "مُشْرِكُونَ"
       },
       "translation": "the polytheists",
       "examples": [
@@ -119333,7 +119369,7 @@
       "lemma": "خَآئِف",
       "forms": {
         "singular": "خَآئِف",
-        "plural": "خَآئِفِينَ"
+        "plural": "خَآئِفُونَ"
       },
       "translation": "fearful",
       "examples": [
@@ -123169,7 +123205,7 @@
       "lemma": "طَآئِف",
       "forms": {
         "singular": "طَآئِف",
-        "plural": "طَّآئِفِينَ"
+        "plural": "طَّآئِفُونَ"
       },
       "translation": "a group",
       "examples": [
@@ -123305,7 +123341,7 @@
       "lemma": "عَاكِف",
       "forms": {
         "singular": "عَاكِف",
-        "plural": "عَٰكِفِينَ"
+        "plural": "عَٰكِفُونَ"
       },
       "translation": "devoted",
       "examples": [
@@ -123488,7 +123524,7 @@
       "lemma": "ءَامِن",
       "forms": {
         "singular": "ءَامِن",
-        "plural": "ءَامِنِينَ"
+        "plural": "ءَامِنُونَ"
       },
       "translation": "secure",
       "examples": [
@@ -129075,7 +129111,12 @@
         }
       ],
       "source": "corpus",
-      "frequency": 33
+      "frequency": 33,
+      "alternate_meanings": [
+        "Forbidden / prohibited — must not be approached because it is sinful or impure",
+        "Sacred / inviolable — must not be approached because it is too holy (e.g. المسجد الحرام, الشهر الحرام)",
+        "Same word, opposite motivation: one repels because of impurity, the other because of sanctity"
+      ]
     },
     {
       "id": "n_تَابِ_تبع",
@@ -129085,7 +129126,7 @@
       "lemma": "تَابِع",
       "forms": {
         "singular": "تَابِع",
-        "plural": "تَّٰبِعِينَ"
+        "plural": "تَّٰبِعُونَ"
       },
       "translation": "a follower",
       "examples": [
@@ -129116,7 +129157,7 @@
       "lemma": "مُمْتَر",
       "forms": {
         "singular": "مُمْتَر",
-        "plural": "مُمْتَرِينَ"
+        "plural": "مُمْتَرُونَ"
       },
       "translation": "the doubters",
       "examples": [
@@ -129771,7 +129812,7 @@
       "lemma": "صَابِر",
       "forms": {
         "singular": "صَابِر",
-        "plural": "صَّٰبِرِينَ"
+        "plural": "صَّٰبِرُونَ"
       },
       "translation": "the patient ones",
       "examples": [
@@ -131117,7 +131158,7 @@
       "lemma": "شَاكِر",
       "forms": {
         "singular": "شَاكِر",
-        "plural": "شَّٰكِرِينَ"
+        "plural": "شَّٰكِرُونَ"
       },
       "translation": "the thankful",
       "examples": [
@@ -131672,7 +131713,7 @@
       "lemma": "أَجْمَعِين",
       "forms": {
         "singular": "أَجْمَعِين",
-        "plural": "أَجْمَعِينَ"
+        "plural": "أَجْمَعُونَ"
       },
       "translation": "all",
       "examples": [
@@ -134298,7 +134339,7 @@
       "lemma": "خَارِج",
       "forms": {
         "singular": "خَارِج",
-        "plural": "خَٰرِجِينَ"
+        "plural": "خَٰرِجُونَ"
       },
       "translation": "will come out",
       "examples": [
@@ -136495,7 +136536,7 @@
       "lemma": "سَآئِل",
       "forms": {
         "singular": "سَآئِل",
-        "plural": "سَّآئِلِينَ"
+        "plural": "سَّآئِلُونَ"
       },
       "translation": "for those who ask",
       "examples": [
@@ -138049,7 +138090,7 @@
       "lemma": "أَقْرَب",
       "forms": {
         "singular": "أَقْرَب",
-        "plural": "أَقْرَبِينَ"
+        "plural": "أَقْرَبُونَ"
       },
       "translation": "(is) nearer",
       "examples": [
@@ -141612,7 +141653,7 @@
       "lemma": "مُعْتَدِين",
       "forms": {
         "singular": "مُعْتَدِين",
-        "plural": "مُعْتَدِينَ"
+        "plural": "مُعْتَدُونَ"
       },
       "translation": "transgressor",
       "examples": [
@@ -147183,7 +147224,7 @@
       "lemma": "مُبَشِّر",
       "forms": {
         "singular": "مُبَشِّر",
-        "plural": "مُبَشِّرِينَ"
+        "plural": "مُبَشِّرُونَ"
       },
       "translation": "(as) bearers of glad tidings",
       "examples": [
@@ -147249,7 +147290,7 @@
       "lemma": "مُنذِر",
       "forms": {
         "singular": "مُنذِر",
-        "plural": "مُنذِرِينَ"
+        "plural": "مُنذِرُونَ"
       },
       "translation": "the warners",
       "examples": [
@@ -150319,7 +150360,7 @@
       "lemma": "مُتَطَهِّر",
       "forms": {
         "singular": "مُتَطَهِّر",
-        "plural": "مُتَطَهِّرِينَ"
+        "plural": "مُتَطَهِّرُونَ"
       },
       "translation": "those who purify themselves",
       "examples": [
@@ -155718,7 +155759,7 @@
       "lemma": "مُبْتَلِي",
       "forms": {
         "singular": "مُبْتَلِي",
-        "plural": "مُبْتَلِينَ"
+        "plural": "مُبْتَلُونَ"
       },
       "translation": "will test you",
       "examples": [
@@ -156565,7 +156606,7 @@
       "lemma": "مُّرْسَل",
       "forms": {
         "singular": "مُّرْسَل",
-        "plural": "مُرْسَلِينَ"
+        "plural": "مُرْسَلُونَ"
       },
       "translation": "the Messengers",
       "examples": [
@@ -160111,7 +160152,7 @@
       "lemma": "خَبِيث",
       "forms": {
         "singular": "خَبِيث",
-        "plural": "خَبِيثِينَ"
+        "plural": "خَبِيثُونَ"
       },
       "translation": "the evil",
       "examples": [
@@ -163145,7 +163186,7 @@
       "lemma": "آثِم",
       "forms": {
         "singular": "آثِم",
-        "plural": "ءَاثِمِينَ"
+        "plural": "ءَاثِمُونَ"
       },
       "translation": "the sinners",
       "examples": [
@@ -166312,7 +166353,7 @@
       "lemma": "مُنفِق",
       "forms": {
         "singular": "مُنفِق",
-        "plural": "مُنفِقِينَ"
+        "plural": "مُنفِقُونَ"
       },
       "translation": "and those who spend",
       "examples": [
@@ -166333,7 +166374,7 @@
       "lemma": "مُسْتَغْفِر",
       "forms": {
         "singular": "مُسْتَغْفِر",
-        "plural": "مُسْتَغْفِرِينَ"
+        "plural": "مُسْتَغْفِرُونَ"
       },
       "translation": "and those who seek forgiveness",
       "examples": [
@@ -166733,7 +166774,7 @@
       "lemma": "نَاصِر",
       "forms": {
         "singular": "نَاصِر",
-        "plural": "نَّٰصِرِينَ"
+        "plural": "نَّٰصِرُونَ"
       },
       "translation": "helpers",
       "examples": [
@@ -167711,7 +167752,7 @@
       "lemma": "مُّحْضَر",
       "forms": {
         "singular": "مُّحْضَر",
-        "plural": "مُحْضَرِينَ"
+        "plural": "مُحْضَرُونَ"
       },
       "translation": "(will be) brought",
       "examples": [
@@ -170056,7 +170097,7 @@
       "lemma": "مُقَرَّب",
       "forms": {
         "singular": "مُقَرَّب",
-        "plural": "مُقَرَّبِينَ"
+        "plural": "مُقَرَّبُونَ"
       },
       "translation": "those brought near",
       "examples": [
@@ -170777,7 +170818,7 @@
       "lemma": "شَاهِد",
       "forms": {
         "singular": "شَاهِد",
-        "plural": "شَّٰهِدِينَ"
+        "plural": "شَّٰهِدُونَ"
       },
       "translation": "the witnesses",
       "examples": [
@@ -171026,7 +171067,7 @@
       "lemma": "مَٰكِر",
       "forms": {
         "singular": "مَٰكِر",
-        "plural": "مَٰكِرِينَ"
+        "plural": "مَٰكِرُونَ"
       },
       "translation": "(of) the planners",
       "examples": [
@@ -171292,7 +171333,7 @@
       "lemma": "كَٰذِب",
       "forms": {
         "singular": "كَٰذِب",
-        "plural": "كَٰذِبِينَ"
+        "plural": "كَٰذِبُونَ"
       },
       "translation": "the liars",
       "examples": [
@@ -172482,7 +172523,12 @@
         }
       ],
       "source": "corpus",
-      "frequency": 7
+      "frequency": 7,
+      "alternate_meanings": [
+        "Human repentance — the servant turning back to Allah in remorse",
+        "Divine acceptance / relenting — Allah turning back toward the servant (تَابَ اللهُ عَلَيْهِ)",
+        "Same word, two opposite subjects: the sinner returning vs. the Creator receiving"
+      ]
     },
     {
       "id": "n_مِّلْ_ملا",
@@ -175313,7 +175359,7 @@
       "lemma": "مُنزَل",
       "forms": {
         "singular": "مُنزَل",
-        "plural": "مُنزَلِينَ"
+        "plural": "مُنزَلُونَ"
       },
       "translation": "[the ones] sent down",
       "examples": [
@@ -175401,7 +175447,7 @@
       "lemma": "مُسَوِّم",
       "forms": {
         "singular": "مُسَوِّم",
-        "plural": "مُسَوِّمِينَ"
+        "plural": "مُسَوِّمُونَ"
       },
       "translation": "[the ones] having marks",
       "examples": [
@@ -175496,7 +175542,7 @@
       "lemma": "خَآئِب",
       "forms": {
         "singular": "خَآئِب",
-        "plural": "خَآئِبِينَ"
+        "plural": "خَآئِبُونَ"
       },
       "translation": "disappointed",
       "examples": [
@@ -175600,7 +175646,7 @@
       "lemma": "كَٰظِم",
       "forms": {
         "singular": "كَٰظِم",
-        "plural": "كَٰظِمِينَ"
+        "plural": "كَٰظِمُونَ"
       },
       "translation": "choked",
       "examples": [
@@ -175626,7 +175672,7 @@
       "lemma": "عَاف",
       "forms": {
         "singular": "عَاف",
-        "plural": "عَافِينَ"
+        "plural": "عَافُونَ"
       },
       "translation": "and those who pardon",
       "examples": [
@@ -175781,7 +175827,7 @@
       "lemma": "عَٰمِل",
       "forms": {
         "singular": "عَٰمِل",
-        "plural": "عَٰمِلِينَ"
+        "plural": "عَٰمِلُونَ"
       },
       "translation": "working",
       "examples": [
@@ -176222,7 +176268,7 @@
       "lemma": "مُّكَذِّب",
       "forms": {
         "singular": "مُّكَذِّب",
-        "plural": "مُكَذِّبِينَ"
+        "plural": "مُكَذِّبُونَ"
       },
       "translation": "to the deniers",
       "examples": [
@@ -178406,7 +178452,7 @@
       "lemma": "مُتَوَكِّل",
       "forms": {
         "singular": "مُتَوَكِّل",
-        "plural": "مُتَوَكِّلِينَ"
+        "plural": "مُتَوَكِّلُونَ"
       },
       "translation": "those who trust",
       "examples": [
@@ -178883,7 +178929,7 @@
       "lemma": "فَرِح",
       "forms": {
         "singular": "فَرِح",
-        "plural": "فَرِحِينَ"
+        "plural": "فَرِحُونَ"
       },
       "translation": "Rejoicing",
       "examples": [
@@ -183771,7 +183817,7 @@
       "lemma": "مُّحْصِن",
       "forms": {
         "singular": "مُّحْصِن",
-        "plural": "مُّحْصِنِينَ"
+        "plural": "مُّحْصِنُونَ"
       },
       "translation": "being chaste",
       "examples": [
@@ -183797,7 +183843,7 @@
       "lemma": "مُسَٰفِح",
       "forms": {
         "singular": "مُسَٰفِح",
-        "plural": "مُسَٰفِحِينَ"
+        "plural": "مُسَٰفِحُونَ"
       },
       "translation": "being lewd",
       "examples": [
@@ -186201,7 +186247,7 @@
       "lemma": "مُنَٰفِق",
       "forms": {
         "singular": "مُنَٰفِق",
-        "plural": "مُنَٰفِقِينَ"
+        "plural": "مُنَٰفِقُونَ"
       },
       "translation": "the hypocrites",
       "examples": [
@@ -186605,7 +186651,7 @@
       "lemma": "صِدِّيق",
       "forms": {
         "singular": "صِدِّيق",
-        "plural": "صِّدِّيقِينَ"
+        "plural": "صِّدِّيقُونَ"
       },
       "translation": "truthful",
       "examples": [
@@ -186815,7 +186861,7 @@
       "lemma": "مُّسْتَضْعَف",
       "forms": {
         "singular": "مُّسْتَضْعَف",
-        "plural": "مُسْتَضْعَفِينَ"
+        "plural": "مُسْتَضْعَفُونَ"
       },
       "translation": "oppressed",
       "examples": [
@@ -188532,7 +188578,7 @@
       "lemma": "مُهَاجِر",
       "forms": {
         "singular": "مُهَاجِر",
-        "plural": "مُهَٰجِرِينَ"
+        "plural": "مُهَٰجِرُونَ"
       },
       "translation": "and the emigrants",
       "examples": [
@@ -189002,7 +189048,7 @@
       "lemma": "خَآئِن",
       "forms": {
         "singular": "خَآئِن",
-        "plural": "خَآئِنِينَ"
+        "plural": "خَآئِنُونَ"
       },
       "translation": "the traitors",
       "examples": [
@@ -190492,7 +190538,7 @@
       "lemma": "مُّذَبْذَب",
       "forms": {
         "singular": "مُّذَبْذَب",
-        "plural": "مُّذَبْذَبِينَ"
+        "plural": "مُّذَبْذَبُونَ"
       },
       "translation": "Wavering",
       "examples": [
@@ -190534,7 +190580,7 @@
       "lemma": "أَسْفَل",
       "forms": {
         "singular": "أَسْفَل",
-        "plural": "أَسْفَلِينَ"
+        "plural": "أَسْفَلُونَ"
       },
       "translation": "the lowest",
       "examples": [
@@ -190889,7 +190935,7 @@
       "lemma": "مُّقِيم",
       "forms": {
         "singular": "مُّقِيم",
-        "plural": "مُقِيمِينَ"
+        "plural": "مُقِيمُونَ"
       },
       "translation": "lasting",
       "examples": [
@@ -191647,7 +191693,7 @@
       "lemma": "آمّ",
       "forms": {
         "singular": "آمّ",
-        "plural": "ءَآمِّينَ"
+        "plural": "ءَآمُّونَ"
       },
       "translation": "(those) coming",
       "examples": [
@@ -192179,7 +192225,7 @@
       "lemma": "مُكَلِّب",
       "forms": {
         "singular": "مُكَلِّب",
-        "plural": "مُكَلِّبِينَ"
+        "plural": "مُكَلِّبُونَ"
       },
       "translation": "ones who train animals to hunt",
       "examples": [
@@ -192729,7 +192775,7 @@
       "lemma": "جَبَّار",
       "forms": {
         "singular": "جَبَّار",
-        "plural": "جَبَّارِينَ"
+        "plural": "جَبَّارُونَ"
       },
       "translation": "tyrant",
       "examples": [
@@ -193144,7 +193190,7 @@
       "lemma": "نَٰدِم",
       "forms": {
         "singular": "نَٰدِم",
-        "plural": "نَّٰدِمِينَ"
+        "plural": "نَّٰدِمُونَ"
       },
       "translation": "the regretful",
       "examples": [
@@ -193622,7 +193668,7 @@
       "lemma": "مُقْسِط",
       "forms": {
         "singular": "مُقْسِط",
-        "plural": "مُقْسِطِينَ"
+        "plural": "مُقْسِطُونَ"
       },
       "translation": "those who act justly",
       "examples": [
@@ -195004,7 +195050,7 @@
       "lemma": "قِسِّيسِين",
       "forms": {
         "singular": "قِسِّيسِين",
-        "plural": "قِسِّيسِينَ"
+        "plural": "قِسِّيسُونَ"
       },
       "translation": "(are) priests",
       "examples": [
@@ -195831,7 +195877,7 @@
       "lemma": "رَّٰزِق",
       "forms": {
         "singular": "رَّٰزِق",
-        "plural": "رَّٰزِقِينَ"
+        "plural": "رَّٰزِقُونَ"
       },
       "translation": "(of) the providers",
       "examples": [
@@ -197000,7 +197046,7 @@
       "lemma": "مَّبْعُوث",
       "forms": {
         "singular": "مَّبْعُوث",
-        "plural": "مَبْعُوثِينَ"
+        "plural": "مَبْعُوثُونَ"
       },
       "translation": "(will be) resurrected",
       "examples": [
@@ -197297,7 +197343,11 @@
         }
       ],
       "source": "corpus",
-      "frequency": 47
+      "frequency": 47,
+      "alternate_meanings": [
+        "A moment / an hour (ordinary unit of time)",
+        "The Hour — the Day of Judgment (eschatological, capital-H)"
+      ]
     },
     {
       "id": "n_بَغْت_بغت",
@@ -198451,7 +198501,7 @@
       "lemma": "مُجْرِم",
       "forms": {
         "singular": "مُجْرِم",
-        "plural": "مُجْرِمِينَ"
+        "plural": "مُجْرِمُونَ"
       },
       "translation": "the criminals",
       "examples": [
@@ -198830,7 +198880,7 @@
       "lemma": "فَٰصِل",
       "forms": {
         "singular": "فَٰصِل",
-        "plural": "فَٰصِلِينَ"
+        "plural": "فَٰصِلُونَ"
       },
       "translation": "(of) the Deciders",
       "examples": [
@@ -199047,7 +199097,7 @@
       "lemma": "حَٰسِب",
       "forms": {
         "singular": "حَٰسِب",
-        "plural": "حَٰسِبِينَ"
+        "plural": "حَٰسِبُونَ"
       },
       "translation": "(as) Reckoners",
       "examples": [
@@ -199578,7 +199628,7 @@
       "lemma": "عَٰلِم",
       "forms": {
         "singular": "عَٰلِم",
-        "plural": "عَٰلِمِينَ"
+        "plural": "عَٰلِمُونَ"
       },
       "translation": "Knower",
       "examples": [
@@ -199871,7 +199921,7 @@
       "lemma": "مُّوقِن",
       "forms": {
         "singular": "مُّوقِن",
-        "plural": "مُوقِنِينَ"
+        "plural": "مُوقِنُونَ"
       },
       "translation": "certain",
       "examples": [
@@ -200009,7 +200059,7 @@
       "lemma": "ءَافِل",
       "forms": {
         "singular": "ءَافِل",
-        "plural": "ءَافِلِينَ"
+        "plural": "ءَافِلُونَ"
       },
       "translation": "the ones that set",
       "examples": [
@@ -201816,7 +201866,7 @@
       "lemma": "خَٰلِق",
       "forms": {
         "singular": "خَٰلِق",
-        "plural": "خَٰلِقِينَ"
+        "plural": "خَٰلِقُونَ"
       },
       "translation": "creator",
       "examples": [
@@ -202483,7 +202533,7 @@
       "lemma": "ظَٰهِر",
       "forms": {
         "singular": "ظَٰهِر",
-        "plural": "ظَٰهِرِينَ"
+        "plural": "ظَٰهِرُونَ"
       },
       "translation": "dominant",
       "examples": [
@@ -203006,7 +203056,7 @@
       "lemma": "مُعْجِز",
       "forms": {
         "singular": "مُعْجِز",
-        "plural": "مُعْجِزِينَ"
+        "plural": "مُعْجِزُونَ"
       },
       "translation": "escape",
       "examples": [
@@ -203454,7 +203504,7 @@
       "lemma": "مُّخْتَلِف",
       "forms": {
         "singular": "مُّخْتَلِف",
-        "plural": "مُخْتَلِفِينَ"
+        "plural": "مُخْتَلِفُونَ"
       },
       "translation": "(of) varying",
       "examples": [
@@ -204587,7 +204637,7 @@
       "lemma": "غَآئِب",
       "forms": {
         "singular": "غَآئِب",
-        "plural": "غَآئِبِينَ"
+        "plural": "غَآئِبُونَ"
       },
       "translation": "absent",
       "examples": [
@@ -204718,7 +204768,7 @@
       "lemma": "صَٰغِر",
       "forms": {
         "singular": "صَٰغِر",
-        "plural": "صَّٰغِرِينَ"
+        "plural": "صَّٰغِرُونَ"
       },
       "translation": "humiliated",
       "examples": [
@@ -204759,7 +204809,7 @@
       "lemma": "مُنظَر",
       "forms": {
         "singular": "مُنظَر",
-        "plural": "مُنظَرِينَ"
+        "plural": "مُنظَرُونَ"
       },
       "translation": "given respite",
       "examples": [
@@ -205095,7 +205145,7 @@
       "lemma": "نَاصِح",
       "forms": {
         "singular": "نَاصِح",
-        "plural": "نَّٰصِحِينَ"
+        "plural": "نَّٰصِحُونَ"
       },
       "translation": "the sincere advisors",
       "examples": [
@@ -206622,7 +206672,7 @@
       "lemma": "عَمُون",
       "forms": {
         "singular": "عَمُون",
-        "plural": "عَمِينَ"
+        "plural": "عَمُونَ"
       },
       "translation": "blind",
       "examples": [
@@ -207298,7 +207348,7 @@
       "lemma": "جَٰثِم",
       "forms": {
         "singular": "جَٰثِم",
-        "plural": "جَٰثِمِينَ"
+        "plural": "جَٰثِمُونَ"
       },
       "translation": "fallen prone",
       "examples": [
@@ -207593,7 +207643,7 @@
       "lemma": "غَٰبِر",
       "forms": {
         "singular": "غَٰبِر",
-        "plural": "غَٰبِرِينَ"
+        "plural": "غَٰبِرُونَ"
       },
       "translation": "those who remain behind",
       "examples": [
@@ -207807,7 +207857,7 @@
       "lemma": "حَٰكِم",
       "forms": {
         "singular": "حَٰكِم",
-        "plural": "حَٰكِمِينَ"
+        "plural": "حَٰكِمُونَ"
       },
       "translation": "(of) the Judges",
       "examples": [
@@ -207848,7 +207898,7 @@
       "lemma": "كَٰرِه",
       "forms": {
         "singular": "كَٰرِه",
-        "plural": "كَٰرِهِينَ"
+        "plural": "كَٰرِهُونَ"
       },
       "translation": "(are) averse",
       "examples": [
@@ -207899,7 +207949,7 @@
       "lemma": "فَٰتِح",
       "forms": {
         "singular": "فَٰتِح",
-        "plural": "فَٰتِحِينَ"
+        "plural": "فَٰتِحُونَ"
       },
       "translation": "(of) those who Decide",
       "examples": [
@@ -208303,7 +208353,7 @@
       "lemma": "حَٰشِر",
       "forms": {
         "singular": "حَٰشِر",
-        "plural": "حَٰشِرِينَ"
+        "plural": "حَٰشِرُونَ"
       },
       "translation": "gatherers",
       "examples": [
@@ -208334,7 +208384,7 @@
       "lemma": "مُّلْق",
       "forms": {
         "singular": "مُّلْق",
-        "plural": "مُلْقِينَ"
+        "plural": "مُلْقُونَ"
       },
       "translation": "the ones to throw",
       "examples": [
@@ -208591,7 +208641,7 @@
       "lemma": "سِنِين",
       "forms": {
         "singular": "سِنِين",
-        "plural": "سِّنِينَ"
+        "plural": "سِّنُونَ"
       },
       "translation": "years",
       "examples": [
@@ -209690,7 +209740,7 @@
       "lemma": "رَّٰحِم",
       "forms": {
         "singular": "رَّٰحِم",
-        "plural": "رَّٰحِمِينَ"
+        "plural": "رَّٰحِمُونَ"
       },
       "translation": "(of) the merciful",
       "examples": [
@@ -209736,7 +209786,7 @@
       "lemma": "مُفْتَر",
       "forms": {
         "singular": "مُفْتَر",
-        "plural": "مُفْتَرِينَ"
+        "plural": "مُفْتَرُونَ"
       },
       "translation": "inventors",
       "examples": [
@@ -209854,7 +209904,7 @@
       "lemma": "غَافِر",
       "forms": {
         "singular": "غَافِر",
-        "plural": "غَٰفِرِينَ"
+        "plural": "غَٰفِرُونَ"
       },
       "translation": "(of) Forgivers",
       "examples": [
@@ -210009,7 +210059,7 @@
       "lemma": "مُعَذِّب",
       "forms": {
         "singular": "مُعَذِّب",
-        "plural": "مُعَذِّبِينَ"
+        "plural": "مُعَذِّبُونَ"
       },
       "translation": "will be punished",
       "examples": [
@@ -210316,7 +210366,7 @@
       "lemma": "غَٰو",
       "forms": {
         "singular": "غَٰو",
-        "plural": "غَاوِينَ"
+        "plural": "غَاوُونَ"
       },
       "translation": "astray",
       "examples": [
@@ -211600,7 +211650,7 @@
       "lemma": "مُرْدِف",
       "forms": {
         "singular": "مُرْدِف",
-        "plural": "مُرْدِفِينَ"
+        "plural": "مُرْدِفُونَ"
       },
       "translation": "one after another",
       "examples": [
@@ -213871,7 +213921,7 @@
       "lemma": "مُدْبِر",
       "forms": {
         "singular": "مُدْبِر",
-        "plural": "مُّدْبِرِينَ"
+        "plural": "مُّدْبِرُونَ"
       },
       "translation": "fleeing",
       "examples": [
@@ -215062,7 +215112,7 @@
       "lemma": "غَٰرِم",
       "forms": {
         "singular": "غَٰرِم",
-        "plural": "غَٰرِمِينَ"
+        "plural": "غَٰرِمُونَ"
       },
       "translation": "and for those in debt",
       "examples": [
@@ -215337,7 +215387,7 @@
       "lemma": "مُطَّوِّع",
       "forms": {
         "singular": "مُطَّوِّع",
-        "plural": "مُطَّوِّعِينَ"
+        "plural": "مُطَّوِّعُونَ"
       },
       "translation": "the ones who give willingly",
       "examples": [
@@ -215542,7 +215592,7 @@
       "lemma": "خَٰلِف",
       "forms": {
         "singular": "خَٰلِف",
-        "plural": "خَٰلِفِينَ"
+        "plural": "خَٰلِفُونَ"
       },
       "translation": "those who stay behind",
       "examples": [
@@ -216045,7 +216095,7 @@
       "lemma": "مُطَّهِّر",
       "forms": {
         "singular": "مُطَّهِّر",
-        "plural": "مُطَّهِّرِينَ"
+        "plural": "مُطَّهِّرُونَ"
       },
       "translation": "the ones who purify themselves",
       "examples": [
@@ -217986,7 +218036,7 @@
       "lemma": "مُنذَر",
       "forms": {
         "singular": "مُنذَر",
-        "plural": "مُنذَرِينَ"
+        "plural": "مُنذَرُونَ"
       },
       "translation": "(of) those who were warned",
       "examples": [
@@ -218096,7 +218146,7 @@
       "lemma": "عَال",
       "forms": {
         "singular": "عَال",
-        "plural": "عَالِينَ"
+        "plural": "عَالُونَ"
       },
       "translation": "haughty",
       "examples": [
@@ -220163,7 +220213,7 @@
       "lemma": "مُّنِيب",
       "forms": {
         "singular": "مُّنِيب",
-        "plural": "مُنِيبِينَ"
+        "plural": "مُنِيبُونَ"
       },
       "translation": "Turning",
       "examples": [
@@ -220595,7 +220645,7 @@
       "lemma": "سَافِل",
       "forms": {
         "singular": "سَافِل",
-        "plural": "سَٰفِلِينَ"
+        "plural": "سَٰفِلُونَ"
       },
       "translation": "its lowest",
       "examples": [
@@ -221531,7 +221581,7 @@
       "lemma": "ذَّٰكِر",
       "forms": {
         "singular": "ذَّٰكِر",
-        "plural": "ذَّٰكِرِينَ"
+        "plural": "ذَّٰكِرُونَ"
       },
       "translation": "for those who remember",
       "examples": [
@@ -221851,7 +221901,7 @@
       "lemma": "فَاعِل",
       "forms": {
         "singular": "فَاعِل",
-        "plural": "فَٰعِلِينَ"
+        "plural": "فَٰعِلُونَ"
       },
       "translation": "doers",
       "examples": [
@@ -222304,7 +222354,7 @@
       "lemma": "زَّٰهِد",
       "forms": {
         "singular": "زَّٰهِد",
-        "plural": "زَّٰهِدِينَ"
+        "plural": "زَّٰهِدُونَ"
       },
       "translation": "those keen to give up",
       "examples": [
@@ -222539,7 +222589,7 @@
       "lemma": "خَٰطِـٔ",
       "forms": {
         "singular": "خَٰطِـٔ",
-        "plural": "خَاطِـِٔينَ"
+        "plural": "خَاطِـُٔونَ"
       },
       "translation": "sinners",
       "examples": [
@@ -223632,7 +223682,7 @@
       "lemma": "مُنزِل",
       "forms": {
         "singular": "مُنزِل",
-        "plural": "مُنزِلِينَ"
+        "plural": "مُنزِلُونَ"
       },
       "translation": "(of) the hosts",
       "examples": [
@@ -224420,7 +224470,7 @@
       "lemma": "هَالِك",
       "forms": {
         "singular": "هَالِك",
-        "plural": "هَٰلِكِينَ"
+        "plural": "هَٰلِكُونَ"
       },
       "translation": "those who perish",
       "examples": [
@@ -224547,7 +224597,7 @@
       "lemma": "مُتَصَدِّق",
       "forms": {
         "singular": "مُتَصَدِّق",
-        "plural": "مُتَصَدِّقِينَ"
+        "plural": "مُتَصَدِّقُونَ"
       },
       "translation": "the charitable",
       "examples": [
@@ -226675,7 +226725,7 @@
       "lemma": "مُهْطِع",
       "forms": {
         "singular": "مُهْطِع",
-        "plural": "مُهْطِعِينَ"
+        "plural": "مُهْطِعُونَ"
       },
       "translation": "Racing ahead",
       "examples": [
@@ -226848,7 +226898,7 @@
       "lemma": "مُّقَرَّن",
       "forms": {
         "singular": "مُّقَرَّن",
-        "plural": "مُّقَرَّنِينَ"
+        "plural": "مُّقَرَّنُونَ"
       },
       "translation": "bound",
       "examples": [
@@ -227451,7 +227501,7 @@
       "lemma": "خَٰزِن",
       "forms": {
         "singular": "خَٰزِن",
-        "plural": "خَٰزِنِينَ"
+        "plural": "خَٰزِنُونَ"
       },
       "translation": "(are) retainers",
       "examples": [
@@ -227472,7 +227522,7 @@
       "lemma": "مُسْتَقْدِم",
       "forms": {
         "singular": "مُسْتَقْدِم",
-        "plural": "مُسْتَقْدِمِينَ"
+        "plural": "مُسْتَقْدِمُونَ"
       },
       "translation": "the preceding ones",
       "examples": [
@@ -227493,7 +227543,7 @@
       "lemma": "مُسْتَـْٔخِر",
       "forms": {
         "singular": "مُسْتَـْٔخِر",
-        "plural": "مُسْتَـْٔخِرِينَ"
+        "plural": "مُسْتَـْٔخِرُونَ"
       },
       "translation": "the later ones",
       "examples": [
@@ -227756,7 +227806,7 @@
       "lemma": "مُّتَقَٰبِل",
       "forms": {
         "singular": "مُّتَقَٰبِل",
-        "plural": "مُّتَقَٰبِلِينَ"
+        "plural": "مُّتَقَٰبِلُونَ"
       },
       "translation": "facing each other",
       "examples": [
@@ -227818,7 +227868,7 @@
       "lemma": "قَٰنِط",
       "forms": {
         "singular": "قَٰنِط",
-        "plural": "قَٰنِطِينَ"
+        "plural": "قَٰنِطُونَ"
       },
       "translation": "the despairing",
       "examples": [
@@ -227929,7 +227979,7 @@
       "lemma": "مُصْبِح",
       "forms": {
         "singular": "مُصْبِح",
-        "plural": "مُّصْبِحِينَ"
+        "plural": "مُّصْبِحُونَ"
       },
       "translation": "(in the) morning",
       "examples": [
@@ -228040,7 +228090,7 @@
       "lemma": "مُّشْرِق",
       "forms": {
         "singular": "مُّشْرِق",
-        "plural": "مُشْرِقِينَ"
+        "plural": "مُشْرِقُونَ"
       },
       "translation": "at sunrise",
       "examples": [
@@ -228066,7 +228116,7 @@
       "lemma": "مُتَوَسِّم",
       "forms": {
         "singular": "مُتَوَسِّم",
-        "plural": "مُتَوَسِّمِينَ"
+        "plural": "مُتَوَسِّمُونَ"
       },
       "translation": "for those who discern",
       "examples": [
@@ -228233,7 +228283,7 @@
       "lemma": "مُقْتَسِم",
       "forms": {
         "singular": "مُقْتَسِم",
-        "plural": "مُقْتَسِمِينَ"
+        "plural": "مُقْتَسِمُونَ"
       },
       "translation": "those who divided",
       "examples": [
@@ -228254,7 +228304,7 @@
       "lemma": "عِضِين",
       "forms": {
         "singular": "عِضِين",
-        "plural": "عِضِينَ"
+        "plural": "عِضُونَ"
       },
       "translation": "(in) parts",
       "examples": [
@@ -228788,7 +228838,7 @@
       "lemma": "مُتَكَبِّر",
       "forms": {
         "singular": "مُتَكَبِّر",
-        "plural": "مُتَكَبِّرِينَ"
+        "plural": "مُتَكَبِّرُونَ"
       },
       "translation": "(of) the arrogant",
       "examples": [
@@ -229244,7 +229294,7 @@
       "lemma": "شَّٰرِب",
       "forms": {
         "singular": "شَّٰرِب",
-        "plural": "شَّٰرِبِينَ"
+        "plural": "شَّٰرِبُونَ"
       },
       "translation": "And drink",
       "examples": [
@@ -229855,7 +229905,7 @@
       "lemma": "بَاق",
       "forms": {
         "singular": "بَاق",
-        "plural": "بَاقِينَ"
+        "plural": "بَاقُونَ"
       },
       "translation": "the survivors",
       "examples": [
@@ -229922,7 +229972,7 @@
       "lemma": "مُطْمَئِنّ",
       "forms": {
         "singular": "مُطْمَئِنّ",
-        "plural": "مُطْمَئِنِّينَ"
+        "plural": "مُطْمَئِنُّونَ"
       },
       "translation": "securely",
       "examples": [
@@ -230706,7 +230756,7 @@
       "lemma": "أَوَّاب",
       "forms": {
         "singular": "أَوَّاب",
-        "plural": "أَوَّٰبِينَ"
+        "plural": "أَوَّٰبُونَ"
       },
       "translation": "repeatedly turning",
       "examples": [
@@ -230791,7 +230841,7 @@
       "lemma": "مُبَذِّر",
       "forms": {
         "singular": "مُبَذِّر",
-        "plural": "مُبَذِّرِينَ"
+        "plural": "مُبَذِّرُونَ"
       },
       "translation": "the spendthrifts",
       "examples": [
@@ -230833,7 +230883,7 @@
       "lemma": "مَلُوم",
       "forms": {
         "singular": "مَلُوم",
-        "plural": "مَلُومِينَ"
+        "plural": "مَلُومُونَ"
       },
       "translation": "blameworthy",
       "examples": [
@@ -232778,7 +232828,7 @@
       "lemma": "مَّٰكِث",
       "forms": {
         "singular": "مَّٰكِث",
-        "plural": "مَّٰكِثِينَ"
+        "plural": "مَّٰكِثُونَ"
       },
       "translation": "(will) remain",
       "examples": [
@@ -234176,7 +234226,7 @@
       "lemma": "مُّنتَصِر",
       "forms": {
         "singular": "مُّنتَصِر",
-        "plural": "مُنتَصِرِينَ"
+        "plural": "مُنتَصِرُونَ"
       },
       "translation": "(he) supported",
       "examples": [
@@ -234423,7 +234473,7 @@
       "lemma": "مُشْفِق",
       "forms": {
         "singular": "مُشْفِق",
-        "plural": "مُشْفِقِينَ"
+        "plural": "مُشْفِقُونَ"
       },
       "translation": "fearful",
       "examples": [
@@ -234500,7 +234550,7 @@
       "lemma": "مُّضِلّ",
       "forms": {
         "singular": "مُّضِلّ",
-        "plural": "مُضِلِّينَ"
+        "plural": "مُضِلُّونَ"
       },
       "translation": "misleader",
       "examples": [
@@ -239391,7 +239441,7 @@
       "lemma": "خَٰمِد",
       "forms": {
         "singular": "خَٰمِد",
-        "plural": "خَٰمِدِينَ"
+        "plural": "خَٰمِدُونَ"
       },
       "translation": "extinct",
       "examples": [
@@ -239417,7 +239467,7 @@
       "lemma": "لَٰعِب",
       "forms": {
         "singular": "لَٰعِب",
-        "plural": "لَٰعِبِينَ"
+        "plural": "لَٰعِبُونَ"
       },
       "translation": "(in) play",
       "examples": [
@@ -241509,7 +241559,7 @@
       "lemma": "مُخْبِت",
       "forms": {
         "singular": "مُخْبِت",
-        "plural": "مُخْبِتِينَ"
+        "plural": "مُخْبِتُونَ"
       },
       "translation": "(to) the humble ones",
       "examples": [
@@ -241801,7 +241851,7 @@
       "lemma": "مُعَٰجِز",
       "forms": {
         "singular": "مُعَٰجِز",
-        "plural": "مُعَٰجِزِينَ"
+        "plural": "مُعَٰجِزُونَ"
       },
       "translation": "(to) cause failure",
       "examples": [
@@ -242222,7 +242272,7 @@
       "lemma": "ءَاكِل",
       "forms": {
         "singular": "ءَاكِل",
-        "plural": "ءَاكِلِينَ"
+        "plural": "ءَاكِلُونَ"
       },
       "translation": "Will surely eat",
       "examples": [
@@ -242679,7 +242729,7 @@
       "lemma": "عَآدّ",
       "forms": {
         "singular": "عَآدّ",
-        "plural": "عَآدِّينَ"
+        "plural": "عَآدُّونَ"
       },
       "translation": "those who keep count",
       "examples": [
@@ -243648,7 +243698,7 @@
       "lemma": "مُذْعِن",
       "forms": {
         "singular": "مُذْعِن",
-        "plural": "مُذْعِنِينَ"
+        "plural": "مُذْعِنُونَ"
       },
       "translation": "(as) promptly obedient",
       "examples": [
@@ -245085,7 +245135,7 @@
       "lemma": "خَٰضِع",
       "forms": {
         "singular": "خَٰضِع",
-        "plural": "خَٰضِعِينَ"
+        "plural": "خَٰضِعُونَ"
       },
       "translation": "(in) humility",
       "examples": [
@@ -245180,7 +245230,7 @@
       "lemma": "مَسْجُون",
       "forms": {
         "singular": "مَسْجُون",
-        "plural": "مَسْجُونِينَ"
+        "plural": "مَسْجُونُونَ"
       },
       "translation": "those imprisoned",
       "examples": [
@@ -245602,7 +245652,7 @@
       "lemma": "شَٰفِع",
       "forms": {
         "singular": "شَٰفِع",
-        "plural": "شَٰفِعِينَ"
+        "plural": "شَٰفِعُونَ"
       },
       "translation": "intercessors",
       "examples": [
@@ -245628,7 +245678,7 @@
       "lemma": "مَرْجُوم",
       "forms": {
         "singular": "مَرْجُوم",
-        "plural": "مَرْجُومِينَ"
+        "plural": "مَرْجُومُونَ"
       },
       "translation": "those who are stoned",
       "examples": [
@@ -245745,7 +245795,7 @@
       "lemma": "وَٰعِظ",
       "forms": {
         "singular": "وَٰعِظ",
-        "plural": "وَٰعِظِينَ"
+        "plural": "وَٰعِظُونَ"
       },
       "translation": "the advisors",
       "examples": [
@@ -245813,7 +245863,7 @@
       "lemma": "فَٰرِه",
       "forms": {
         "singular": "فَٰرِه",
-        "plural": "فَٰرِهِينَ"
+        "plural": "فَٰرِهُونَ"
       },
       "translation": "skillfully",
       "examples": [
@@ -245834,7 +245884,7 @@
       "lemma": "مُسَحَّر",
       "forms": {
         "singular": "مُسَحَّر",
-        "plural": "مُسَحَّرِينَ"
+        "plural": "مُسَحَّرُونَ"
       },
       "translation": "those bewitched",
       "examples": [
@@ -245891,7 +245941,7 @@
       "lemma": "قَال",
       "forms": {
         "singular": "قَال",
-        "plural": "قَالِينَ"
+        "plural": "قَالُونَ"
       },
       "translation": "those who detest",
       "examples": [
@@ -245912,7 +245962,7 @@
       "lemma": "مُخْسِر",
       "forms": {
         "singular": "مُخْسِر",
-        "plural": "مُخْسِرِينَ"
+        "plural": "مُخْسِرُونَ"
       },
       "translation": "those who cause loss",
       "examples": [
@@ -247464,7 +247514,7 @@
       "lemma": "مَقْبُوح",
       "forms": {
         "singular": "مَقْبُوح",
-        "plural": "مَقْبُوحِينَ"
+        "plural": "مَقْبُوحُونَ"
       },
       "translation": "the despised",
       "examples": [
@@ -247722,7 +247772,7 @@
       "lemma": "حَٰمِل",
       "forms": {
         "singular": "حَٰمِل",
-        "plural": "حَٰمِلِينَ"
+        "plural": "حَٰمِلُونَ"
       },
       "translation": "And those carrying",
       "examples": [
@@ -247805,7 +247855,7 @@
       "lemma": "مُسْتَبْصِر",
       "forms": {
         "singular": "مُسْتَبْصِر",
-        "plural": "مُسْتَبْصِرِينَ"
+        "plural": "مُسْتَبْصِرُونَ"
       },
       "translation": "endowed with insight",
       "examples": [
@@ -248814,7 +248864,7 @@
       "lemma": "مُعَوِّق",
       "forms": {
         "singular": "مُعَوِّق",
-        "plural": "مُعَوِّقِينَ"
+        "plural": "مُعَوِّقُونَ"
       },
       "translation": "those who hinder",
       "examples": [
@@ -249176,7 +249226,7 @@
       "lemma": "صَّٰٓئِم",
       "forms": {
         "singular": "صَّٰٓئِم",
-        "plural": "صَّٰٓئِمِينَ"
+        "plural": "صَّٰٓئِمُونَ"
       },
       "translation": "and the men who fast",
       "examples": [
@@ -249454,7 +249504,7 @@
       "lemma": "مُسْتَـْٔنِس",
       "forms": {
         "singular": "مُسْتَـْٔنِس",
-        "plural": "مُسْتَـْٔنِسِينَ"
+        "plural": "مُسْتَـْٔنِسُونَ"
       },
       "translation": "seeking to remain",
       "examples": [
@@ -249545,7 +249595,7 @@
       "lemma": "مَّلْعُون",
       "forms": {
         "singular": "مَّلْعُون",
-        "plural": "مَّلْعُونِينَ"
+        "plural": "مَّلْعُونُونَ"
       },
       "translation": "Accursed",
       "examples": [
@@ -251102,7 +251152,7 @@
       "lemma": "طَٰغ",
       "forms": {
         "singular": "طَٰغ",
-        "plural": "طَٰغِينَ"
+        "plural": "طَٰغُونَ"
       },
       "translation": "transgressing",
       "examples": [
@@ -251852,7 +251902,7 @@
       "lemma": "مُدْحَض",
       "forms": {
         "singular": "مُدْحَض",
-        "plural": "مُدْحَضِينَ"
+        "plural": "مُدْحَضُونَ"
       },
       "translation": "the losers",
       "examples": [
@@ -251922,7 +251972,7 @@
       "lemma": "مُسَبِّح",
       "forms": {
         "singular": "مُسَبِّح",
-        "plural": "مُسَبِّحِينَ"
+        "plural": "مُسَبِّحُونَ"
       },
       "translation": "glorify (Allah)",
       "examples": [
@@ -251994,7 +252044,7 @@
       "lemma": "فَٰتِن",
       "forms": {
         "singular": "فَٰتِن",
-        "plural": "فَٰتِنِينَ"
+        "plural": "فَٰتِنُونَ"
       },
       "translation": "can tempt away (anyone)",
       "examples": [
@@ -253005,7 +253055,7 @@
       "lemma": "مُتَكَلِّف",
       "forms": {
         "singular": "مُتَكَلِّف",
-        "plural": "مُتَكَلِّفِينَ"
+        "plural": "مُتَكَلِّفُونَ"
       },
       "translation": "the ones who pretend",
       "examples": [
@@ -253274,7 +253324,7 @@
       "lemma": "سَّٰخِر",
       "forms": {
         "singular": "سَّٰخِر",
-        "plural": "سَّٰخِرِينَ"
+        "plural": "سَّٰخِرُونَ"
       },
       "translation": "the mockers",
       "examples": [
@@ -253476,7 +253526,7 @@
       "lemma": "حَآفّ",
       "forms": {
         "singular": "حَآفّ",
-        "plural": "حَآفِّينَ"
+        "plural": "حَآفُّونَ"
       },
       "translation": "surrounding",
       "examples": [
@@ -253964,7 +254014,7 @@
       "lemma": "طَآئِع",
       "forms": {
         "singular": "طَآئِع",
-        "plural": "طَآئِعِينَ"
+        "plural": "طَآئِعُونَ"
       },
       "translation": "willingly",
       "examples": [
@@ -254135,7 +254185,7 @@
       "lemma": "مُعْتَب",
       "forms": {
         "singular": "مُعْتَب",
-        "plural": "مُعْتَبِينَ"
+        "plural": "مُعْتَبُونَ"
       },
       "translation": "those who receive favor",
       "examples": [
@@ -254533,7 +254583,7 @@
       "lemma": "مُقْرِن",
       "forms": {
         "singular": "مُقْرِن",
-        "plural": "مُقْرِنِينَ"
+        "plural": "مُقْرِنُونَ"
       },
       "translation": "capable",
       "examples": [
@@ -254715,7 +254765,7 @@
       "lemma": "مُقْتَرِن",
       "forms": {
         "singular": "مُقْتَرِن",
-        "plural": "مُقْتَرِنِينَ"
+        "plural": "مُقْتَرِنُونَ"
       },
       "translation": "accompanying (him)",
       "examples": [
@@ -255014,7 +255064,7 @@
       "lemma": "مُنشَر",
       "forms": {
         "singular": "مُنشَر",
-        "plural": "مُنشَرِينَ"
+        "plural": "مُنشَرُونَ"
       },
       "translation": "(will be) raised again",
       "examples": [
@@ -255270,7 +255320,7 @@
       "lemma": "مُسْتَيْقِن",
       "forms": {
         "singular": "مُسْتَيْقِن",
-        "plural": "مُسْتَيْقِنِينَ"
+        "plural": "مُسْتَيْقِنُونَ"
       },
       "translation": "(are) convinced",
       "examples": [
@@ -255956,7 +256006,7 @@
       "lemma": "ظَّآنّ",
       "forms": {
         "singular": "ظَّآنّ",
-        "plural": "ظَّآنِّينَ"
+        "plural": "ظَّآنُّونَ"
       },
       "translation": "who assume",
       "examples": [
@@ -256129,7 +256179,7 @@
       "lemma": "مُحَلِّق",
       "forms": {
         "singular": "مُحَلِّق",
-        "plural": "مُحَلِّقِينَ"
+        "plural": "مُحَلِّقُونَ"
       },
       "translation": "having shaved",
       "examples": [
@@ -256150,7 +256200,7 @@
       "lemma": "مُقَصِّر",
       "forms": {
         "singular": "مُقَصِّر",
-        "plural": "مُقَصِّرِينَ"
+        "plural": "مُقَصِّرُونَ"
       },
       "translation": "and shortened",
       "examples": [
@@ -260225,7 +260275,7 @@
       "lemma": "مَسْبُوق",
       "forms": {
         "singular": "مَسْبُوق",
-        "plural": "مَسْبُوقِينَ"
+        "plural": "مَسْبُوقُونَ"
       },
       "translation": "(are) outrun",
       "examples": [
@@ -260381,7 +260431,7 @@
       "lemma": "مُقْو",
       "forms": {
         "singular": "مُقْو",
-        "plural": "مُقْوِينَ"
+        "plural": "مُقْوُونَ"
       },
       "translation": "for the wayfarers in the desert",
       "examples": [
@@ -260491,7 +260541,7 @@
       "lemma": "مُّسْتَخْلَف",
       "forms": {
         "singular": "مُّسْتَخْلَف",
-        "plural": "مُّسْتَخْلَفِينَ"
+        "plural": "مُّسْتَخْلَفُونَ"
       },
       "translation": "trustees",
       "examples": [
@@ -260579,7 +260629,7 @@
       "lemma": "مُصَّدِّق",
       "forms": {
         "singular": "مُصَّدِّق",
-        "plural": "مُصَّدِّقِينَ"
+        "plural": "مُصَّدِّقُونَ"
       },
       "translation": "the men who give charity",
       "examples": [
@@ -260696,7 +260746,7 @@
       "lemma": "سِتِّين",
       "forms": {
         "singular": "سِتِّين",
-        "plural": "سِتِّينَ"
+        "plural": "سِتُّونَ"
       },
       "translation": "(of) sixty",
       "examples": [
@@ -260879,7 +260929,7 @@
       "lemma": "أَذَلّ",
       "forms": {
         "singular": "أَذَلّ",
-        "plural": "أَذَلِّينَ"
+        "plural": "أَذَلُّونَ"
       },
       "translation": "the more humble",
       "examples": [
@@ -262183,7 +262233,7 @@
       "lemma": "صَٰرِم",
       "forms": {
         "singular": "صَٰرِم",
-        "plural": "صَٰرِمِينَ"
+        "plural": "صَٰرِمُونَ"
       },
       "translation": "pluck (the) fruit",
       "examples": [
@@ -262834,7 +262884,7 @@
       "lemma": "حَٰجِز",
       "forms": {
         "singular": "حَٰجِز",
-        "plural": "حَٰجِزِينَ"
+        "plural": "حَٰجِزُونَ"
       },
       "translation": "(who could) prevent (it)",
       "examples": [
@@ -263088,7 +263138,7 @@
       "lemma": "عِزِين",
       "forms": {
         "singular": "عِزِين",
-        "plural": "عِزِينَ"
+        "plural": "عِزُونَ"
       },
       "translation": "(in) separate groups",
       "examples": [
@@ -264309,7 +264359,7 @@
       "lemma": "خَآئِض",
       "forms": {
         "singular": "خَآئِض",
-        "plural": "خَآئِضِينَ"
+        "plural": "خَآئِضُونَ"
       },
       "translation": "the vain talkers",
       "examples": [
@@ -265525,7 +265575,7 @@
       "lemma": "لَّٰبِث",
       "forms": {
         "singular": "لَّٰبِث",
-        "plural": "لَّٰبِثِينَ"
+        "plural": "لَّٰبِثُونَ"
       },
       "translation": "(They will) be remaining",
       "examples": [
@@ -266722,7 +266772,7 @@
       "lemma": "مُطَفِّف",
       "forms": {
         "singular": "مُطَفِّف",
-        "plural": "مُطَفِّفِينَ"
+        "plural": "مُطَفِّفُونَ"
       },
       "translation": "to those who give less",
       "examples": [
@@ -266839,7 +266889,7 @@
       "lemma": "عِلِّيِّين",
       "forms": {
         "singular": "عِلِّيِّين",
-        "plural": "عِلِّيِّينَ"
+        "plural": "عِلِّيُّونَ"
       },
       "translation": "Illiyin",
       "examples": [
@@ -267037,7 +267087,7 @@
       "lemma": "فَكِهِين",
       "forms": {
         "singular": "فَكِهِين",
-        "plural": "فَكِهِينَ"
+        "plural": "فَكِهُونَ"
       },
       "translation": "jesting",
       "examples": [
@@ -268817,7 +268867,7 @@
       "lemma": "مُنفَكّ",
       "forms": {
         "singular": "مُنفَكّ",
-        "plural": "مُنفَكِّينَ"
+        "plural": "مُنفَكُّونَ"
       },
       "translation": "to be abandoned",
       "examples": [

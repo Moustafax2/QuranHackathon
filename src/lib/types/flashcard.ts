@@ -50,6 +50,7 @@ export interface LexicalEntry {
   lemma?: string;
   forms?: VerbForms | NounForms;
   translation: string;
+  alternate_meanings?: string[];
   arabic_explanation?: string;
   examples: ExampleReference[];
   source: string;

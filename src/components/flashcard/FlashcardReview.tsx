@@ -24,6 +24,7 @@ export function FlashcardReview({
   showHansWehr = false,
 }: FlashcardReviewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showAlternateMeanings, setShowAlternateMeanings] = useState(false);
   const [startTime] = useState(Date.now());
   const [hansWehrDef, setHansWehrDef] = useState<string | null>(null);
   const [hansWehrLoading, setHansWehrLoading] = useState(false);
@@ -168,7 +169,7 @@ export function FlashcardReview({
       <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
         <div dir="rtl" className="font-amiri text-2xl text-white text-center whitespace-nowrap">
           {forms.singular}
-          {hasPlural ? ` (${forms.plural})` : " (غير متوفر)"}
+          {hasPlural ? ` (${forms.plural})` : " (n/a)"}
         </div>
       </div>
     );
@@ -232,9 +233,34 @@ export function FlashcardReview({
                 </div>
               )}
 
-              <div className="text-center text-xl font-medium text-emerald-400">
-                {word.translation}
+              <div className="flex items-center justify-center gap-3">
+                <div className="text-center text-xl font-medium text-emerald-400">
+                  {word.translation}
+                </div>
+                {word.alternate_meanings && word.alternate_meanings.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowAlternateMeanings(v => !v); }}
+                    className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                      showAlternateMeanings
+                        ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
+                        : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                    }`}
+                  >
+                    alt
+                  </button>
+                )}
               </div>
+
+              {showAlternateMeanings && word.alternate_meanings && word.alternate_meanings.length > 0 && (
+                <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                  <div className="mb-2 text-xs font-medium text-gray-500">Alternate meanings</div>
+                  <ul className="space-y-1">
+                    {word.alternate_meanings.map((m, i) => (
+                      <li key={i} className="text-sm text-gray-300">{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {showHansWehr && (
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
