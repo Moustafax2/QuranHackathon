@@ -717,20 +717,20 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className={`flex items-center justify-between rounded-lg border px-4 py-3 ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
-      <div>
+    <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
+      <div className="min-w-0 flex-1">
         <div className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-stone-900"}`}>{label}</div>
         <div className={`text-xs ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>{description}</div>
       </div>
       <button
         onClick={() => onChange(!value)}
-        className={`relative h-5 w-9 rounded-full transition-colors ${
+        className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
           value ? "bg-emerald-600" : "bg-gray-700"
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-            value ? "translate-x-4" : "translate-x-0.5"
+          className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            value ? "translate-x-4" : "translate-x-0"
           }`}
         />
       </button>
