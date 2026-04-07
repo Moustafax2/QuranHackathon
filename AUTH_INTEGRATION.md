@@ -17,6 +17,7 @@
 - `QF_SESSION_SECRET`: secret used to encrypt the local session and login transaction cookies
 - `APP_URL`: base URL used for callback and post-logout redirects
 - `QF_USER_API_BASE_URL`: optional override for User API base URL
+- `QF_USER_SCOPES`: optional override for requested OAuth scopes
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key
 - `SUPABASE_SERVICE_ROLE_KEY`: server-side key used for player upserts
@@ -27,6 +28,8 @@
 3. `POST /api/auth/qf/login` stores the one-time login transaction in an encrypted HttpOnly cookie.
 4. The user is redirected to the hosted Quran Foundation authorization page.
 5. Quran Foundation redirects to `/api/auth/callback`.
+
+Default requested scopes are `openid offline_access bookmark user`. `profile` and `email` are intentionally not requested by default because some clients appear not to be granted them.
 
 ## Callback Flow
 1. `/api/auth/callback` reads `code` and `state`.
