@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 import type { GamePhase } from "@/lib/game/state-machine";
 
 interface Props {
@@ -14,13 +15,8 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
-interface RoomInfo {
-  id: string;
-  code: string;
-  host_id: string;
-  game_mode: string;
-  settings: { num_rounds: number; surah_filter: number[] | null; time_per_question: number };
-}
+type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
+type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
 
 export default function GameRoomPage({ params, searchParams }: Props) {
   const { roomId } = use(params);
@@ -29,22 +25,40 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch room info on mount
   useEffect(() => {
     async function fetchRoom() {
       const supabase = createClient();
-      const { data, error: fetchError } = await supabase
+      const roomResponse = await supabase
         .from("rooms")
         .select("*")
         .eq("code", roomId)
         .single();
+      const data = roomResponse.data as RoomInfo | null;
+      const fetchError = roomResponse.error;
 
       if (fetchError || !data) {
         setError("Room not found");
       } else {
-        setRoomInfo(data as unknown as RoomInfo);
+        setRoomInfo(data);
+        if (data.status === "in_progress") {
+          const activeGameResponse = await supabase
+            .from("games")
+            .select("id")
+            .eq("room_id", data.id)
+            .is("ended_at", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const activeGame = activeGameResponse.data as ActiveGameLookup | null;
+
+          if (activeGame?.id) {
+            setGameId(activeGame.id);
+          }
+        }
       }
       setLoading(false);
     }
@@ -67,7 +81,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const phase: GamePhase = gameState.phase;
 
   async function handleStartGame() {
-    if (!roomInfo || !player) return;
+    if (!roomInfo || !player || starting) return;
+    setStarting(true);
     setError(null);
 
     try {
@@ -83,6 +98,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
       setGameId(data.game_id);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -201,10 +218,10 @@ export default function GameRoomPage({ params, searchParams }: Props) {
           {isHost ? (
             <button
               onClick={handleStartGame}
-              disabled={players.length < 2}
+              disabled={players.length < 1 || starting}
               className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
             >
-              Start Game
+              {starting ? "Starting..." : "Start Game"}
             </button>
           ) : (
             <div className="flex-1 rounded-xl border border-gray-700 py-3 text-center text-sm text-gray-500">
