@@ -92,3 +92,15 @@ Default requested scopes are `openid offline_access bookmark user`. `profile` an
   - non-host clients still need a durable `game_id` discovery path after game start
   - buzzer mode still needs full host-confirm/round-complete logic
 - Signed-in bookmark writes depend on the current Quran Foundation bookmark endpoints and granted scopes; if those differ from the current docs, the UI will surface route errors instead of silently falling back.
+
+## Local Development Shortcut
+- A dev-only fake login helper exists at `POST /api/auth/qf/dev-login`.
+- A dev-only browser UI exists at `/dev/auth`.
+- It is enabled when `NODE_ENV !== production` or `ENABLE_DEV_AUTH=true`.
+- You can seed a local session from an existing linked `players` row by sending:
+  - `{ "playerId": "<uuid>" }`
+  - or `{ "qfSub": "<quran_foundation_uid>" }`
+- To inspect recent candidate players locally, call `GET /api/auth/qf/dev-login`.
+- The `/dev/auth` page lists recent linked players and lets you create the local session cookie with one click.
+- This creates the same app session cookie shape used by the real OAuth flow, but with placeholder tokens.
+- Use it for local testing of app logic such as multiplayer and auth-gated UI. Do not use it to test real Quran Foundation User API calls that require a valid remote access token.

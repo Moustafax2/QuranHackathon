@@ -30,11 +30,14 @@ export function useRoom(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentPlayer || !roomCode) return;
+    const currentPlayerId = currentPlayer?.id;
+    const currentPlayerName = currentPlayer?.display_name;
+
+    if (!currentPlayerId || !currentPlayerName || !roomCode) return;
 
     const supabase = createClient();
     const channel: RealtimeChannel = supabase.channel(`room:${roomCode}`, {
-      config: { presence: { key: currentPlayer.id } },
+      config: { presence: { key: currentPlayerId } },
     });
 
     channel
@@ -57,8 +60,8 @@ export function useRoom(
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await channel.track({
-            player_id: currentPlayer.id,
-            display_name: currentPlayer.display_name,
+            player_id: currentPlayerId,
+            display_name: currentPlayerName,
           });
           setIsConnected(true);
         } else if (status === "CHANNEL_ERROR") {
@@ -69,7 +72,7 @@ export function useRoom(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomCode, currentPlayer, hostId]);
+  }, [roomCode, currentPlayer?.id, currentPlayer?.display_name, hostId]);
 
   return { players, isConnected, error };
 }

@@ -22,9 +22,10 @@ export async function invokeSupabaseEdgeFunction<T>(
     cache: "no-store",
   });
 
-  const payload = (await response.json().catch(() => null)) as
-    | (T & { error?: string })
-    | null;
+  const payload = (await response.json().catch(async () => {
+    const text = await response.text().catch(() => "");
+    return text ? ({ error: text } as { error: string }) : null;
+  })) as (T & { error?: string }) | { error?: string } | null;
 
   if (!response.ok) {
     throw new Error(payload?.error ?? `Supabase function ${functionName} failed.`);

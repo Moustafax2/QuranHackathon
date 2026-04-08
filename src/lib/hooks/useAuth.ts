@@ -81,11 +81,7 @@ export function useAuth(): AuthState {
   }, [loadSession]);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/qf/logout", {
-      method: "POST",
-      cache: "no-store",
-    });
-    window.location.href = "/";
+    window.location.href = "/api/auth/qf/logout";
   }, []);
 
   return {
