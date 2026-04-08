@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   INITIAL_GAME_STATE,
@@ -9,6 +10,10 @@ import {
   type GameEvent,
   type GameState,
 } from "@/lib/game/state-machine";
+
+type GameRow = Database["public"]["Tables"]["games"]["Row"];
+type GameRoundRow = Database["public"]["Tables"]["game_rounds"]["Row"];
+type RoomPlayerRow = Database["public"]["Tables"]["room_players"]["Row"];
 
 interface UseGameReturn {
   gameState: GameState;
@@ -29,25 +34,34 @@ export function useGame(
 
   useEffect(() => {
     if (!gameId) return;
+    const currentGameId = gameId;
 
     const supabase = createClient();
-    const channel = supabase.channel(`game:${gameId}`);
+    const channel = supabase.channel(`game:${currentGameId}`);
     let cancelled = false;
 
     async function hydrateCurrentRound() {
-      const { data: game } = await supabase
+      const gameResponse = await supabase
         .from("games")
         .select("id, room_id, total_rounds, winner_id, ended_at")
-        .eq("id", gameId)
+        .eq("id", currentGameId)
         .single();
+      const game = gameResponse.data as Pick<
+        GameRow,
+        "id" | "room_id" | "total_rounds" | "winner_id" | "ended_at"
+      > | null;
 
       if (!game || cancelled) return;
 
       if (game.ended_at) {
-        const { data: roomPlayers } = await supabase
+        const roomPlayersResponse = await supabase
           .from("room_players")
           .select("player_id, score")
           .eq("room_id", game.room_id);
+        const roomPlayers = roomPlayersResponse.data as Pick<
+          RoomPlayerRow,
+          "player_id" | "score"
+        >[] | null;
 
         const scores = Object.fromEntries(
           (roomPlayers ?? []).map((row) => [row.player_id, row.score])
@@ -63,11 +77,12 @@ export function useGame(
         return;
       }
 
-      const { data: rounds } = await supabase
+      const roundsResponse = await supabase
         .from("game_rounds")
         .select("*")
-        .eq("game_id", gameId)
+        .eq("game_id", currentGameId)
         .order("round_number", { ascending: true });
+      const rounds = roundsResponse.data as GameRoundRow[] | null;
 
       if (!rounds || cancelled) return;
 
