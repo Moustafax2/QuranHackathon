@@ -75,6 +75,11 @@ export function getQfCallbackUrl(): string {
   return `${getAppBaseUrl()}/api/auth/callback`;
 }
 
+export function getQfPostLogoutRedirectUrl(): string | null {
+  const value = process.env.QF_POST_LOGOUT_REDIRECT_URI?.trim();
+  return value ? normalizeUrl(value) : null;
+}
+
 export function getQfUserApiBaseUrl(): string {
   const override = process.env.QF_USER_API_BASE_URL?.trim();
   if (override) {
