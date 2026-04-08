@@ -32,17 +32,93 @@ export function useGame(
 
     const supabase = createClient();
     const channel = supabase.channel(`game:${gameId}`);
+    let cancelled = false;
+
+    async function hydrateCurrentRound() {
+      const { data: game } = await supabase
+        .from("games")
+        .select("id, room_id, total_rounds, winner_id, ended_at")
+        .eq("id", gameId)
+        .single();
+
+      if (!game || cancelled) return;
+
+      if (game.ended_at) {
+        const { data: roomPlayers } = await supabase
+          .from("room_players")
+          .select("player_id, score")
+          .eq("room_id", game.room_id);
+
+        const scores = Object.fromEntries(
+          (roomPlayers ?? []).map((row) => [row.player_id, row.score])
+        );
+
+        dispatch({
+          type: "game:end",
+          payload: {
+            scores,
+            winner_id: game.winner_id ?? "",
+          },
+        });
+        return;
+      }
+
+      const { data: rounds } = await supabase
+        .from("game_rounds")
+        .select("*")
+        .eq("game_id", gameId)
+        .order("round_number", { ascending: true });
+
+      if (!rounds || cancelled) return;
+
+      const currentRound =
+        rounds.find((round) => !round.ended_at) ??
+        rounds[0];
+
+      if (!currentRound) return;
+
+      const options = (currentRound.options ?? []).map((option) => {
+        if (typeof option === "string") {
+          try {
+            return JSON.parse(option) as { verse_key: string; text: string };
+          } catch {
+            return { verse_key: "", text: option };
+          }
+        }
+
+        return option as unknown as { verse_key: string; text: string };
+      });
+
+      dispatch({
+        type: "round:start",
+        payload: {
+          round_id: currentRound.id,
+          round_number: currentRound.round_number,
+          total_rounds: game.total_rounds,
+          prompt_verse_key: currentRound.prompt_verse_key,
+          prompt_text: currentRound.prompt_text ?? "",
+          correct_verse_key: currentRound.correct_verse_key,
+          correct_text: currentRound.correct_text ?? undefined,
+          options,
+        },
+      });
+    }
 
     channel
       .on("broadcast", { event: "game_event" }, ({ payload }) => {
         const event = payload as GameEvent;
         dispatch(event);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void hydrateCurrentRound();
+        }
+      });
 
     channelRef.current = channel;
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
       channelRef.current = null;
     };

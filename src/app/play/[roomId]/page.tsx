@@ -29,6 +29,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch room info on mount
@@ -45,6 +46,20 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         setError("Room not found");
       } else {
         setRoomInfo(data as unknown as RoomInfo);
+        if (data.status === "in_progress") {
+          const { data: activeGame } = await supabase
+            .from("games")
+            .select("id")
+            .eq("room_id", data.id)
+            .is("ended_at", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (activeGame?.id) {
+            setGameId(activeGame.id);
+          }
+        }
       }
       setLoading(false);
     }
@@ -67,7 +82,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const phase: GamePhase = gameState.phase;
 
   async function handleStartGame() {
-    if (!roomInfo || !player) return;
+    if (!roomInfo || !player || starting) return;
+    setStarting(true);
     setError(null);
 
     try {
@@ -83,6 +99,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
       setGameId(data.game_id);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -201,10 +219,10 @@ export default function GameRoomPage({ params, searchParams }: Props) {
           {isHost ? (
             <button
               onClick={handleStartGame}
-              disabled={players.length < 2}
+              disabled={players.length < 1 || starting}
               className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
             >
-              Start Game
+              {starting ? "Starting..." : "Start Game"}
             </button>
           ) : (
             <div className="flex-1 rounded-xl border border-gray-700 py-3 text-center text-sm text-gray-500">
