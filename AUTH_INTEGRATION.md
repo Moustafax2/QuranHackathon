@@ -18,6 +18,7 @@
 - `APP_URL`: base URL used for callback and post-logout redirects
 - `QF_USER_API_BASE_URL`: optional override for User API base URL
 - `QF_USER_SCOPES`: optional override for requested OAuth scopes
+- `QF_POST_LOGOUT_REDIRECT_URI`: optional logout redirect URL that must already be whitelisted in Quran Foundation client configuration
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key
 - `SUPABASE_SERVICE_ROLE_KEY`: server-side key used for player upserts
@@ -52,6 +53,7 @@ Default requested scopes are `openid offline_access bookmark user`. `profile` an
   - derived user summary
 - Session refresh happens server-side when the token is close to expiry.
 - If refresh fails, the local session is cleared and the user must sign in again.
+- Provider logout sends `id_token_hint`. `post_logout_redirect_uri` is only sent when `QF_POST_LOGOUT_REDIRECT_URI` is configured, because the provider requires that value to be pre-whitelisted per client.
 
 ## Local Player Mapping
 - `players.id` remains the local UUID primary key used by rooms, scores, and multiplayer.
