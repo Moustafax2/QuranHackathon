@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getUsableSession } from "@/lib/qf-user/session";
+import { resolvePlayerId } from "@/lib/multiplayer/resolve-player";
 import { invokeSupabaseEdgeFunction } from "@/lib/multiplayer/server";
 
 export async function POST(request: Request) {
   const cookieCarrier = new NextResponse();
-  const session = await getUsableSession(cookieCarrier.cookies);
-  if (!session) {
+  const playerId = await resolvePlayerId(request, cookieCarrier.cookies);
+  if (!playerId) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       game_mode: string;
       settings: Record<string, unknown>;
     }>("join-room", {
-      player_id: session.player_id,
+      player_id: playerId,
       room_code: body.room_code,
     });
     return NextResponse.json(data, { headers: cookieCarrier.headers });

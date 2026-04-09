@@ -22,11 +22,23 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const { roomId } = use(params);
   use(searchParams);
   const { player, loading: authLoading } = useAuth();
+  const [guestPlayerId, setGuestPlayerId] = useState<string | null>(null);
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Read guest player ID from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("qalamspace_guest_player");
+      if (raw) {
+        const guest = JSON.parse(raw) as { id?: string };
+        if (guest.id) setGuestPlayerId(guest.id);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Fetch room info on mount
   useEffect(() => {
@@ -74,7 +86,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
 
   const { gameState, submitAnswer, pressBuzzer } = useGame(
     gameId,
-    player?.id ?? null
+    player?.id ?? null,
+    guestPlayerId
   );
 
   const isHost = player?.id === roomInfo?.host_id;
@@ -86,9 +99,11 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     setError(null);
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
       const response = await fetch("/api/multiplayer/start-game", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ room_id: roomInfo.id }),
       });
       const data = (await response.json()) as { game_id?: string; error?: string };

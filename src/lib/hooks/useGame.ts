@@ -27,7 +27,8 @@ interface UseGameReturn {
  */
 export function useGame(
   gameId: string | null,
-  playerId: string | null
+  playerId: string | null,
+  guestPlayerId?: string | null
 ): UseGameReturn {
   const [gameState, dispatch] = useReducer(reduceGameState, INITIAL_GAME_STATE);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -139,13 +140,19 @@ export function useGame(
     };
   }, [gameId]);
 
+  const buildHeaders = useCallback(() => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
+    return headers;
+  }, [guestPlayerId]);
+
   const submitAnswer = useCallback(
     async (roundId: string, answerVerseKey: string) => {
       if (!gameId || !playerId) return;
 
       await fetch("/api/multiplayer/submit-answer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildHeaders(),
         body: JSON.stringify({
           game_id: gameId,
           round_id: roundId,
@@ -153,7 +160,7 @@ export function useGame(
         }),
       });
     },
-    [gameId, playerId]
+    [gameId, playerId, buildHeaders]
   );
 
   const pressBuzzer = useCallback(
@@ -162,7 +169,7 @@ export function useGame(
 
       await fetch("/api/multiplayer/submit-answer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildHeaders(),
         body: JSON.stringify({
           game_id: gameId,
           round_id: roundId,
@@ -170,7 +177,7 @@ export function useGame(
         }),
       });
     },
-    [gameId, playerId]
+    [gameId, playerId, buildHeaders]
   );
 
   return { gameState, submitAnswer, pressBuzzer };
