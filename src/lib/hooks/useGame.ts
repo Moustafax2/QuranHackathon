@@ -113,8 +113,6 @@ export function useGame(
           total_rounds: game.total_rounds,
           prompt_verse_key: currentRound.prompt_verse_key,
           prompt_text: currentRound.prompt_text ?? "",
-          correct_verse_key: currentRound.correct_verse_key,
-          correct_text: currentRound.correct_text ?? undefined,
           options,
         },
       });

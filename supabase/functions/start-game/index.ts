@@ -137,7 +137,6 @@ serve(async (req: Request) => {
         total_rounds: questions.length,
         prompt_verse_key: firstQuestion.prompt_verse_key,
         prompt_text: firstQuestion.prompt_text,
-        correct_verse_key: firstQuestion.correct_verse_key,
         options: firstQuestion.options,
       },
     });
