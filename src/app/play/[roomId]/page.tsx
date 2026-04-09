@@ -150,7 +150,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         players={players}
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
-        isBuzzerMode={roomInfo?.game_mode === "buzzer"}
+        gameMode={roomInfo?.game_mode ?? "multiple-choice"}
       />
     );
   }
@@ -269,7 +269,7 @@ interface GameProps {
   players: RoomPlayer[];
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
   onPressBuzzer: (roundId: string) => Promise<void>;
-  isBuzzerMode: boolean;
+  gameMode: string;
 }
 
 const RESULT_MIN_MS = 3500; // minimum time to show the round result screen
@@ -281,8 +281,11 @@ function GameInProgress({
   players,
   onSubmitAnswer,
   onPressBuzzer,
-  isBuzzerMode,
+  gameMode,
 }: GameProps) {
+  const isBuzzerMode = gameMode === "buzzer";
+  const isFillInBlank = gameMode === "fill-in-blank";
+  const isWordMeaning = gameMode === "word-meaning";
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [buzzed, setBuzzed] = useState(false);
@@ -417,7 +420,13 @@ function GameInProgress({
         {/* Prompt */}
         <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            {isBuzzerMode ? "Recite the next ayah" : "What comes next?"}
+            {isBuzzerMode
+              ? "Recite the next ayah"
+              : isFillInBlank
+              ? "Fill in the blank"
+              : isWordMeaning
+              ? "Which word is missing?"
+              : "What comes next?"}
           </p>
           <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
             {round.prompt_text}
@@ -479,9 +488,9 @@ function GameInProgress({
           </div>
         )}
 
-        {/* Multiple choice options */}
+        {/* Options */}
         {!isBuzzerMode && round.options && effectivePhase === "round_active" && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning ? "grid-cols-2" : "sm:grid-cols-2"}`}>
             {round.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
@@ -498,9 +507,19 @@ function GameInProgress({
                   key={option.verse_key}
                   onClick={() => handleSelect(option.verse_key)}
                   disabled={answered}
-                  className={`rounded-xl border p-4 text-right transition-all ${style}`}
+                  className={`rounded-xl border transition-all ${
+                    isFillInBlank || isWordMeaning
+                      ? "p-4 text-center"
+                      : "p-4 text-right"
+                  } ${style}`}
                 >
-                  <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
+                  <p
+                    dir="rtl"
+                    lang="ar"
+                    className={`font-amiri leading-loose text-white ${
+                      isFillInBlank || isWordMeaning ? "text-2xl" : "text-xl"
+                    }`}
+                  >
                     {option.text}
                   </p>
                 </button>

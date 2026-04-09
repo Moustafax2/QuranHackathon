@@ -47,11 +47,67 @@ function shuffle<T>(arr: T[]): T[] {
 
 // Short surahs (Juz 30) are easier — weight them higher for casual play
 const SHORT_SURAHS = Array.from({ length: 37 }, (_, i) => 78 + i); // 78-114
+
+/**
+ * Generate a fill-in-the-blank question from a verse.
+ * Blanks one word and provides 3 Arabic word distractors.
+ */
+function makeFillInBlankQuestion(
+  prompt: Verse,
+  verseCache: Map<number, Verse[]>
+): GeneratedQuestion | null {
+  const words = prompt.text_uthmani.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length < 3) return null;
+
+  // Pick a word from the middle (avoid first/last for readability)
+  const wordIdx = randInt(1, words.length - 1);
+  const blankWord = words[wordIdx];
+
+  // Replace the chosen word with a blank
+  const blankedText = words
+    .map((w, i) => (i === wordIdx ? "___" : w))
+    .join(" ");
+
+  // Collect distractor words from other cached verses
+  const distractors: string[] = [];
+  for (const verseList of verseCache.values()) {
+    for (const v of verseList) {
+      const ws = v.text_uthmani
+        .split(/\s+/)
+        .filter((w) => w.length > 2 && w !== blankWord);
+      if (ws.length) distractors.push(ws[randInt(0, ws.length)]);
+      if (distractors.length >= 9) break;
+    }
+    if (distractors.length >= 9) break;
+  }
+
+  const distractorWords = shuffle(distractors).slice(0, 3);
+  if (distractorWords.length < 3) return null;
+
+  const correctKey = `fill:${prompt.verse_key}:${wordIdx}`;
+
+  const options = shuffle([
+    { verse_key: correctKey, text: blankWord },
+    ...distractorWords.map((w, i) => ({
+      verse_key: `fill:wrong${i}:${prompt.verse_key}`,
+      text: w,
+    })),
+  ]);
+
+  return {
+    prompt_verse_key: prompt.verse_key,
+    prompt_text: blankedText,
+    correct_verse_key: correctKey,
+    correct_text: blankWord,
+    options,
+  };
+}
+
 /**
  * Generate questions for a game.
  *
  * @param numRounds - Number of questions to generate
- * @param gameMode - 'multiple-choice' or 'buzzer'
+ * @param gameMode - 'multiple-choice' | 'fill-in-blank' | 'word-meaning' | 'buzzer'
  * @param surahFilter - Optional array of surah IDs to pick from
  */
 export async function generateQuestions(
@@ -62,9 +118,13 @@ export async function generateQuestions(
   const questions: GeneratedQuestion[] = [];
   const pool = surahFilter?.length ? surahFilter : SHORT_SURAHS;
 
-  // Pre-fetch verses for a selection of surahs to avoid too many API calls
+  // Pre-fetch verses for a selection of surahs
   const surahsToFetch = new Set<number>();
   for (let i = 0; i < numRounds; i++) {
+    surahsToFetch.add(pool[randInt(0, pool.length)]);
+  }
+  // Always fetch a few extra surahs so we have distractors for fill-in-blank
+  while (surahsToFetch.size < Math.min(3, pool.length)) {
     surahsToFetch.add(pool[randInt(0, pool.length)]);
   }
 
@@ -79,7 +139,6 @@ export async function generateQuestions(
   const usedPrompts = new Set<string>();
 
   for (let i = 0; i < numRounds; i++) {
-    // Pick a random surah from our fetched set
     const surahIds = [...verseCache.keys()];
     const surahId = surahIds[randInt(0, surahIds.length)];
     const verses = verseCache.get(surahId)!;
@@ -99,7 +158,6 @@ export async function generateQuestions(
     usedPrompts.add(prompt.verse_key);
 
     if (gameMode === "buzzer") {
-      // Buzzer mode: no options needed
       questions.push({
         prompt_verse_key: prompt.verse_key,
         prompt_text: prompt.text_uthmani,
@@ -107,13 +165,22 @@ export async function generateQuestions(
         correct_text: correct.text_uthmani,
         options: [],
       });
+    } else if (gameMode === "fill-in-blank" || gameMode === "word-meaning") {
+      // Both modes use fill-in-blank question format.
+      // word-meaning shows the word and asks players to identify it in context.
+      const q = makeFillInBlankQuestion(prompt, verseCache);
+      if (q) {
+        questions.push(q);
+      } else {
+        // Fallback to multiple-choice if the verse is too short
+        i--; // retry this round slot
+      }
     } else {
-      // Multiple choice: pick 3 distractors
+      // multiple-choice: pick 3 distractors (next verses from other spots)
       const distractorPool = verses.filter(
         (_, idx) => idx !== promptIdx && idx !== promptIdx + 1
       );
 
-      // If surah is too short for 3 distractors, fill from another surah
       if (distractorPool.length < 3) {
         const otherSurahId = surahIds.find((id) => id !== surahId);
         if (otherSurahId) {
