@@ -257,6 +257,8 @@ interface GameProps {
   isBuzzerMode: boolean;
 }
 
+const RESULT_MIN_MS = 3500; // minimum time to show the round result screen
+
 function GameInProgress({
   roomCode,
   gameState,
@@ -269,10 +271,34 @@ function GameInProgress({
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [buzzed, setBuzzed] = useState(false);
+  // Pinned result — keeps the result screen visible for at least RESULT_MIN_MS
+  // even after the server moves to the next round.
+  const [pinnedResult, setPinnedResult] = useState<typeof gameState.round_result>(null);
+  const [showingResult, setShowingResult] = useState(false);
 
   const round = gameState.current_round;
   const result = gameState.round_result;
   const phase = gameState.phase;
+
+  // When a real round_result arrives, pin it and start the timer.
+  useEffect(() => {
+    if (phase === "round_result" && result) {
+      setPinnedResult(result);
+      setShowingResult(true);
+      const timer = setTimeout(() => {
+        setShowingResult(false);
+        setPinnedResult(null);
+        setAnswered(false);
+        setSelected(null);
+        setBuzzed(false);
+      }, RESULT_MIN_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, result]);
+
+  // While pinned, treat everything as if we're still in round_result.
+  const effectivePhase = showingResult ? "round_result" : phase;
+  const effectiveResult = showingResult ? pinnedResult : result;
 
   // Game over screen
   if (phase === "game_over") {
@@ -384,34 +410,45 @@ function GameInProgress({
           <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
         </div>
 
-        {/* Round result overlay */}
-        {phase === "round_result" && result && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <p className="mb-2 text-sm font-semibold text-emerald-400">
-              Correct answer:
+        {/* Round result — stays visible for RESULT_MIN_MS */}
+        {effectivePhase === "round_result" && effectiveResult && (
+          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              Round over
             </p>
-            <p dir="rtl" lang="ar" className="font-amiri text-xl leading-loose text-white">
-              {result.correct_text}
+            <p className="mb-1 text-sm text-gray-400">Correct answer:</p>
+            <p dir="rtl" lang="ar" className="mb-4 font-amiri text-2xl leading-loose text-white">
+              {effectiveResult.correct_text}
             </p>
-            <div className="mt-3 space-y-1">
-              {result.answers.map((a) => (
-                <p key={a.player_id} className="text-sm">
-                  <span className={a.is_correct ? "text-emerald-400" : "text-red-400"}>
-                    {a.is_correct ? "+" : ""}
-                    {a.points_awarded} pts
-                  </span>
-                  <span className="ml-2 text-gray-400">
-                    {a.display_name}
-                    {a.player_id === playerId && " (You)"}
-                  </span>
-                </p>
-              ))}
+            <div className="space-y-2">
+              {effectiveResult.answers.map((a) => {
+                const isMe = a.player_id === playerId;
+                return (
+                  <div
+                    key={a.player_id}
+                    className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-sm ${
+                      isMe
+                        ? a.is_correct
+                          ? "border border-emerald-500/30 bg-emerald-500/10"
+                          : "border border-red-500/30 bg-red-500/10"
+                        : "bg-gray-800/50"
+                    }`}
+                  >
+                    <span className={isMe ? "font-semibold text-white" : "text-gray-400"}>
+                      {a.display_name}{isMe && " (You)"}
+                    </span>
+                    <span className={a.is_correct ? "font-bold text-emerald-400" : "font-bold text-red-400"}>
+                      {a.is_correct ? "✓" : "✗"} {a.is_correct ? "+" : ""}{a.points_awarded} pts
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Buzzer mode */}
-        {isBuzzerMode && phase === "round_active" && (
+        {isBuzzerMode && effectivePhase === "round_active" && (
           <div className="text-center">
             <button
               onClick={handleBuzzer}
@@ -428,12 +465,12 @@ function GameInProgress({
         )}
 
         {/* Multiple choice options */}
-        {!isBuzzerMode && round.options && phase === "round_active" && (
+        {!isBuzzerMode && round.options && effectivePhase === "round_active" && (
           <div className="grid gap-3 sm:grid-cols-2">
             {round.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
-              if (answered && result) {
-                if (option.verse_key === result.correct_verse_key)
+              if (answered && effectiveResult) {
+                if (option.verse_key === effectiveResult.correct_verse_key)
                   style = "border-emerald-500 bg-emerald-500/10";
                 else if (option.verse_key === selected)
                   style = "border-red-500 bg-red-500/10";
@@ -457,7 +494,7 @@ function GameInProgress({
           </div>
         )}
 
-        {answered && !result && (
+        {answered && !effectiveResult && (
           <p className="mt-4 text-center text-sm text-gray-500">
             Waiting for other players...
           </p>
