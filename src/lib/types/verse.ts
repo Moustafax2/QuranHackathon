@@ -7,6 +7,7 @@ export interface Translation {
 export interface Word {
   id: number;
   position: number;
+  line_number?: number;
   text_uthmani: string;
   translation: {
     text: string;

@@ -11,13 +11,13 @@ const trainingModes = [
     href: "/train/flashcards",
   },
   {
-    id: "blank-ayah",
-    title: "Blank the Ayah",
+    id: "memorization-tester",
+    title: "Memorization Tester",
     description:
-      "An ayah appears with key words blanked out. Fill in the missing words from memory.",
+      "Test your hifz: blank out a page and recall it, or identify an ayah and locate it in the mushaf.",
     icon: "✏️",
     available: true,
-    href: "/train/blank-ayah",
+    href: "/train/memorization-tester",
   },
   {
     id: "challenge",
@@ -78,10 +78,6 @@ export default function TrainPage() {
           ))}
         </div>
 
-        {/* Placeholder pages for the available modes */}
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-800 p-6 text-center text-sm text-gray-600">
-          Flashcards and Blank the Ayah gameplay coming next sprint
-        </div>
       </div>
     </div>
   );
