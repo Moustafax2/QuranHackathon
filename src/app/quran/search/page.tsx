@@ -80,12 +80,9 @@ export default async function SearchPage({ searchParams }: Props) {
                     {result.text}
                   </p>
                   {result.translations?.[0] && (
-                    <p
-                      className="text-sm text-gray-600 dark:text-gray-400"
-                      dangerouslySetInnerHTML={{
-                        __html: result.translations[0].text,
-                      }}
-                    />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {result.translations[0].text.replace(/<[^>]*>/g, "")}
+                    </p>
                   )}
                 </Link>
               );

@@ -12,6 +12,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const supabase = createAdminSupabaseClient();
 
+  const limit = Math.min(Number(searchParams.get("limit") ?? 100), 500);
+  const offset = Number(searchParams.get("offset") ?? 0);
+
   let query = supabase
     .from("review_log")
     .select("*")
@@ -29,7 +32,7 @@ export async function GET(request: Request) {
   if (startDate) query = query.gte("timestamp", startDate);
   if (endDate) query = query.lte("timestamp", endDate);
 
-  query = query.order("timestamp", { ascending: false });
+  query = query.order("timestamp", { ascending: false }).range(offset, offset + limit - 1);
 
   const { data, error } = await query;
   if (error) {

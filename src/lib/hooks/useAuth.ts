@@ -16,6 +16,7 @@ interface AuthState {
   player: Player | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   loading: boolean;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -27,24 +28,38 @@ interface SessionResponse {
   player: Player | null;
 }
 
+const GUEST_STORAGE_KEY = "qalamspace_guest_player";
+
 export function useAuth(): AuthState {
   const [state, setState] = useState<Omit<AuthState, "logout" | "refresh">>({
     player: null,
     user: null,
     isAuthenticated: false,
+    isGuest: false,
     loading: true,
   });
 
   const loadSession = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/qf/session", { cache: "no-store" });
-      return (await response.json()) as SessionResponse;
+      const payload = (await response.json()) as SessionResponse;
+
+      if (!payload.isAuthenticated && typeof window !== "undefined") {
+        const raw = sessionStorage.getItem(GUEST_STORAGE_KEY);
+        if (raw) {
+          const guestPlayer = JSON.parse(raw) as Player;
+          return { ...payload, player: guestPlayer, isGuest: true };
+        }
+      }
+
+      return { ...payload, isGuest: false };
     } catch {
       return {
         player: null,
         user: null,
         isAuthenticated: false,
-      } satisfies SessionResponse;
+        isGuest: false,
+      };
     }
   }, []);
 
@@ -59,6 +74,7 @@ export function useAuth(): AuthState {
         player: payload.player,
         user: payload.user,
         isAuthenticated: payload.isAuthenticated,
+        isGuest: payload.isGuest,
         loading: false,
       });
     }
@@ -76,6 +92,7 @@ export function useAuth(): AuthState {
       player: payload.player,
       user: payload.user,
       isAuthenticated: payload.isAuthenticated,
+      isGuest: payload.isGuest,
       loading: false,
     });
   }, [loadSession]);

@@ -1,5 +1,6 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import type { Verse } from "@/lib/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
 import { useBookmarks } from "@/lib/hooks/useBookmarks";
@@ -44,7 +45,7 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
               <p
                 key={t.id}
                 className="text-base leading-relaxed text-gray-400"
-                dangerouslySetInnerHTML={{ __html: t.text }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t.text) }}
               />
             ))}
           </div>

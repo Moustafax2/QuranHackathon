@@ -4,7 +4,15 @@ import {
   broadcastGameEvent,
   corsHeaders,
 } from "../_shared/supabase-admin.ts";
-import { generateQuestions } from "../_shared/question-generator.ts";
+
+interface Question {
+  prompt_verse_key: string;
+  prompt_text: string;
+  correct_verse_key: string;
+  correct_text: string;
+  options: { verse_key: string; text: string }[];
+  game_mode?: string;
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -12,11 +20,22 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { room_id, player_id } = await req.json();
+    const { room_id, player_id, questions } = await req.json() as {
+      room_id: string;
+      player_id: string;
+      questions: Question[];
+    };
 
     if (!room_id || !player_id) {
       return new Response(
         JSON.stringify({ error: "room_id and player_id are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "questions array is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -26,7 +45,7 @@ serve(async (req: Request) => {
     // Verify room exists and player is host
     const { data: room, error: roomError } = await admin
       .from("rooms")
-      .select("*")
+      .select("id, host_id, status")
       .eq("id", room_id)
       .single();
 
@@ -51,33 +70,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const settings = room.settings as {
-      num_rounds: number;
-      surah_filter: number[] | null;
-      time_per_question: number;
-    };
-
-    // Generate all questions upfront
-    const questions = await generateQuestions(
-      settings.num_rounds,
-      room.game_mode,
-      settings.surah_filter
-    );
-
-    if (questions.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Failed to generate questions" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Create game record
     const { data: game, error: gameError } = await admin
       .from("games")
-      .insert({
-        room_id,
-        total_rounds: questions.length,
-      })
+      .insert({ room_id, total_rounds: questions.length })
       .select()
       .single();
 
@@ -113,17 +109,9 @@ serve(async (req: Request) => {
       );
     }
 
-    // Update room status
-    await admin
-      .from("rooms")
-      .update({ status: "in_progress" })
-      .eq("id", room_id);
-
-    // Reset room_players scores
-    await admin
-      .from("room_players")
-      .update({ score: 0 })
-      .eq("room_id", room_id);
+    // Update room status and reset scores
+    await admin.from("rooms").update({ status: "in_progress" }).eq("id", room_id);
+    await admin.from("room_players").update({ score: 0 }).eq("room_id", room_id);
 
     // Broadcast first round
     const firstRound = insertedRounds![0];
@@ -137,7 +125,6 @@ serve(async (req: Request) => {
         total_rounds: questions.length,
         prompt_verse_key: firstQuestion.prompt_verse_key,
         prompt_text: firstQuestion.prompt_text,
-        correct_verse_key: firstQuestion.correct_verse_key,
         options: firstQuestion.options,
       },
     });

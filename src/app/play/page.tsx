@@ -82,7 +82,7 @@ const SURAH_JUZ: Record<number, number> = {
 
 export default function PlayPage() {
   const router = useRouter();
-  const { player, loading: authLoading } = useAuth();
+  const { player, isGuest, loading: authLoading, refresh } = useAuth();
 
   // Game config state
   const [selectedModes, setSelectedModes] = useState<GameModeId[]>(["multiple-choice"]);
@@ -96,6 +96,7 @@ export default function PlayPage() {
   const [roomCode, setRoomCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [creatingGuest, setCreatingGuest] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -147,6 +148,30 @@ export default function PlayPage() {
     return `${selectedSurahs.length} surah${selectedSurahs.length > 1 ? "s" : ""}`;
   }
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function multiplayerHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (isGuest && player) headers["X-Guest-Player-Id"] = player.id;
+    return headers;
+  }
+
+  async function handleContinueAsGuest() {
+    setCreatingGuest(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/multiplayer/guest-token", { method: "POST" });
+      const data = (await res.json()) as { id?: string; display_name?: string; error?: string };
+      if (!res.ok || !data.id) throw new Error(data.error ?? "Failed to create guest session.");
+      sessionStorage.setItem("qalamspace_guest_player", JSON.stringify(data));
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCreatingGuest(false);
+    }
+  }
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   async function handleCreateRoom() {
@@ -158,10 +183,10 @@ export default function PlayPage() {
       const primaryMode = selectedModes[0];
       const response = await fetch("/api/multiplayer/create-room", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: multiplayerHeaders(),
         body: JSON.stringify({
-          game_mode: primaryMode,
-          settings: buildSettings(),
+          game_mode: primaryMode,   // stored on the room row (used as fallback)
+          settings: buildSettings(), // includes game_modes[], scope, filters
         }),
       });
       const data = (await response.json()) as { code?: string; error?: string };
@@ -182,7 +207,7 @@ export default function PlayPage() {
     try {
       const response = await fetch("/api/multiplayer/join-room", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: multiplayerHeaders(),
         body: JSON.stringify({ room_code: roomCode }),
       });
       const data = (await response.json()) as { code?: string; game_mode?: string; error?: string };
@@ -434,19 +459,42 @@ export default function PlayPage() {
               </div>
             )}
 
-            {/* Auth gate */}
+            {/* Identity gate — sign in OR guest */}
             {!authLoading && !player ? (
-              <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5 text-center">
-                <p className="mb-3 text-sm text-gray-400">Sign in to create or join a room</p>
+              <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5 space-y-3">
+                <p className="text-sm text-gray-400 text-center">Choose how to play</p>
                 <a
                   href="/api/auth/qf/login?next=/play"
-                  className="inline-block rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                  className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
                 >
-                  Continue with Quran.com
+                  Sign in with Quran.com
                 </a>
+                <button
+                  onClick={handleContinueAsGuest}
+                  disabled={creatingGuest}
+                  className="w-full rounded-xl border border-gray-700 bg-gray-800 py-2.5 text-sm font-semibold text-gray-300 hover:border-gray-600 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  {creatingGuest ? "Setting up..." : "Continue as Guest"}
+                </button>
+                <p className="text-xs text-gray-600 text-center">
+                  Guest sessions are temporary — progress won&apos;t be saved.
+                </p>
               </div>
             ) : (
               <>
+                {/* Guest badge */}
+                {isGuest && player && (
+                  <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
+                    <span className="text-amber-300">Playing as {player.display_name}</span>
+                    <a
+                      href="/api/auth/qf/login?next=/play"
+                      className="text-xs text-amber-400 underline hover:text-amber-300"
+                    >
+                      Sign in
+                    </a>
+                  </div>
+                )}
+
                 {/* Create */}
                 <button
                   onClick={handleCreateRoom}
