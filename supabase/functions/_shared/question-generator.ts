@@ -45,8 +45,26 @@ function shuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
-// Short surahs (Juz 30) are easier — weight them higher for casual play
-const SHORT_SURAHS = Array.from({ length: 37 }, (_, i) => 78 + i); // 78-114
+const ALL_SURAHS = Array.from({ length: 114 }, (_, i) => i + 1);
+
+// Surah → primary juz (first juz the surah starts in)
+const SURAH_JUZ: Record<number, number> = {
+  1:1,2:1,3:3,4:4,5:6,6:7,7:8,8:9,9:10,10:11,11:11,12:12,13:13,14:13,15:14,
+  16:14,17:15,18:15,19:16,20:16,21:17,22:17,23:18,24:18,25:18,26:19,27:19,
+  28:20,29:20,30:21,31:21,32:21,33:21,34:22,35:22,36:22,37:23,38:23,39:23,
+  40:24,41:24,42:25,43:25,44:25,45:25,46:26,47:26,48:26,49:26,50:26,51:27,
+  52:27,53:27,54:27,55:27,56:27,57:27,58:28,59:28,60:28,61:28,62:28,63:28,
+  64:28,65:28,66:28,67:29,68:29,69:29,70:29,71:29,72:29,73:29,74:29,75:29,
+  76:29,77:29,78:30,79:30,80:30,81:30,82:30,83:30,84:30,85:30,86:30,87:30,
+  88:30,89:30,90:30,91:30,92:30,93:30,94:30,95:30,96:30,97:30,98:30,99:30,
+  100:30,101:30,102:30,103:30,104:30,105:30,106:30,107:30,108:30,109:30,
+  110:30,111:30,112:30,113:30,114:30,
+};
+
+export function surahsForJuzList(juzList: number[]): number[] {
+  const juzSet = new Set(juzList);
+  return ALL_SURAHS.filter((s) => juzSet.has(SURAH_JUZ[s]));
+}
 
 /**
  * Generate a fill-in-the-blank question from a verse.
@@ -107,16 +125,16 @@ function makeFillInBlankQuestion(
  * Generate questions for a game.
  *
  * @param numRounds - Number of questions to generate
- * @param gameMode - 'multiple-choice' | 'fill-in-blank' | 'word-meaning' | 'buzzer'
- * @param surahFilter - Optional array of surah IDs to pick from
+ * @param gameModes - One or more of 'multiple-choice' | 'fill-in-blank' | 'word-meaning' | 'buzzer'
+ * @param surahFilter - Optional array of surah IDs to pick from (null = all Quran)
  */
 export async function generateQuestions(
   numRounds: number,
-  gameMode: string,
+  gameModes: string[],
   surahFilter?: number[] | null
 ): Promise<GeneratedQuestion[]> {
   const questions: GeneratedQuestion[] = [];
-  const pool = surahFilter?.length ? surahFilter : SHORT_SURAHS;
+  const pool = surahFilter?.length ? surahFilter : ALL_SURAHS;
 
   // Pre-fetch verses for a selection of surahs
   const surahsToFetch = new Set<number>();
@@ -137,6 +155,7 @@ export async function generateQuestions(
   );
 
   const usedPrompts = new Set<string>();
+  let retries = 0;
 
   for (let i = 0; i < numRounds; i++) {
     const surahIds = [...verseCache.keys()];
@@ -157,6 +176,8 @@ export async function generateQuestions(
     const correct = verses[promptIdx + 1];
     usedPrompts.add(prompt.verse_key);
 
+    const gameMode = gameModes[randInt(0, gameModes.length)];
+
     if (gameMode === "buzzer") {
       questions.push({
         prompt_verse_key: prompt.verse_key,
@@ -170,11 +191,13 @@ export async function generateQuestions(
       // word-meaning shows the word and asks players to identify it in context.
       const q = makeFillInBlankQuestion(prompt, verseCache);
       if (q) {
+        retries = 0;
         questions.push(q);
-      } else {
-        // Fallback to multiple-choice if the verse is too short
-        i--; // retry this round slot
+      } else if (++retries <= numRounds * 3) {
+        // Retry this round slot — verse was too short for fill-in-blank
+        i--;
       }
+      // else: give up retrying and accept fewer questions than requested
     } else {
       // multiple-choice: pick 3 distractors (next verses from other spots)
       const distractorPool = verses.filter(

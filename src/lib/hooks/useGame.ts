@@ -15,10 +15,12 @@ type GameRow = Database["public"]["Tables"]["games"]["Row"];
 type GameRoundRow = Database["public"]["Tables"]["game_rounds"]["Row"];
 type RoomPlayerRow = Database["public"]["Tables"]["room_players"]["Row"];
 
+interface SubmitResult { ok: boolean; error?: string }
+
 interface UseGameReturn {
   gameState: GameState;
-  submitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
-  pressBuzzer: (roundId: string) => Promise<void>;
+  submitAnswer: (roundId: string, answerVerseKey: string) => Promise<SubmitResult>;
+  pressBuzzer: (roundId: string) => Promise<SubmitResult>;
 }
 
 /**
@@ -145,35 +147,51 @@ export function useGame(
   }, [guestPlayerId]);
 
   const submitAnswer = useCallback(
-    async (roundId: string, answerVerseKey: string) => {
-      if (!gameId || !playerId) return;
-
-      await fetch("/api/multiplayer/submit-answer", {
-        method: "POST",
-        headers: buildHeaders(),
-        body: JSON.stringify({
-          game_id: gameId,
-          round_id: roundId,
-          answer_verse_key: answerVerseKey,
-        }),
-      });
+    async (roundId: string, answerVerseKey: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!gameId || !playerId) return { ok: false };
+      try {
+        const res = await fetch("/api/multiplayer/submit-answer", {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            game_id: gameId,
+            round_id: roundId,
+            answer_verse_key: answerVerseKey,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? "Failed to submit answer" };
+        }
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Network error — answer may not have been recorded" };
+      }
     },
     [gameId, playerId, buildHeaders]
   );
 
   const pressBuzzer = useCallback(
-    async (roundId: string) => {
-      if (!gameId || !playerId) return;
-
-      await fetch("/api/multiplayer/submit-answer", {
-        method: "POST",
-        headers: buildHeaders(),
-        body: JSON.stringify({
-          game_id: gameId,
-          round_id: roundId,
-          is_buzzer: true,
-        }),
-      });
+    async (roundId: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!gameId || !playerId) return { ok: false };
+      try {
+        const res = await fetch("/api/multiplayer/submit-answer", {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            game_id: gameId,
+            round_id: roundId,
+            is_buzzer: true,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? "Failed to buzz" };
+        }
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Network error — buzz may not have been recorded" };
+      }
     },
     [gameId, playerId, buildHeaders]
   );

@@ -185,8 +185,8 @@ export default function PlayPage() {
         method: "POST",
         headers: multiplayerHeaders(),
         body: JSON.stringify({
-          game_mode: primaryMode,
-          settings: buildSettings(),
+          game_mode: primaryMode,   // stored on the room row (used as fallback)
+          settings: buildSettings(), // includes game_modes[], scope, filters
         }),
       });
       const data = (await response.json()) as { code?: string; error?: string };

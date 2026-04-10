@@ -267,8 +267,8 @@ interface GameProps {
   gameState: GameState;
   playerId: string;
   players: RoomPlayer[];
-  onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
-  onPressBuzzer: (roundId: string) => Promise<void>;
+  onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<{ ok: boolean; error?: string }>;
+  onPressBuzzer: (roundId: string) => Promise<{ ok: boolean; error?: string }>;
   gameMode: string;
 }
 
@@ -289,6 +289,7 @@ function GameInProgress({
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [buzzed, setBuzzed] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   // Pinned result — keeps the result screen visible for at least RESULT_MIN_MS
   // even after the server moves to the next round.
   const [pinnedResult, setPinnedResult] = useState<typeof gameState.round_result>(null);
@@ -383,13 +384,22 @@ function GameInProgress({
     if (answered) return;
     setSelected(verseKey);
     setAnswered(true);
-    await onSubmitAnswer(round!.round_id, verseKey);
+    setSubmitError(null);
+    const result = await onSubmitAnswer(round!.round_id, verseKey);
+    if (!result.ok) {
+      setSubmitError(result.error ?? "Failed to submit answer");
+    }
   }
 
   async function handleBuzzer() {
     if (buzzed) return;
     setBuzzed(true);
-    await onPressBuzzer(round!.round_id);
+    setSubmitError(null);
+    const result = await onPressBuzzer(round!.round_id);
+    if (!result.ok) {
+      setSubmitError(result.error ?? "Failed to buzz");
+      setBuzzed(false); // allow retry
+    }
   }
 
   // Build scores display
@@ -425,10 +435,14 @@ function GameInProgress({
               : isFillInBlank
               ? "Fill in the blank"
               : isWordMeaning
-              ? "Which word is missing?"
+              ? "What does this word mean?"
               : "What comes next?"}
           </p>
-          <p dir="rtl" lang="ar" className="font-amiri text-3xl leading-loose text-white">
+          <p
+            dir="rtl"
+            lang="ar"
+            className={`font-amiri text-white ${isWordMeaning ? "text-4xl leading-loose" : "text-3xl leading-loose"}`}
+          >
             {round.prompt_text}
           </p>
           <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
@@ -514,10 +528,14 @@ function GameInProgress({
                   } ${style}`}
                 >
                   <p
-                    dir="rtl"
-                    lang="ar"
-                    className={`font-amiri leading-loose text-white ${
-                      isFillInBlank || isWordMeaning ? "text-2xl" : "text-xl"
+                    dir={isWordMeaning ? "ltr" : "rtl"}
+                    lang={isWordMeaning ? "en" : "ar"}
+                    className={`text-white ${
+                      isWordMeaning
+                        ? "text-lg font-medium leading-relaxed"
+                        : isFillInBlank
+                        ? "font-amiri text-2xl leading-loose"
+                        : "font-amiri text-xl leading-loose"
                     }`}
                   >
                     {option.text}
@@ -532,6 +550,10 @@ function GameInProgress({
           <p className="mt-4 text-center text-sm text-gray-500">
             Waiting for other players...
           </p>
+        )}
+
+        {submitError && (
+          <p className="mt-4 text-center text-sm text-red-400">{submitError}</p>
         )}
       </div>
     </div>
