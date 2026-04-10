@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 import type { GamePhase } from "@/lib/game/state-machine";
 
 interface Props {
@@ -14,37 +15,50 @@ interface Props {
   searchParams: Promise<{ mode?: string }>;
 }
 
-interface RoomInfo {
-  id: string;
-  code: string;
-  host_id: string;
-  game_mode: string;
-  settings: { num_rounds: number; surah_filter: number[] | null; time_per_question: number };
-}
+type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
+type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
 
 export default function GameRoomPage({ params, searchParams }: Props) {
   const { roomId } = use(params);
-  const { mode } = use(searchParams);
+  use(searchParams);
   const { player, loading: authLoading } = useAuth();
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch room info on mount
   useEffect(() => {
     async function fetchRoom() {
       const supabase = createClient();
-      const { data, error: fetchError } = await supabase
+      const roomResponse = await supabase
         .from("rooms")
         .select("*")
         .eq("code", roomId)
         .single();
+      const data = roomResponse.data as RoomInfo | null;
+      const fetchError = roomResponse.error;
 
       if (fetchError || !data) {
         setError("Room not found");
       } else {
-        setRoomInfo(data as unknown as RoomInfo);
+        setRoomInfo(data);
+        if (data.status === "in_progress") {
+          const activeGameResponse = await supabase
+            .from("games")
+            .select("id")
+            .eq("room_id", data.id)
+            .is("ended_at", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const activeGame = activeGameResponse.data as ActiveGameLookup | null;
+
+          if (activeGame?.id) {
+            setGameId(activeGame.id);
+          }
+        }
       }
       setLoading(false);
     }
@@ -67,20 +81,25 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const phase: GamePhase = gameState.phase;
 
   async function handleStartGame() {
-    if (!roomInfo || !player) return;
+    if (!roomInfo || !player || starting) return;
+    setStarting(true);
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "start-game",
-        { body: { room_id: roomInfo.id, player_id: player.id } }
-      );
-
-      if (fnError) throw new Error(fnError.message);
+      const response = await fetch("/api/multiplayer/start-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: roomInfo.id }),
+      });
+      const data = (await response.json()) as { game_id?: string; error?: string };
+      if (!response.ok || !data.game_id) {
+        throw new Error(data.error ?? "Failed to start game.");
+      }
       setGameId(data.game_id);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -109,10 +128,10 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   if (phase !== "lobby" && gameState.current_round) {
     return (
       <GameInProgress
+        key={gameState.current_round.round_id}
         roomCode={roomId}
         gameState={gameState}
         playerId={player?.id ?? ""}
-        isHost={isHost}
         players={players}
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
@@ -199,10 +218,10 @@ export default function GameRoomPage({ params, searchParams }: Props) {
           {isHost ? (
             <button
               onClick={handleStartGame}
-              disabled={players.length < 1}
+              disabled={players.length < 1 || starting}
               className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
             >
-              Start Game
+              {starting ? "Starting..." : "Start Game"}
             </button>
           ) : (
             <div className="flex-1 rounded-xl border border-gray-700 py-3 text-center text-sm text-gray-500">
@@ -232,7 +251,6 @@ interface GameProps {
   roomCode: string;
   gameState: GameState;
   playerId: string;
-  isHost: boolean;
   players: RoomPlayer[];
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
   onPressBuzzer: (roundId: string) => Promise<void>;
@@ -243,7 +261,6 @@ function GameInProgress({
   roomCode,
   gameState,
   playerId,
-  isHost,
   players,
   onSubmitAnswer,
   onPressBuzzer,
@@ -256,15 +273,6 @@ function GameInProgress({
   const round = gameState.current_round;
   const result = gameState.round_result;
   const phase = gameState.phase;
-
-  // Reset state when new round starts
-  useEffect(() => {
-    if (phase === "round_active") {
-      setAnswered(false);
-      setSelected(null);
-      setBuzzed(false);
-    }
-  }, [phase, round?.round_number]);
 
   // Game over screen
   if (phase === "game_over") {

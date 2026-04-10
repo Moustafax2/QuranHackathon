@@ -78,7 +78,7 @@ export default function LeaderboardPage() {
     }
 
     fetchLeaderboard();
-  }, [player?.id]);
+  }, [player]);
 
   const players = tab === "global" ? globalPlayers : friendsPlayers;
 

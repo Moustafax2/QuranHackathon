@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -30,11 +30,14 @@ export function useRoom(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentPlayer || !roomCode) return;
+    const currentPlayerId = currentPlayer?.id;
+    const currentPlayerName = currentPlayer?.display_name;
+
+    if (!currentPlayerId || !currentPlayerName || !roomCode) return;
 
     const supabase = createClient();
     const channel: RealtimeChannel = supabase.channel(`room:${roomCode}`, {
-      config: { presence: { key: currentPlayer.id } },
+      config: { presence: { key: currentPlayerId } },
     });
 
     channel
@@ -57,8 +60,8 @@ export function useRoom(
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await channel.track({
-            player_id: currentPlayer.id,
-            display_name: currentPlayer.display_name,
+            player_id: currentPlayerId,
+            display_name: currentPlayerName,
           });
           setIsConnected(true);
         } else if (status === "CHANNEL_ERROR") {

@@ -3,3 +3,4 @@ export * from "./verse";
 export * from "./audio";
 export * from "./search";
 export * from "./game";
+export * from "./flashcard";
