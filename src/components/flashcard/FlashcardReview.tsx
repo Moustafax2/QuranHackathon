@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import DOMPurify from "dompurify";
 import type { LexicalEntry, Rating } from "@/lib/types/flashcard";
 import { CardType } from "@/lib/types/flashcard";
 import { ensureCompleteVerbForms } from "@/lib/corpus/verb-generator";
@@ -415,16 +416,18 @@ export function FlashcardReview({
                     <div
                       className="max-h-32 overflow-y-auto text-sm leading-relaxed text-gray-300"
                       dangerouslySetInnerHTML={{
-                          __html: hansWehrDef
-                          // already bold: <b>IV</b> → <br><b>IV</b>
-                          .replace(
-                            /<b>(II|III|IV|VI|VII|VIII|IX|X|V)<\/b>/g,
-                            "<br><b>$1</b>"
-                          )
-                          // plain text: " IV " → <br><b>IV</b>
-                          .replace(
-                            /(?<![<>/\w])(II|III|IV|VI|VII|VIII|IX|X|V)(?=\s)/g,
-                            "<br><b>$1</b>"
+                          __html: DOMPurify.sanitize(
+                            hansWehrDef
+                            // already bold: <b>IV</b> → <br><b>IV</b>
+                            .replace(
+                              /<b>(II|III|IV|VI|VII|VIII|IX|X|V)<\/b>/g,
+                              "<br><b>$1</b>"
+                            )
+                            // plain text: " IV " → <br><b>IV</b>
+                            .replace(
+                              /(?<![<>/\w])(II|III|IV|VI|VII|VIII|IX|X|V)(?=\s)/g,
+                              "<br><b>$1</b>"
+                            )
                           ),
                       }}
                     />

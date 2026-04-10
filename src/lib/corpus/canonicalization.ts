@@ -122,29 +122,11 @@ export function normalizeVerb(words: RawWord[]): LexicalEntry | null {
   if (verbWords.length === 0) return null;
 
   const root = verbWords[0].root || "";
-  // #region agent log
-  const hasStaEana = verbWords.some(w => w.surah === 1 && w.ayah === 5);
-  const hasEawth = verbWords.some(w => w.buckwalter_root === 'Ew*');
-  if (hasStaEana) {
-    fetch('http://127.0.0.1:7928/ingest/072fcd97-088c-4485-ab8e-cc835b14d75c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8997fe'},body:JSON.stringify({sessionId:'8997fe',location:'canonicalization.ts:123',message:'Processing verb from 1:5',data:{root:root,buckwalter_root:verbWords[0].buckwalter_root,buckwalter_lemma:verbWords[0].buckwalter_lemma,lemma:verbWords[0].lemma,text:verbWords[0].text,features:verbWords[0].features,verb_form:verbWords[0].verb_form},timestamp:Date.now(),hypothesisId:'A,B,C'})}).catch(()=>{});
-  }
-  if (hasEawth) {
-    fetch('http://127.0.0.1:7928/ingest/072fcd97-088c-4485-ab8e-cc835b14d75c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8997fe'},body:JSON.stringify({sessionId:'8997fe',location:'canonicalization.ts:149',message:'H1: Processing عوذ verb',data:{root:root,buckwalter_root:verbWords[0].buckwalter_root,buckwalter_lemma:verbWords[0].buckwalter_lemma,lemma:verbWords[0].lemma,text:verbWords[0].text,all_words:verbWords.map(w=>({tense:w.tense,person:w.person,text:w.text,lemma:w.lemma,buckwalter_lemma:w.buckwalter_lemma}))},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  }
-  // #endregion
   let past = chooseVerbPast(verbWords);
   let present = chooseVerbPresent(verbWords);
   let imperative = chooseVerbImperative(verbWords);
   const verbalNoun = chooseVerbalNoun(words);
-  // #region agent log
-  if (hasStaEana) {
-    fetch('http://127.0.0.1:7928/ingest/072fcd97-088c-4485-ab8e-cc835b14d75c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8997fe'},body:JSON.stringify({sessionId:'8997fe',location:'canonicalization.ts:135',message:'After choosing verb forms',data:{past:past,present:present,imperative:imperative,verbalNoun:verbalNoun},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-  }
-  if (hasEawth) {
-    fetch('http://127.0.0.1:7928/ingest/072fcd97-088c-4485-ab8e-cc835b14d75c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8997fe'},body:JSON.stringify({sessionId:'8997fe',location:'canonicalization.ts:166',message:'H5: After choosing عوذ verb forms',data:{past:past,present:present,imperative:imperative,verbalNoun:verbalNoun},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-  }
-  // #endregion
-  
+
   // OPTION 1 & 3: Use Qutrub as fallback for missing forms, especially weak verbs
   const hasMissingForms = past === undefined || present === undefined || imperative === undefined;
   const isWeak = root ? isWeakRoot(root) : false;

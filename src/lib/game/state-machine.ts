@@ -10,8 +10,6 @@ export interface RoundData {
   total_rounds: number;
   prompt_verse_key: string;
   prompt_text: string;
-  correct_verse_key: string;
-  correct_text?: string;
   options?: OptionData[];
 }
 

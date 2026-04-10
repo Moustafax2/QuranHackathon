@@ -230,19 +230,11 @@ async function endRound(
 
   for (const answer of answers ?? []) {
     if (answer.points_awarded > 0) {
-      // Increment score
-      const { data: rp } = await admin
-        .from("room_players")
-        .select("score")
-        .eq("room_id", game!.room_id)
-        .eq("player_id", answer.player_id)
-        .single();
-
-      await admin
-        .from("room_players")
-        .update({ score: (rp?.score ?? 0) + answer.points_awarded })
-        .eq("room_id", game!.room_id)
-        .eq("player_id", answer.player_id);
+      await admin.rpc("increment_player_score", {
+        p_room_id: game!.room_id,
+        p_player_id: answer.player_id,
+        p_delta: answer.points_awarded,
+      });
     }
   }
 
@@ -299,19 +291,11 @@ async function endRound(
 
     // Update player lifetime stats
     for (const [pid, score] of Object.entries(scores)) {
-      const { data: p } = await admin
-        .from("players")
-        .select("total_points, total_wins")
-        .eq("id", pid)
-        .single();
-
-      await admin
-        .from("players")
-        .update({
-          total_points: (p?.total_points ?? 0) + score,
-          total_wins: (p?.total_wins ?? 0) + (pid === winnerId ? 1 : 0),
-        })
-        .eq("id", pid);
+      await admin.rpc("increment_player_stats", {
+        p_player_id: pid,
+        p_points: score,
+        p_won: pid === winnerId,
+      });
     }
 
     await broadcastGameEvent(gameId, {
@@ -353,7 +337,6 @@ async function endRound(
           total_rounds: game!.total_rounds,
           prompt_verse_key: nextRound.prompt_verse_key,
           prompt_text: nextRound.prompt_text ?? "",
-          correct_verse_key: nextRound.correct_verse_key,
           options,
         },
       });

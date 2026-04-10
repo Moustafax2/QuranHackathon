@@ -15,10 +15,12 @@ type GameRow = Database["public"]["Tables"]["games"]["Row"];
 type GameRoundRow = Database["public"]["Tables"]["game_rounds"]["Row"];
 type RoomPlayerRow = Database["public"]["Tables"]["room_players"]["Row"];
 
+interface SubmitResult { ok: boolean; error?: string }
+
 interface UseGameReturn {
   gameState: GameState;
-  submitAnswer: (roundId: string, answerVerseKey: string) => Promise<void>;
-  pressBuzzer: (roundId: string) => Promise<void>;
+  submitAnswer: (roundId: string, answerVerseKey: string) => Promise<SubmitResult>;
+  pressBuzzer: (roundId: string) => Promise<SubmitResult>;
 }
 
 /**
@@ -27,7 +29,8 @@ interface UseGameReturn {
  */
 export function useGame(
   gameId: string | null,
-  playerId: string | null
+  playerId: string | null,
+  guestPlayerId?: string | null
 ): UseGameReturn {
   const [gameState, dispatch] = useReducer(reduceGameState, INITIAL_GAME_STATE);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -112,8 +115,6 @@ export function useGame(
           total_rounds: game.total_rounds,
           prompt_verse_key: currentRound.prompt_verse_key,
           prompt_text: currentRound.prompt_text ?? "",
-          correct_verse_key: currentRound.correct_verse_key,
-          correct_text: currentRound.correct_text ?? undefined,
           options,
         },
       });
@@ -139,38 +140,60 @@ export function useGame(
     };
   }, [gameId]);
 
-  const submitAnswer = useCallback(
-    async (roundId: string, answerVerseKey: string) => {
-      if (!gameId || !playerId) return;
+  const buildHeaders = useCallback(() => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
+    return headers;
+  }, [guestPlayerId]);
 
-      await fetch("/api/multiplayer/submit-answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          game_id: gameId,
-          round_id: roundId,
-          answer_verse_key: answerVerseKey,
-        }),
-      });
+  const submitAnswer = useCallback(
+    async (roundId: string, answerVerseKey: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!gameId || !playerId) return { ok: false };
+      try {
+        const res = await fetch("/api/multiplayer/submit-answer", {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            game_id: gameId,
+            round_id: roundId,
+            answer_verse_key: answerVerseKey,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? "Failed to submit answer" };
+        }
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Network error — answer may not have been recorded" };
+      }
     },
-    [gameId, playerId]
+    [gameId, playerId, buildHeaders]
   );
 
   const pressBuzzer = useCallback(
-    async (roundId: string) => {
-      if (!gameId || !playerId) return;
-
-      await fetch("/api/multiplayer/submit-answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          game_id: gameId,
-          round_id: roundId,
-          is_buzzer: true,
-        }),
-      });
+    async (roundId: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!gameId || !playerId) return { ok: false };
+      try {
+        const res = await fetch("/api/multiplayer/submit-answer", {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            game_id: gameId,
+            round_id: roundId,
+            is_buzzer: true,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.error ?? "Failed to buzz" };
+        }
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Network error — buzz may not have been recorded" };
+      }
     },
-    [gameId, playerId]
+    [gameId, playerId, buildHeaders]
   );
 
   return { gameState, submitAnswer, pressBuzzer };
