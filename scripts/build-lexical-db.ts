@@ -285,20 +285,28 @@ async function buildFullDatabase() {
   console.log(`  Unique lemmas: ${groupedByLemma.size}`);
   
   const entries: LexicalEntry[] = [];
-  
-  groupedByLemma.forEach((words) => {
+  const total = groupedByLemma.size;
+  let processed = 0;
+
+  groupedByLemma.forEach((words, key) => {
+    processed++;
+    console.log(`  [${processed}/${total}] ${key}`);
+
     const verb = normalizeVerb(words);
-    if (verb) entries.push(verb);
-    
+    if (verb) {
+      console.log(`    → verb: ${verb.canonical_form}  past=${verb.forms && "past" in verb.forms ? verb.forms.past : "-"}  present=${verb.forms && "present" in verb.forms ? verb.forms.present : "-"}  imp=${verb.forms && "imperative" in verb.forms ? verb.forms.imperative : "-"}`);
+      entries.push(verb);
+    }
+
     const noun = normalizeNoun(words);
     if (noun) entries.push(noun);
-    
+
     const particle = normalizeParticle(words);
     if (particle) entries.push(particle);
   });
-  
+
   const deduplicated = deduplicateEntries(entries);
-  
+
   console.log(`  Canonical entries: ${deduplicated.length}`);
   console.log("");
   

@@ -13,6 +13,7 @@ import {
   getSessionProgress,
 } from "@/lib/flashcard/session-manager";
 import { getWordById } from "@/lib/corpus/lexical-db";
+import { deleteFlashcard } from "@/lib/storage/flashcard-storage-supabase";
 
 // ── Flagged words (localStorage) ─────────────────────────────────
 const FLAGGED_KEY = "qalamspace_flagged_words";
@@ -52,6 +53,8 @@ export default function ReviewPage() {
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [flaggedWords, setFlaggedWords] = useState<Set<string>>(new Set());
   const [justFlagged, setJustFlagged] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     setFlaggedWords(getFlaggedWords());
@@ -139,6 +142,27 @@ export default function ReviewPage() {
     saveFlaggedWords(updated);
   };
 
+  const handleDelete = async () => {
+    if (!session) return;
+    const card = getCurrentCard(session);
+    if (!card) return;
+    await deleteFlashcard(card.id);
+    // Remove card from session queue and keep current_index pointing at the next card
+    const updatedCards = session.cards.filter((_, i) => i !== session.current_index);
+    const updatedSession = {
+      ...session,
+      cards: updatedCards,
+      stats: { ...session.stats, total_cards: Math.max(0, session.stats.total_cards - 1) },
+    };
+    setUndoStack([]); // undo would be invalid after a delete
+    setConfirmDelete(false);
+    setMenuOpen(false);
+    if (updatedSession.current_index >= updatedCards.length) {
+      setShowSummary(true);
+    }
+    setSession(updatedSession);
+  };
+
   const formatTime = (ms: number) => {
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -224,7 +248,7 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 py-8">
+    <div className="min-h-screen bg-gray-950 px-4 py-8" onClick={() => { setMenuOpen(false); setConfirmDelete(false); }}>
       <div className="mx-auto max-w-4xl">
         {/* Progress */}
         <div className="mb-6">
@@ -242,16 +266,64 @@ export default function ReviewPage() {
 
         {/* Controls row */}
         <div className="mb-4 flex items-center justify-between gap-3">
-          {/* Undo */}
-          <button
-            onClick={handleUndo}
-            disabled={undoStack.length === 0}
-            title="Undo last rating (Z)"
-            className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-gray-500 transition-colors hover:border-gray-600 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <span className="text-base leading-none">↩</span>
-            <span>Undo</span>
-          </button>
+          {/* Left: Undo + 3-dot menu */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              title="Undo last rating (Z)"
+              className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-gray-500 transition-colors hover:border-gray-600 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <span className="text-base leading-none">↩</span>
+              <span>Undo</span>
+            </button>
+
+            {/* 3-dot menu */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); setConfirmDelete(false); }}
+                title="Card options"
+                className="flex items-center justify-center rounded-lg border border-gray-700 bg-gray-900 px-2.5 py-1.5 text-gray-500 transition-colors hover:border-gray-600 hover:text-gray-300"
+              >
+                <span className="text-base leading-none tracking-widest">•••</span>
+              </button>
+
+              {menuOpen && (
+                <div
+                  className="absolute left-0 top-full z-20 mt-1 min-w-[160px] rounded-xl border border-gray-700 bg-gray-900 py-1 shadow-xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {confirmDelete ? (
+                    <div className="px-3 py-2">
+                      <p className="mb-2 text-xs text-gray-400">Remove this card permanently?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleDelete}
+                          className="flex-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => { setConfirmDelete(false); setMenuOpen(false); }}
+                          className="flex-1 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-gray-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+                    >
+                      <span>🗑</span>
+                      <span>Delete card</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* Flag button */}

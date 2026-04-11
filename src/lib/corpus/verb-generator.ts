@@ -173,7 +173,7 @@ function extractPattern(existingForm: string, formType: VerbForm): string {
  * Generate 3MS present tense from any present tense form
  * Works by replacing the person prefix with ي
  */
-function derive3MSPresent(anyPresent: string): string | undefined {
+export function derive3MSPresent(anyPresent: string): string | undefined {
   if (!anyPresent || anyPresent === "-") return undefined;
   
   // Remove diacritics to analyze structure

@@ -219,6 +219,71 @@ function OptimizeWarningModal({
 }
 
 // ──────────────────────────────────────────────────────────────────
+// Reset warning modal
+// ──────────────────────────────────────────────────────────────────
+
+function ResetWarningModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+      <div className="w-full max-w-md rounded-2xl border border-red-900/60 bg-gray-900 p-6 shadow-2xl">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-xl">
+            🗑️
+          </div>
+          <h2 className="text-lg font-bold text-white">Reset All Flashcard Data?</h2>
+        </div>
+
+        <div className="mb-5 space-y-3 rounded-xl border border-red-900/40 bg-red-950/30 p-4 text-sm text-red-200/80">
+          <p className="font-semibold text-red-300">This will permanently delete:</p>
+          <ul className="ml-4 list-disc space-y-1.5 text-red-200/70">
+            <li>All your <strong>review history</strong> and scheduling data</li>
+            <li>All <strong>FSRS and SM-2 card states</strong> (intervals, stability, difficulty)</li>
+            <li>All <strong>learned and due cards</strong> — everything restarts from zero</li>
+          </ul>
+          <p className="mt-2 text-red-300/90 font-medium">This cannot be undone.</p>
+        </div>
+
+        <label className="mb-5 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-700 bg-gray-800 p-4">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500"
+          />
+          <span className="text-sm text-gray-300">
+            I understand this will permanently delete all my flashcard progress and cannot be undone.
+          </span>
+        </label>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={!confirmed}
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reset everything
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Main settings page
 // ──────────────────────────────────────────────────────────────────
 
@@ -237,6 +302,9 @@ export default function SettingsPage() {
 
   // Optimize warning
   const [showOptimizeWarning, setShowOptimizeWarning] = useState(false);
+
+  // Reset warning
+  const [showResetWarning, setShowResetWarning] = useState(false);
 
   useEffect(() => {
     async function loadPrefs() {
@@ -263,11 +331,9 @@ export default function SettingsPage() {
   };
 
   const handleReset = async () => {
-    if (confirm("Are you sure you want to reset all data? This cannot be undone.")) {
-      await resetAllData();
-      clearAllSM2States();
-      router.push("/train/flashcards");
-    }
+    await resetAllData();
+    clearAllSM2States();
+    router.push("/train/flashcards");
   };
 
   const handleExport = async () => {
@@ -321,6 +387,17 @@ export default function SettingsPage() {
         />
       )}
 
+      {/* Reset warning modal */}
+      {showResetWarning && (
+        <ResetWarningModal
+          onConfirm={() => {
+            setShowResetWarning(false);
+            handleReset();
+          }}
+          onCancel={() => setShowResetWarning(false)}
+        />
+      )}
+
       {/* Optimize warning modal */}
       {showOptimizeWarning && (
         <OptimizeWarningModal
@@ -353,8 +430,6 @@ export default function SettingsPage() {
                   ["show_arabic_explanation", "Show Arabic explanation"],
                   ["show_root",               "Show root/lemma"],
                   ["show_ayah_examples",      "Show ayah examples"],
-                  ["show_transliteration",    "Show transliteration"],
-                  ["auto_audio",              "Auto audio"],
                 ] as const
               ).map(([key, label]) => (
                 <label key={key} className="flex items-center justify-between">
@@ -649,6 +724,23 @@ export default function SettingsPage() {
               className="flex-1 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
             >
               {saved ? "✓ Saved!" : "Save Settings"}
+            </button>
+          </div>
+
+          {/* ── Danger Zone ────────────────────────────────────────── */}
+          <div className="rounded-2xl border border-red-900/40 bg-red-950/10 p-6">
+            <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-red-400">
+              <span>⚠️</span> Danger Zone
+            </h2>
+            <p className="mb-4 text-sm text-gray-500">
+              These actions are permanent and cannot be undone.
+            </p>
+            <button
+              onClick={() => setShowResetWarning(true)}
+              className="w-full rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-left text-red-400 transition-all hover:border-red-700 hover:bg-red-950/70"
+            >
+              <div className="font-medium">Reset Flashcard Suite</div>
+              <div className="text-sm text-red-500/70">Delete all review history, card states, and progress</div>
             </button>
           </div>
         </div>
