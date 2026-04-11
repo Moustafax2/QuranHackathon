@@ -217,10 +217,7 @@ export default function PlayPage() {
         error?: string;
       };
       if (!response.ok || !data.code) {
-        if (
-          response.status === 409 ||
-          (data.error ?? "").toLowerCase().includes("cannot join new game already in progress")
-        ) {
+        if (response.status === 409) {
           throw new Error("Cannot join: this game is already in progress for current participants only.");
         }
         throw new Error(data.error ?? "Room not found.");

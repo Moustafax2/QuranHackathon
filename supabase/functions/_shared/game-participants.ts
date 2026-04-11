@@ -1,6 +1,7 @@
 import { createAdminClient, broadcastGameEvent } from "./supabase-admin.ts";
 
 const HEARTBEAT_GRACE_SECONDS = 20;
+const MILLISECONDS_PER_SECOND = 1000;
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -54,7 +55,7 @@ async function getEligibleParticipantIds(
 ): Promise<string[]> {
   const now = new Date();
   const thresholdIso = new Date(
-    now.getTime() - HEARTBEAT_GRACE_SECONDS * 1000
+    now.getTime() - HEARTBEAT_GRACE_SECONDS * MILLISECONDS_PER_SECOND
   ).toISOString();
 
   await admin

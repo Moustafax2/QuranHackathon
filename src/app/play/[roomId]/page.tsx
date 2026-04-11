@@ -126,7 +126,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     void syncParticipants();
     const interval = setInterval(() => {
       void syncParticipants();
-    }, 5000);
+    }, 10000);
 
     return () => {
       cancelled = true;
@@ -149,7 +149,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     void heartbeat();
     const interval = setInterval(() => {
       if (!stopped) void heartbeat();
-    }, 5000);
+    }, 8000);
 
     return () => {
       stopped = true;

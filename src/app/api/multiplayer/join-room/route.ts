@@ -7,6 +7,7 @@ function normalizeEnvValue(value: string | undefined): string | null {
 }
 
 function isJwtLikeToken(value: string): boolean {
+  // Heuristic only: Supabase service role JWT keys are dot-separated.
   return value.split(".").length === 3;
 }
 
@@ -50,7 +51,9 @@ export async function POST(request: Request) {
       cache: "no-store",
     });
 
-    const raw = await edgeResponse.text().catch(() => "");
+    const raw = await edgeResponse
+      .text()
+      .catch(() => '{"error":"Failed to parse edge function response."}');
     let parsed: Record<string, unknown> = {};
     if (raw) {
       try {
