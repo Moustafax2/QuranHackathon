@@ -401,10 +401,10 @@ function GameInProgress({
     displayNameById.get(pid) ??
     players.find((p) => p.player_id === pid)?.display_name ??
     "Unknown";
-  function getParticipantActivityStatus(participant: ParticipantStatus): {
+  const getParticipantActivityStatus = useCallback((participant: ParticipantStatus): {
     label: "Active" | "Returned" | "Disconnected";
     className: string;
-  } {
+  } => {
     if (!participant.is_active) {
       return {
         label: "Disconnected",
@@ -423,7 +423,7 @@ function GameInProgress({
       label: "Active",
       className: "text-emerald-300 bg-emerald-500/15 border-emerald-500/30",
     };
-  }
+  }, []);
 
   // Game over screen
   if (phase === "game_over") {

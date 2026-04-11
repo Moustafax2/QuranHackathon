@@ -7,8 +7,9 @@ function normalizeEnvValue(value: string | undefined): string | null {
 }
 
 function isJwtLikeToken(value: string): boolean {
-  // Heuristic only: if key looks like a JWT (header.payload.signature), include
-  // Authorization in addition to apikey; Supabase still validates credentials.
+  // If key looks like JWT (header.payload.signature), also send Authorization.
+  // Newer Supabase secret keys are not JWTs and should only use `apikey`.
+  // We include both only for backward-compatible edge function auth behavior.
   return /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value);
 }
 

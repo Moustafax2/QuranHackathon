@@ -66,13 +66,24 @@ async function getEligibleParticipantIds(
     .eq("is_active", true)
     .lt("last_seen_at", thresholdIso);
 
-  const { data: eligibleRows } = await admin
+  const { data: activeRows } = await admin
     .from("game_participants")
     .select("player_id")
     .eq("game_id", gameId)
-    .or(`is_active.eq.true,last_seen_at.gte.${thresholdIso}`);
+    .eq("is_active", true);
 
-  return (eligibleRows ?? []).map((row) => row.player_id);
+  const { data: recentlySeenRows } = await admin
+    .from("game_participants")
+    .select("player_id")
+    .eq("game_id", gameId)
+    .gte("last_seen_at", thresholdIso);
+
+  return Array.from(
+    new Set([
+      ...(activeRows ?? []).map((row) => row.player_id),
+      ...(recentlySeenRows ?? []).map((row) => row.player_id),
+    ])
+  );
 }
 
 export async function maybeCompleteRound(
