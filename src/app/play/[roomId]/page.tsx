@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { use } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -48,11 +48,11 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     } catch { /* ignore */ }
   }, []);
 
-  function multiplayerHeaders(): Record<string, string> {
+  const multiplayerHeaders = useCallback((): Record<string, string> => {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
     return headers;
-  }
+  }, [guestPlayerId]);
 
   // Fetch room info on mount
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
       stopped = true;
       clearInterval(interval);
     };
-  }, [gameId, player, guestPlayerId]);
+  }, [gameId, player, multiplayerHeaders]);
 
   async function handleStartGame() {
     if (!roomInfo || !player || starting) return;
