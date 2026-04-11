@@ -12,19 +12,27 @@ import type { GamePhase } from "@/lib/game/state-machine";
 
 interface Props {
   params: Promise<{ roomId: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; rejoined?: string }>;
 }
 
 type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
 type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
+type ParticipantStatus = {
+  player_id: string;
+  display_name: string;
+  is_active: boolean;
+  last_seen_at: string | null;
+  became_inactive_at: string | null;
+};
 
 export default function GameRoomPage({ params, searchParams }: Props) {
   const { roomId } = use(params);
-  use(searchParams);
+  const { rejoined } = use(searchParams);
   const { player, loading: authLoading } = useAuth();
   const [guestPlayerId, setGuestPlayerId] = useState<string | null>(null);
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
+  const [participantStatuses, setParticipantStatuses] = useState<ParticipantStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +47,12 @@ export default function GameRoomPage({ params, searchParams }: Props) {
       }
     } catch { /* ignore */ }
   }, []);
+
+  function multiplayerHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
+    return headers;
+  }
 
   // Fetch room info on mount
   useEffect(() => {
@@ -92,6 +106,56 @@ export default function GameRoomPage({ params, searchParams }: Props) {
 
   const isHost = player?.id === roomInfo?.host_id;
   const phase: GamePhase = gameState.phase;
+
+  useEffect(() => {
+    if (!gameId) return;
+    let cancelled = false;
+
+    async function syncParticipants() {
+      const response = await fetch(`/api/multiplayer/game-participants?game_id=${gameId}`, {
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { participants?: ParticipantStatus[] }
+        | null;
+      if (!cancelled) {
+        setParticipantStatuses(data?.participants ?? []);
+      }
+    }
+
+    void syncParticipants();
+    const interval = setInterval(() => {
+      void syncParticipants();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!gameId || !player) return;
+    let stopped = false;
+
+    async function heartbeat() {
+      await fetch("/api/multiplayer/game-heartbeat", {
+        method: "POST",
+        headers: multiplayerHeaders(),
+        body: JSON.stringify({ game_id: gameId }),
+      }).catch(() => null);
+    }
+
+    void heartbeat();
+    const interval = setInterval(() => {
+      if (!stopped) void heartbeat();
+    }, 5000);
+
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [gameId, player, guestPlayerId]);
 
   async function handleStartGame() {
     if (!roomInfo || !player || starting) return;
@@ -151,6 +215,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
         gameMode={roomInfo?.game_mode ?? "multiple-choice"}
+        participantStatuses={participantStatuses}
       />
     );
   }
@@ -179,6 +244,11 @@ export default function GameRoomPage({ params, searchParams }: Props) {
           <p className="mt-3 text-sm text-gray-500">
             Share this code with friends to join
           </p>
+          {rejoined === "1" && (
+            <p className="mt-2 text-xs text-emerald-400">
+              You rejoined your in-progress game.
+            </p>
+          )}
           {!isConnected && (
             <p className="mt-2 text-xs text-amber-400">Connecting...</p>
           )}
@@ -267,6 +337,7 @@ interface GameProps {
   gameState: GameState;
   playerId: string;
   players: RoomPlayer[];
+  participantStatuses: ParticipantStatus[];
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<{ ok: boolean; error?: string }>;
   onPressBuzzer: (roundId: string) => Promise<{ ok: boolean; error?: string }>;
   gameMode: string;
@@ -279,6 +350,7 @@ function GameInProgress({
   gameState,
   playerId,
   players,
+  participantStatuses,
   onSubmitAnswer,
   onPressBuzzer,
   gameMode,
@@ -318,15 +390,20 @@ function GameInProgress({
   // While pinned, treat everything as if we're still in round_result.
   const effectivePhase = showingResult ? "round_result" : phase;
   const effectiveResult = showingResult ? pinnedResult : result;
+  const displayNameById = new Map(
+    participantStatuses.map((participant) => [participant.player_id, participant.display_name])
+  );
+  const resolvePlayerName = (pid: string) =>
+    displayNameById.get(pid) ??
+    players.find((p) => p.player_id === pid)?.display_name ??
+    "Unknown";
 
   // Game over screen
   if (phase === "game_over") {
     const sortedScores = Object.entries(gameState.scores).sort(
       ([, a], [, b]) => b - a
     );
-    const winnerName = players.find(
-      (p) => p.player_id === gameState.winner_id
-    )?.display_name;
+    const winnerName = resolvePlayerName(gameState.winner_id ?? "");
 
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
@@ -341,7 +418,7 @@ function GameInProgress({
           </p>
           <div className="mb-8 space-y-2">
             {sortedScores.map(([pid, score], i) => {
-              const name = players.find((p) => p.player_id === pid)?.display_name ?? "Unknown";
+              const name = resolvePlayerName(pid);
               return (
                 <div
                   key={pid}
@@ -426,6 +503,44 @@ function GameInProgress({
             <span className="text-gray-400">Others: {othersScore}</span>
           </div>
         </div>
+
+        {participantStatuses.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Player activity
+            </p>
+            <div className="space-y-2">
+              {participantStatuses.map((participant) => {
+                const isMe = participant.player_id === playerId;
+                const statusLabel = participant.is_active
+                  ? participant.became_inactive_at
+                    ? "Returned"
+                    : "Active"
+                  : "Disconnected";
+                const statusClass = participant.is_active
+                  ? participant.became_inactive_at
+                    ? "text-blue-300 bg-blue-500/15 border-blue-500/30"
+                    : "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
+                  : "text-amber-300 bg-amber-500/15 border-amber-500/30";
+
+                return (
+                  <div
+                    key={participant.player_id}
+                    className="flex items-center justify-between rounded-xl bg-gray-800/50 px-4 py-2.5"
+                  >
+                    <span className={isMe ? "font-semibold text-white" : "text-gray-300"}>
+                      {participant.display_name}
+                      {isMe && " (You)"}
+                    </span>
+                    <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Prompt */}
         <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">

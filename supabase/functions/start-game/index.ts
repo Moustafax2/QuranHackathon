@@ -4,6 +4,7 @@ import {
   broadcastGameEvent,
   corsHeaders,
 } from "../_shared/supabase-admin.ts";
+import { reconcileParticipants } from "../_shared/game-participants.ts";
 
 interface Question {
   prompt_verse_key: string;
@@ -112,6 +113,7 @@ serve(async (req: Request) => {
     // Update room status and reset scores
     await admin.from("rooms").update({ status: "in_progress" }).eq("id", room_id);
     await admin.from("room_players").update({ score: 0 }).eq("room_id", room_id);
+    await reconcileParticipants(admin, game.id, room_id);
 
     // Broadcast first round
     const firstRound = insertedRounds![0];

@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolvePlayerId } from "@/lib/multiplayer/resolve-player";
-import { invokeSupabaseEdgeFunction } from "@/lib/multiplayer/server";
+
+function normalizeEnvValue(value: string | undefined): string | null {
+  const normalized = value?.trim().replace(/^['"]|['"]$/g, "");
+  return normalized ? normalized : null;
+}
+
+function isJwtLikeToken(value: string): boolean {
+  return value.split(".").length === 3;
+}
 
 export async function POST(request: Request) {
   const cookieCarrier = new NextResponse();
@@ -15,17 +23,47 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = await invokeSupabaseEdgeFunction<{
-      room_id: string;
-      code: string;
-      host_id: string;
-      game_mode: string;
-      settings: Record<string, unknown>;
-    }>("join-room", {
-      player_id: playerId,
-      room_code: body.room_code,
+    const supabaseUrl = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const serviceRoleKey = normalizeEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { error: "Missing Supabase edge function configuration." },
+        { status: 500, headers: cookieCarrier.headers }
+      );
+    }
+
+    const headers: HeadersInit = {
+      apikey: serviceRoleKey,
+      "Content-Type": "application/json",
+    };
+    if (isJwtLikeToken(serviceRoleKey)) {
+      headers.Authorization = `Bearer ${serviceRoleKey}`;
+    }
+
+    const edgeResponse = await fetch(`${supabaseUrl}/functions/v1/join-room`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        player_id: playerId,
+        room_code: body.room_code,
+      }),
+      cache: "no-store",
     });
-    return NextResponse.json(data, { headers: cookieCarrier.headers });
+
+    const raw = await edgeResponse.text().catch(() => "");
+    let parsed: Record<string, unknown> = {};
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        parsed = { error: raw };
+      }
+    }
+
+    return NextResponse.json(parsed, {
+      status: edgeResponse.status,
+      headers: cookieCarrier.headers,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to join room." },
