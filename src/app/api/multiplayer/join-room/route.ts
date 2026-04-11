@@ -7,11 +7,9 @@ function normalizeEnvValue(value: string | undefined): string | null {
 }
 
 function isJwtLikeToken(value: string): boolean {
-  // Heuristic only: Supabase legacy service role JWT keys are dot-separated.
-  // This can false-positive on any three-segment string, but is acceptable here
-  // because this branch only decides whether to include Authorization in addition
-  // to apikey; the edge function auth still validates the key server-side.
-  return value.split(".").length === 3;
+  // Heuristic only: if key looks like a JWT (header.payload.signature), include
+  // Authorization in addition to apikey; Supabase still validates credentials.
+  return /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value);
 }
 
 export async function POST(request: Request) {
