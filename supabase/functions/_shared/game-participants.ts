@@ -29,15 +29,23 @@ export async function reconcileParticipants(
 
   if (!roomPlayers || roomPlayers.length === 0) return;
 
-  await admin.from("game_participants").upsert(
-    roomPlayers.map((row) => ({
+  const { data: existingParticipants } = await admin
+    .from("game_participants")
+    .select("player_id")
+    .eq("game_id", gameId);
+
+  const existingIds = new Set((existingParticipants ?? []).map((row) => row.player_id));
+  const newParticipants = roomPlayers
+    .filter((row) => !existingIds.has(row.player_id))
+    .map((row) => ({
       game_id: gameId,
       player_id: row.player_id,
       is_active: true,
       last_seen_at: new Date().toISOString(),
-    })),
-    { onConflict: "game_id,player_id", ignoreDuplicates: true }
-  );
+    }));
+
+  if (newParticipants.length === 0) return;
+  await admin.from("game_participants").insert(newParticipants);
 }
 
 async function getEligibleParticipantIds(

@@ -397,6 +397,29 @@ function GameInProgress({
     displayNameById.get(pid) ??
     players.find((p) => p.player_id === pid)?.display_name ??
     "Unknown";
+  function getParticipantActivityStatus(participant: ParticipantStatus): {
+    label: "Active" | "Returned" | "Disconnected";
+    className: string;
+  } {
+    if (!participant.is_active) {
+      return {
+        label: "Disconnected",
+        className: "text-amber-300 bg-amber-500/15 border-amber-500/30",
+      };
+    }
+
+    if (participant.became_inactive_at) {
+      return {
+        label: "Returned",
+        className: "text-blue-300 bg-blue-500/15 border-blue-500/30",
+      };
+    }
+
+    return {
+      label: "Active",
+      className: "text-emerald-300 bg-emerald-500/15 border-emerald-500/30",
+    };
+  }
 
   // Game over screen
   if (phase === "game_over") {
@@ -512,16 +535,7 @@ function GameInProgress({
             <div className="space-y-2">
               {participantStatuses.map((participant) => {
                 const isMe = participant.player_id === playerId;
-                const statusLabel = participant.is_active
-                  ? participant.became_inactive_at
-                    ? "Returned"
-                    : "Active"
-                  : "Disconnected";
-                const statusClass = participant.is_active
-                  ? participant.became_inactive_at
-                    ? "text-blue-300 bg-blue-500/15 border-blue-500/30"
-                    : "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
-                  : "text-amber-300 bg-amber-500/15 border-amber-500/30";
+                const status = getParticipantActivityStatus(participant);
 
                 return (
                   <div
@@ -532,8 +546,8 @@ function GameInProgress({
                       {participant.display_name}
                       {isMe && " (You)"}
                     </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClass}`}>
-                      {statusLabel}
+                    <span className={`rounded-full border px-2 py-0.5 text-xs ${status.className}`}>
+                      {status.label}
                     </span>
                   </div>
                 );
