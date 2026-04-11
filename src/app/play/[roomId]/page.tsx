@@ -17,6 +17,10 @@ interface Props {
 
 type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
 type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
+const PARTICIPANT_STATUS_POLL_INTERVAL_MS = 10_000;
+// Keep this comfortably below backend grace (20s) so active players don't timeout.
+const HEARTBEAT_INTERVAL_MS = 8_000;
+
 type ParticipantStatus = {
   player_id: string;
   display_name: string;
@@ -126,7 +130,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     void syncParticipants();
     const interval = setInterval(() => {
       void syncParticipants();
-    }, 10000);
+    }, PARTICIPANT_STATUS_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
@@ -149,7 +153,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     void heartbeat();
     const interval = setInterval(() => {
       if (!stopped) void heartbeat();
-    }, 8000);
+    }, HEARTBEAT_INTERVAL_MS);
 
     return () => {
       stopped = true;

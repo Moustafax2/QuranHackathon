@@ -7,7 +7,10 @@ function normalizeEnvValue(value: string | undefined): string | null {
 }
 
 function isJwtLikeToken(value: string): boolean {
-  // Heuristic only: Supabase service role JWT keys are dot-separated.
+  // Heuristic only: Supabase legacy service role JWT keys are dot-separated.
+  // This can false-positive on any three-segment string, but is acceptable here
+  // because this branch only decides whether to include Authorization in addition
+  // to apikey; the edge function auth still validates the key server-side.
   return value.split(".").length === 3;
 }
 
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
 
     const raw = await edgeResponse
       .text()
-      .catch(() => '{"error":"Failed to parse edge function response."}');
+      .catch(() => '{"error":"Failed to read edge function response."}');
     let parsed: Record<string, unknown> = {};
     if (raw) {
       try {

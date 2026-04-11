@@ -1,5 +1,6 @@
 import { createAdminClient, broadcastGameEvent } from "./supabase-admin.ts";
 
+// 20s grace with ~8s client heartbeat allows brief disconnects without stalling rounds.
 const HEARTBEAT_GRACE_SECONDS = 20;
 const MILLISECONDS_PER_SECOND = 1000;
 
