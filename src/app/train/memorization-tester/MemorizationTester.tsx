@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
-import { addRating, getSurahScores, type RatingLevel } from "@/lib/memorization/storage";
+import { addRating, getSurahScores, clearAllRecords, type RatingLevel } from "@/lib/memorization/storage";
 import type { AyahQuestion, PageBlankQuestion, MemorizationQuestion } from "@/lib/memorization/types";
 
 type Mode = "ayah" | "page-blank";
@@ -20,8 +20,8 @@ const TESTING_HISTORY_FLAG = "memorizationTesterTesting";
 
 // ── Heat map color ──────────────────────────────────────────────────────────
 
-function scoreToColor(score: number | undefined, isDarkMode: boolean): string {
-  if (score === undefined) return isDarkMode ? "bg-gray-800" : "bg-stone-200";
+function scoreToColor(score: number | undefined): string {
+  if (score === undefined) return "bg-gray-800";
   if (score < 0.5) return "bg-red-700/70";
   if (score < 1.5) return "bg-yellow-600/70";
   return "bg-emerald-700/70";
@@ -36,6 +36,68 @@ function isTestingHistoryState(state: unknown): boolean {
   );
 }
 
+// ── Heatmap reset warning modal ────────────────────────────────────────────
+
+function HeatmapResetModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+      <div className="w-full max-w-md rounded-2xl border border-red-900/60 bg-gray-900 p-6 shadow-2xl">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-xl">
+            🗑️
+          </div>
+          <h2 className="text-lg font-bold text-white">Reset Heatmap Data?</h2>
+        </div>
+
+        <div className="mb-5 space-y-2 rounded-xl border border-red-900/40 bg-red-950/30 p-4 text-sm text-red-200/80">
+          <p className="font-semibold text-red-300">This will permanently delete:</p>
+          <ul className="ml-4 list-disc space-y-1.5 text-red-200/70">
+            <li>All your <strong>ayah ratings</strong> (Wrong / Medium / Correct)</li>
+            <li>All <strong>surah performance scores</strong> shown on the heatmap</li>
+          </ul>
+          <p className="mt-2 font-medium text-red-300/90">This cannot be undone.</p>
+        </div>
+
+        <label className="mb-5 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-700 bg-gray-800 p-4">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-700 text-red-500 focus:ring-red-500"
+          />
+          <span className="text-sm text-gray-300">
+            I understand this will permanently delete all my memorization ratings and cannot be undone.
+          </span>
+        </label>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={!confirmed}
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Reset heatmap
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function MemorizationTester() {
@@ -45,7 +107,7 @@ export function MemorizationTester() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     () => new Set(Array.from({ length: JUZ_COUNT }, (_, i) => i + 1))
   );
-  const [showFullAyah, setShowFullAyah] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [showReference, setShowReference] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<MemorizationQuestion | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -54,26 +116,12 @@ export function MemorizationTester() {
   const [error, setError] = useState<string | null>(null);
   const [surahScores, setSurahScores] = useState<Record<number, number>>({});
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [areSettingsMinimized, setAreSettingsMinimized] = useState(true);
+  const [showHeatmapReset, setShowHeatmapReset] = useState(false);
 
   // Load heat map data on mount and after ratings
   useEffect(() => {
     setSurahScores(getSurahScores());
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    setIsDarkMode(mediaQuery.matches);
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsDarkMode(event.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // When switching selectionType, reset selectedIds to all
@@ -113,7 +161,7 @@ export function MemorizationTester() {
       mode,
       selectionType,
       selectionIds: [...selectedIds].join(","),
-      showFullAyah: String(showFullAyah),
+      difficulty,
     });
 
     try {
@@ -129,7 +177,7 @@ export function MemorizationTester() {
     } finally {
       setLoading(false);
     }
-  }, [mode, selectionType, selectedIds, showFullAyah]);
+  }, [mode, selectionType, selectedIds, difficulty]);
 
   const handleStart = async () => {
     if (typeof window !== "undefined" && !isTestingHistoryState(window.history.state)) {
@@ -238,26 +286,29 @@ export function MemorizationTester() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [phase, resetTestingView]);
 
-  const pageClass = isDarkMode ? "bg-black text-white" : "bg-stone-50 text-stone-900";
-  const cardClass = isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white";
-  const mutedTextClass = isDarkMode ? "text-gray-400" : "text-stone-600";
-  const subtleTextClass = isDarkMode ? "text-gray-500" : "text-stone-500";
-  const controlClass = isDarkMode
-    ? "bg-gray-800 text-gray-400 hover:bg-gray-700"
-    : "bg-stone-200 text-stone-700 hover:bg-stone-300";
-  const ghostButtonClass = isDarkMode
-    ? "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white"
-    : "border-stone-300 text-stone-600 hover:border-stone-400 hover:text-stone-900";
+  const pageClass = "bg-black text-white";
+  const cardClass = "border-gray-800 bg-gray-900";
+  const mutedTextClass = "text-gray-400";
+  const subtleTextClass = "text-gray-500";
+  const controlClass = "bg-gray-800 text-gray-400 hover:bg-gray-700";
+  const ghostButtonClass = "border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white";
 
   // ── Setup Screen ────────────────────────────────────────────────────────
 
   if (phase === "setup") {
     return (
       <div className={`mx-auto max-w-3xl rounded-3xl px-4 py-10 ${pageClass}`}>
+        {showHeatmapReset && (
+          <HeatmapResetModal
+            onConfirm={() => {
+              clearAllRecords();
+              setSurahScores({});
+              setShowHeatmapReset(false);
+            }}
+            onCancel={() => setShowHeatmapReset(false)}
+          />
+        )}
         <div className="mb-8">
-          <div className="mb-4 flex justify-end">
-            <ThemeToggle isDarkMode={isDarkMode} onToggle={() => setIsDarkMode((prev) => !prev)} />
-          </div>
           <h1 className="text-2xl font-bold">Memorization Tester</h1>
           <p className={`mt-1 text-sm ${mutedTextClass}`}>
             Test your hifz with mushaf pages or individual ayahs.
@@ -274,12 +325,8 @@ export function MemorizationTester() {
                 onClick={() => setMode(m)}
                 className={`rounded-xl border p-4 text-left transition-all ${
                   mode === m
-                    ? isDarkMode
-                      ? "border-emerald-500 bg-emerald-900/20"
-                      : "border-emerald-300 bg-emerald-50"
-                    : isDarkMode
-                      ? "border-gray-700 bg-gray-900 hover:border-gray-600"
-                      : "border-stone-200 bg-white hover:border-stone-300"
+                    ? "border-emerald-500 bg-emerald-900/20"
+                    : "border-gray-700 bg-gray-900 hover:border-gray-600"
                 }`}
               >
                 <div className="text-lg mb-1">{m === "page-blank" ? "📄" : "🔍"}</div>
@@ -358,21 +405,15 @@ export function MemorizationTester() {
                   onClick={() => toggleId(ch.id)}
                   className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors border-b border-gray-800/50 last:border-0 ${
                     selectedIds.has(ch.id)
-                      ? isDarkMode
-                        ? "bg-emerald-900/20 text-white"
-                        : "bg-emerald-50 text-stone-900"
-                      : isDarkMode
-                        ? "text-gray-400 hover:bg-gray-800"
-                        : "text-stone-700 hover:bg-stone-50"
+                      ? "bg-emerald-900/20 text-white"
+                      : "text-gray-400 hover:bg-gray-800"
                   }`}
                 >
                   <span
                     className={`flex-shrink-0 h-4 w-4 rounded border flex items-center justify-center ${
                       selectedIds.has(ch.id)
                         ? "border-emerald-500 bg-emerald-600"
-                        : isDarkMode
-                          ? "border-gray-600"
-                          : "border-stone-400"
+                        : "border-gray-600"
                     }`}
                   >
                     {selectedIds.has(ch.id) && (
@@ -390,17 +431,57 @@ export function MemorizationTester() {
           )}
         </section>
 
+        {/* Difficulty — ayah mode only */}
+        {mode === "ayah" && (
+          <section className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className={`text-sm font-semibold uppercase tracking-wider ${subtleTextClass}`}>
+                Difficulty
+              </h2>
+              <div className="relative group">
+                <button
+                  type="button"
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border text-xs ${subtleTextClass} border-gray-700 hover:border-gray-500`}
+                  aria-label="Difficulty info"
+                >
+                  ?
+                </button>
+                <div className="pointer-events-none absolute left-1/2 top-5 z-10 w-56 -translate-x-1/2 rounded-lg border border-gray-700 bg-gray-900 p-3 text-xs text-gray-300 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <p className="mb-1.5"><span className="font-semibold text-white">Easy</span> — show the full ayah</p>
+                  <p className="mb-1.5"><span className="font-semibold text-white">Medium</span> — show the first half</p>
+                  <p><span className="font-semibold text-white">Hard</span> — show only enough words to identify the ayah uniquely</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {(["easy", "medium", "hard"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium capitalize transition-all ${
+                    difficulty === d
+                      ? d === "hard"
+                        ? "bg-red-700 text-white"
+                        : d === "easy"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-emerald-600 text-white"
+                      : controlClass
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Settings */}
         <section className="mb-8">
           <button
             type="button"
             onClick={() => setAreSettingsMinimized((prev) => !prev)}
             aria-expanded={!areSettingsMinimized}
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
-              isDarkMode
-                ? "border-gray-800 bg-gray-900 hover:bg-gray-800"
-                : "border-stone-200 bg-white hover:bg-stone-50"
-            }`}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-left transition-colors hover:bg-gray-800"
           >
             <h2 className={`text-sm font-semibold uppercase tracking-wider ${subtleTextClass}`}>Settings</h2>
             <span className={`text-xs ${mutedTextClass}`}>
@@ -410,28 +491,25 @@ export function MemorizationTester() {
 
           {!areSettingsMinimized && (
             <div className="space-y-3 pt-3">
-              {mode === "ayah" && (
-                <ToggleRow
-                  isDarkMode={isDarkMode}
-                  label="Show full ayah"
-                  description="Default: show only the first half"
-                  value={showFullAyah}
-                  onChange={setShowFullAyah}
-                />
-              )}
               <ToggleRow
-                isDarkMode={isDarkMode}
                 label="Show reference info"
                 description="Show surah name and ayah number"
                 value={showReference}
                 onChange={setShowReference}
               />
+              <button
+                onClick={() => setShowHeatmapReset(true)}
+                className="w-full rounded-lg border border-red-900/50 bg-red-950/20 px-4 py-3 text-left transition-all hover:border-red-700 hover:bg-red-950/40"
+              >
+                <div className="text-sm font-medium text-red-400">Reset Heatmap</div>
+                <div className="text-xs text-red-500/70">Delete all memorization ratings and scores</div>
+              </button>
             </div>
           )}
         </section>
 
         {/* Heat map */}
-        <HeatMap scores={surahScores} isDarkMode={isDarkMode} />
+        <HeatMap scores={surahScores} />
 
         <button
           onClick={handleStart}
@@ -467,7 +545,6 @@ export function MemorizationTester() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <ThemeToggle isDarkMode={isDarkMode} onToggle={() => setIsDarkMode((prev) => !prev)} />
           <button
             onClick={handleUndo}
             disabled={history.length === 0}
@@ -505,7 +582,6 @@ export function MemorizationTester() {
               revealed={revealed}
               showReference={showReference}
               imageLoaded={imageLoaded}
-              isDarkMode={isDarkMode}
               onImageLoad={() => setImageLoaded(true)}
               mushafUrl={mushafPageUrl}
             />
@@ -514,7 +590,6 @@ export function MemorizationTester() {
               question={currentQuestion as PageBlankQuestion}
               revealed={revealed}
               imageLoaded={imageLoaded}
-              isDarkMode={isDarkMode}
               onImageLoad={() => setImageLoaded(true)}
               mushafUrl={mushafPageUrl}
             />
@@ -531,7 +606,7 @@ export function MemorizationTester() {
               </button>
             ) : (
               <div className="w-full space-y-3">
-                <p className={`text-center text-sm ${mutedTextClass}`}>How did you do?</p>
+                {/* <p className={`text-center text-sm ${mutedTextClass}`}>How did you do?</p> */}
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => handleRate(0)}
@@ -574,7 +649,6 @@ function AyahCard({
   revealed,
   showReference,
   imageLoaded,
-  isDarkMode,
   onImageLoad,
   mushafUrl,
 }: {
@@ -582,50 +656,51 @@ function AyahCard({
   revealed: boolean;
   showReference: boolean;
   imageLoaded: boolean;
-  isDarkMode: boolean;
   onImageLoad: () => void;
   mushafUrl: (page: number) => string;
 }) {
   const [surahNum, ayahNum] = question.verseKey.split(":").map(Number);
 
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
-      {/* Ayah text */}
-      <div className="p-6">
-        {showReference && (
-          <div className="mb-4 flex items-center gap-2">
-            <span className="rounded-full bg-emerald-900/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
-              {question.surahName} {surahNum}:{ayahNum}
-            </span>
-            <span className={`text-xs ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>Page {question.pageNumber}</span>
-          </div>
-        )}
-        <p
-          dir="rtl"
-          lang="ar"
-          translate="no"
-          className={`font-amiri text-right text-3xl leading-loose ${isDarkMode ? "text-white" : "text-stone-900"}`}
-          style={{
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            // Clamp at rendered line boundaries so no partial last line is shown
-            WebkitLineClamp: 4,
-          }}
-        >
-          {question.displayText}
-          {question.displayText !== question.fullText && (
-            <span className="text-gray-500"> …</span>
+    <div className="rounded-2xl border overflow-hidden border-gray-800 bg-gray-900">
+      {/* Ayah text — hidden once revealed */}
+      {!revealed && (
+        <div className="p-6">
+          {showReference && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="rounded-full bg-emerald-900/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+                {question.surahName} {surahNum}:{ayahNum}
+              </span>
+              <span className="text-xs text-gray-500">Page {question.pageNumber}</span>
+            </div>
           )}
-        </p>
-      </div>
+          <p
+            dir="rtl"
+            lang="ar"
+            translate="no"
+            className="font-amiri text-right text-3xl leading-loose text-white"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              // Clamp at rendered line boundaries so no partial last line is shown
+              WebkitLineClamp: 4,
+            }}
+          >
+            {question.displayText}
+            {question.displayText !== question.fullText && (
+              <span className="text-gray-500"> …</span>
+            )}
+          </p>
+        </div>
+      )}
 
-      {/* Revealed: mushaf page */}
+      {/* Revealed: mushaf page with ayah highlighted */}
       {revealed && (
-        <div className={`border-t ${isDarkMode ? "border-gray-800" : "border-stone-200"}`}>
-          <div className={`relative ${isDarkMode ? "bg-black" : "bg-stone-100"}`}>
+        <div>
+          <div className="relative bg-black">
             {!imageLoaded && (
-              <div className={`flex items-center justify-center py-20 text-sm ${isDarkMode ? "text-gray-600" : "text-stone-500"}`}>
+              <div className="flex items-center justify-center py-20 text-sm text-gray-600">
                 Loading mushaf page…
               </div>
             )}
@@ -637,12 +712,28 @@ function AyahCard({
               onLoad={onImageLoad}
               style={{
                 display: imageLoaded ? "block" : "none",
-                filter: isDarkMode ? "invert(1) brightness(0.9)" : "none",
+                filter: "invert(1) brightness(0.9)",
               }}
             />
+            {imageLoaded && (
+              <div
+                className="absolute left-0 right-0 pointer-events-none"
+                style={{
+                  top: `${question.positionOnPage * 100}%`,
+                  height: "7%",
+                  background: "rgba(16, 185, 129, 0.2)",
+                  boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.5)",
+                }}
+              />
+            )}
           </div>
           {imageLoaded && (
-            <div className={`px-4 py-2 text-xs text-center ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>
+            <div className="px-4 py-2 text-xs text-center text-gray-500">
+              {showReference && (
+                <span className="mr-2 text-emerald-400/70">
+                  {question.surahName} {surahNum}:{ayahNum} ·{" "}
+                </span>
+              )}
               Page {question.pageNumber} · Juz {question.juzNumber}
             </div>
           )}
@@ -656,14 +747,12 @@ function PageBlankCard({
   question,
   revealed,
   imageLoaded,
-  isDarkMode,
   onImageLoad,
   mushafUrl,
 }: {
   question: PageBlankQuestion;
   revealed: boolean;
   imageLoaded: boolean;
-  isDarkMode: boolean;
   onImageLoad: () => void;
   mushafUrl: (page: number) => string;
 }) {
@@ -682,17 +771,17 @@ function PageBlankCard({
   const imageMask = !revealed ? maskGradients[question.coverRegion] : undefined;
 
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
+    <div className="rounded-2xl border overflow-hidden border-gray-800 bg-gray-900">
       {!revealed && (
         <div className="px-6 pt-5 pb-2 text-center">
-          <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-stone-600"}`}>
-            Recall the <span className={isDarkMode ? "font-semibold text-white" : "font-semibold text-stone-900"}>{regionLabel}</span> of this page
+          <p className="text-sm text-gray-400">
+            Recall the <span className="font-semibold text-white">{regionLabel}</span> of this page
           </p>
         </div>
       )}
-      <div className={`relative ${isDarkMode ? "bg-black" : "bg-stone-100"}`}>
+      <div className="relative bg-black">
         {!imageLoaded && (
-          <div className={`flex items-center justify-center py-20 text-sm ${isDarkMode ? "text-gray-600" : "text-stone-500"}`}>
+          <div className="flex items-center justify-center py-20 text-sm text-gray-600">
             Loading mushaf page…
           </div>
         )}
@@ -704,7 +793,7 @@ function PageBlankCard({
           onLoad={onImageLoad}
           style={{
             display: imageLoaded ? "block" : "none",
-            filter: isDarkMode ? "invert(1) brightness(0.9)" : "none",
+            filter: "invert(1) brightness(0.9)",
             WebkitMaskImage: imageMask,
             maskImage: imageMask,
             WebkitMaskSize: "100% 100%",
@@ -713,7 +802,7 @@ function PageBlankCard({
         />
       </div>
       {imageLoaded && (
-        <div className={`px-4 py-2 text-xs text-center ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>
+        <div className="px-4 py-2 text-xs text-center text-gray-500">
           Page {question.pageNumber}
         </div>
       )}
@@ -722,23 +811,21 @@ function PageBlankCard({
 }
 
 function ToggleRow({
-  isDarkMode,
   label,
   description,
   value,
   onChange,
 }: {
-  isDarkMode: boolean;
   label: string;
   description: string;
   value: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <div className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-stone-900"}`}>{label}</div>
-        <div className={`text-xs ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>{description}</div>
+        <div className="text-sm font-medium text-white">{label}</div>
+        <div className="text-xs text-gray-500">{description}</div>
       </div>
       <button
         onClick={() => onChange(!value)}
@@ -756,70 +843,68 @@ function ToggleRow({
   );
 }
 
-function HeatMap({ scores, isDarkMode }: { scores: Record<number, number>; isDarkMode: boolean }) {
+function HeatMap({ scores }: { scores: Record<number, number> }) {
   const hasData = Object.keys(scores).length > 0;
 
   if (!hasData) return null;
 
   return (
     <section className="mb-2">
-      <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wider ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
         Performance Heat Map
       </h2>
-      <div className={`rounded-lg border p-4 ${isDarkMode ? "border-gray-800 bg-gray-900" : "border-stone-200 bg-white"}`}>
-        <div className="grid grid-cols-[repeat(19,minmax(0,1fr))] gap-0.5">
-          {CHAPTERS_DATA.map((ch) => (
-            <div
-              key={ch.id}
-              title={`${ch.name_simple}: ${
-                scores[ch.id] !== undefined
-                  ? ["Wrong", "Medium", "Correct"][Math.round(scores[ch.id])]
-                  : "Not tested"
-              }`}
-              className={`aspect-square rounded-sm ${scoreToColor(scores[ch.id], isDarkMode)}`}
-            />
-          ))}
-        </div>
-        <div className={`mt-3 flex items-center gap-4 text-xs ${isDarkMode ? "text-gray-500" : "text-stone-500"}`}>
-          <span className="flex items-center gap-1.5">
-            <span className={`h-2.5 w-2.5 rounded-sm inline-block ${isDarkMode ? "bg-gray-800" : "bg-stone-200"}`} /> Not tested
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-red-700/70 inline-block" /> Wrong
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-yellow-600/70 inline-block" /> Medium
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-700/70 inline-block" /> Correct
-          </span>
+      <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
+        <p className="mb-3 text-xs text-gray-500">
+          Hover over a cell to see the surah name (each cell is a surah)
+        </p>
+        <div className="flex gap-2">
+          <div className="flex flex-col justify-between pb-0.5 pt-0.5">
+            {[1, 20, 39, 58, 77, 96].map((n) => (
+              <span key={n} className="text-[10px] leading-none text-gray-600">
+                {n}
+              </span>
+            ))}
+          </div>
+          <div className="flex-1">
+            <div className="grid grid-cols-[repeat(19,minmax(0,1fr))] gap-0.5">
+              {CHAPTERS_DATA.map((ch) => {
+                const scoreLabel =
+                  scores[ch.id] !== undefined
+                    ? ["Wrong", "Medium", "Correct"][Math.round(scores[ch.id])]
+                    : "Not tested";
+                const scoreLabelColor =
+                  scores[ch.id] !== undefined
+                    ? ["text-red-400", "text-yellow-400", "text-emerald-400"][
+                        Math.round(scores[ch.id])
+                      ]
+                    : "text-gray-500";
+                return (
+                  <div key={ch.id} className="group relative aspect-square">
+                    <div
+                      className={`h-full w-full rounded-sm ${scoreToColor(scores[ch.id])}`}
+                    />
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      <div className="whitespace-nowrap rounded-lg border border-gray-700 bg-gray-950 px-2.5 py-1.5 text-center shadow-xl">
+                        <div className="text-xs font-semibold text-white">
+                          {ch.name_simple}
+                        </div>
+                        <div className={`text-[10px] ${scoreLabelColor}`}>
+                          {scoreLabel}
+                        </div>
+                      </div>
+                      <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-700" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function ThemeToggle({
-  isDarkMode,
-  onToggle,
-}: {
-  isDarkMode: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      type="button"
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-        isDarkMode
-          ? "border-gray-700 bg-gray-900 text-white hover:bg-gray-800"
-          : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
-      }`}
-    >
-      {isDarkMode ? "Light mode" : "Dark mode"}
-    </button>
-  );
-}
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

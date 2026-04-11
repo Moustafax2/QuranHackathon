@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { getFlashcards } from "@/lib/storage/flashcard-storage-supabase";
-import { loadLexicalDB } from "@/lib/corpus/lexical-db";
+import { getFlashcards, deleteFlashcard, updateFlashcard } from "@/lib/storage/flashcard-storage-supabase";
+import { loadLexicalDB, getWordById } from "@/lib/corpus/lexical-db";
 import { FSRSState } from "@/lib/types/flashcard";
 import type { UserFlashcard, LexicalEntry } from "@/lib/types/flashcard";
+import { FlashcardReview } from "@/components/flashcard/FlashcardReview";
 
 type SortKey = "due" | "stability" | "lapses" | "state";
 type SortDir = "asc" | "desc";
@@ -37,16 +38,53 @@ export default function BrowsePage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [search, setSearch] = useState("");
+  const [pendingAction, setPendingAction] = useState<{ id: string; type: "delete" | "unlearn" } | null>(null);
+  const [previewRow, setPreviewRow] = useState<CardRow | null>(null);
+  const [stabilityTooltip, setStabilityTooltip] = useState(false);
 
   useEffect(() => {
     async function load() {
       const [cards, db] = await Promise.all([getFlashcards(), loadLexicalDB()]);
       const wordMap = new Map(db.map((e) => [e.id, e]));
-      setRows(cards.map((card) => ({ card, word: wordMap.get(card.word_id) ?? null })));
+      const rows = await Promise.all(
+        cards.map(async (card) => ({
+          card,
+          word: wordMap.get(card.word_id) ?? (await getWordById(card.word_id)),
+        }))
+      );
+      setRows(rows);
       setLoading(false);
     }
     load();
   }, []);
+
+  const handleDelete = async (cardId: string) => {
+    await deleteFlashcard(cardId);
+    setRows((prev) => prev.filter((r) => r.card.id !== cardId));
+    setPendingAction(null);
+  };
+
+  const handleUnlearn = async (cardId: string) => {
+    const resetState = {
+      due: new Date(),
+      stability: 0,
+      difficulty: 0,
+      elapsed_days: 0,
+      scheduled_days: 0,
+      learning_steps: 0,
+      reps: 0,
+      lapses: 0,
+      state: FSRSState.New,
+      last_review: undefined,
+    };
+    await updateFlashcard(cardId, { fsrs_state: resetState });
+    setRows((prev) =>
+      prev.map((r) =>
+        r.card.id === cardId ? { ...r, card: { ...r.card, fsrs_state: resetState } } : r
+      )
+    );
+    setPendingAction(null);
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -128,7 +166,7 @@ export default function BrowsePage() {
   const stateCounts = Object.values(FSRSState).filter((v) => typeof v === "number") as FSRSState[];
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 py-12">
+    <div className="min-h-screen bg-gray-950 px-4 py-12" onClick={() => setStabilityTooltip(false)}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -205,7 +243,24 @@ export default function BrowsePage() {
                     className="cursor-pointer px-4 py-3 text-left font-medium text-gray-400 hover:text-white"
                     onClick={() => handleSort("stability")}
                   >
-                    <span className="flex items-center gap-1">Stability <SortIcon k="stability" /></span>
+                    <span className="flex items-center gap-1">
+                      Stability
+                      <span
+                        className="relative"
+                        onClick={(e) => { e.stopPropagation(); setStabilityTooltip((v) => !v); }}
+                      >
+                        <span className="ml-0.5 inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full border border-gray-600 text-[10px] text-gray-500 hover:border-gray-400 hover:text-gray-300">
+                          i
+                        </span>
+                        {stabilityTooltip && (
+                          <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-gray-300 shadow-xl">
+                            <p className="mb-1 font-semibold text-white">Memory Stability</p>
+                            <p>Estimated number of days until you&apos;d have a 90% chance of recalling this card. Higher = stronger memory.</p>
+                          </div>
+                        )}
+                      </span>
+                      <SortIcon k="stability" />
+                    </span>
                   </th>
                   <th
                     className="cursor-pointer px-4 py-3 text-left font-medium text-gray-400 hover:text-white"
@@ -213,25 +268,27 @@ export default function BrowsePage() {
                   >
                     <span className="flex items-center gap-1">Lapses <SortIcon k="lapses" /></span>
                   </th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-400">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60">
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-600">
+                    <td colSpan={7} className="px-4 py-10 text-center text-gray-600">
                       No cards match your filters
                     </td>
                   </tr>
                 )}
                 {filtered.map(({ card, word }) => (
-                  <tr key={card.id} className="bg-gray-950 transition-colors hover:bg-gray-900/60">
+                  <tr
+                    key={card.id}
+                    className="cursor-pointer bg-gray-950 transition-colors hover:bg-gray-900/60"
+                    onClick={() => word && setPreviewRow({ card, word })}
+                  >
                     <td className="px-4 py-3">
                       <span className="font-amiri text-xl text-white">
-                        {word?.canonical_form ?? card.word_id}
+                        {word?.canonical_form.replace(/\s*[\[(][^\])\n]*[\])].*$/, "").trim() ?? card.word_id}
                       </span>
-                      {word?.root && (
-                        <span className="ml-2 text-xs text-gray-600">({word.root})</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-300">{word?.translation ?? "—"}</td>
                     <td className="px-4 py-3">
@@ -250,6 +307,48 @@ export default function BrowsePage() {
                         {card.fsrs_state.lapses}
                       </span>
                     </td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {pendingAction?.id === card.id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">
+                            {pendingAction.type === "delete" ? "Delete card?" : "Reset progress?"}
+                          </span>
+                          <button
+                            onClick={() =>
+                              pendingAction.type === "delete"
+                                ? handleDelete(card.id)
+                                : handleUnlearn(card.id)
+                            }
+                            className="rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setPendingAction(null)}
+                            className="rounded px-2 py-0.5 text-xs font-medium bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setPendingAction({ id: card.id, type: "unlearn" })}
+                            className="rounded px-2 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/25 transition-colors"
+                            title="Reset progress to New"
+                          >
+                            Unlearn
+                          </button>
+                          <button
+                            onClick={() => setPendingAction({ id: card.id, type: "delete" })}
+                            className="rounded px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/25 transition-colors"
+                            title="Remove card permanently"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -263,6 +362,34 @@ export default function BrowsePage() {
           </p>
         )}
       </div>
+
+      {/* Card preview modal */}
+      {previewRow && previewRow.word && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onClick={() => setPreviewRow(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewRow(null)}
+              className="absolute -top-3 -right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-gray-700 bg-gray-900 text-gray-400 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+            <FlashcardReview
+              word={previewRow.word}
+              onReview={() => {}}
+              showRoot
+              showExamples
+              initialFlipped
+              previewMode
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
