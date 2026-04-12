@@ -488,7 +488,7 @@ export default function PlayPage() {
               <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5 space-y-3">
                 <p className="text-sm text-gray-400 text-center">Choose how to play</p>
                 <a
-                  href="/api/auth/qf/login?next=/play"
+                  href="/login?next=/play"
                   className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
                 >
                   Sign in with Quran.com
@@ -511,7 +511,7 @@ export default function PlayPage() {
                   <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
                     <span className="text-amber-300">Playing as {player.display_name}</span>
                     <a
-                      href="/api/auth/qf/login?next=/play"
+                      href="/login?next=/play"
                       className="text-xs text-amber-400 underline hover:text-amber-300"
                     >
                       Sign in

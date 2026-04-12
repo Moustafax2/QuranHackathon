@@ -411,7 +411,7 @@ if (loading) {
             <span>⚠️</span>
             <span>
               Your progress is saved on this device only.{" "}
-              <Link href="/api/auth/qf/login" className="underline hover:text-amber-200">
+              <Link href="/login?next=/train/flashcards" className="underline hover:text-amber-200">
                 Sign in
               </Link>{" "}
               to sync across devices.
