@@ -210,9 +210,20 @@ export default function PlayPage() {
         headers: multiplayerHeaders(),
         body: JSON.stringify({ room_code: roomCode }),
       });
-      const data = (await response.json()) as { code?: string; game_mode?: string; error?: string };
-      if (!response.ok || !data.code) throw new Error(data.error ?? "Room not found.");
-      router.push(`/play/${data.code}?mode=${data.game_mode}`);
+      const data = (await response.json()) as {
+        code?: string;
+        game_mode?: string;
+        rejoined_in_progress?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !data.code) {
+        if (response.status === 409) {
+          throw new Error("Cannot join: this game is already in progress for current participants only.");
+        }
+        throw new Error(data.error ?? "Room not found.");
+      }
+      const rejoinQuery = data.rejoined_in_progress ? "&rejoined=1" : "";
+      router.push(`/play/${data.code}?mode=${data.game_mode}${rejoinQuery}`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
