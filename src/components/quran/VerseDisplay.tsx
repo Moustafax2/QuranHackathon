@@ -1,11 +1,16 @@
 "use client";
 
-import DOMPurify from "dompurify";
 import type { Verse } from "@/lib/types";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
 import { useBookmarks } from "@/lib/hooks/useBookmarks";
 
-export function VerseDisplay({ verses }: { verses: Verse[] }) {
+export function VerseDisplay({
+  verses,
+  showTranslation,
+}: {
+  verses: Verse[];
+  showTranslation: boolean;
+}) {
   const { isBookmarked, addBookmark, removeBookmark } = useBookmarks();
 
   return (
@@ -15,7 +20,8 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
         return (
           <div
             key={verse.id}
-            className="rounded-lg border border-gray-800 bg-gray-900/50 p-6"
+            id={`ayah-${verse.verse_number}`}
+            className="scroll-mt-8 rounded-lg border border-gray-800 bg-gray-900/50 p-6"
           >
             <div className="mb-4 flex items-start justify-between">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-900/40 text-xs font-semibold text-emerald-400">
@@ -37,15 +43,16 @@ export function VerseDisplay({ verses }: { verses: Verse[] }) {
               dir="rtl"
               lang="ar"
               translate="no"
-              className="font-amiri mb-4 text-right text-2xl leading-loose text-white"
+              className="font-amiri mb-4 text-right leading-loose text-white"
+              style={{ fontSize: "1.8rem" }}
             >
               {verse.text_uthmani}
             </p>
-            {verse.translations?.map((t) => (
+            {showTranslation && verse.translations?.map((t) => (
               <p
                 key={t.id}
                 className="text-base leading-relaxed text-gray-400"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t.text) }}
+                dangerouslySetInnerHTML={{ __html: t.text }}
               />
             ))}
           </div>
