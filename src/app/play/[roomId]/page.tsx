@@ -265,10 +265,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
 
   // Realtime hooks
   const { players, isConnected } = useRoom(
-    roomId,
-    membershipStatus === "active" && player
-      ? { id: player.id, display_name: player.display_name }
-      : null,
+    membershipStatus === "active" ? roomInfo?.id ?? null : null,
     roomInfo?.host_id ?? null
   );
 
