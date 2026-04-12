@@ -361,7 +361,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   if (phase !== "lobby" && gameState.current_round) {
     return (
       <GameInProgress
-        key={gameState.current_round.round_id}
+        key={gameId}
         roomCode={roomId}
         gameState={gameState}
         playerId={player?.id ?? ""}
@@ -515,37 +515,60 @@ function GameInProgress({
   // Pinned result — keeps the result screen visible for at least RESULT_MIN_MS
   // even after the server moves to the next round.
   const [pinnedResult, setPinnedResult] = useState<typeof gameState.round_result>(null);
+  const [pinnedRound, setPinnedRound] = useState<typeof gameState.current_round>(null);
   const [showingResult, setShowingResult] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const round = gameState.current_round;
   const result = gameState.round_result;
   const phase = gameState.phase;
-  const isTrivia = round?.prompt_verse_key?.startsWith("trivia-") ?? false;
 
-  // When a real round_result arrives, pin it and start the timer.
+  // When a real round_result arrives, pin both the result and the round so the
+  // display stays frozen for RESULT_MIN_MS even after the server moves on.
+  // We use a ref for the timer so phase changes don't cancel it via effect cleanup.
   useEffect(() => {
-    if (phase === "round_result" && result) {
-      const frame = window.requestAnimationFrame(() => {
-        setPinnedResult(result);
-        setShowingResult(true);
-      });
-      const timer = setTimeout(() => {
+    if (phase === "round_result" && result && !showingResult) {
+      setPinnedResult(result);
+      setPinnedRound(round);
+      setShowingResult(true);
+      setCountdown(Math.ceil(RESULT_MIN_MS / 1000));
+
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((c) => c - 1);
+      }, 1000);
+
+      resultTimerRef.current = setTimeout(() => {
+        resultTimerRef.current = null;
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
         setShowingResult(false);
         setPinnedResult(null);
+        setPinnedRound(null);
+        setCountdown(0);
         setAnswered(false);
         setSelected(null);
         setBuzzed(false);
       }, RESULT_MIN_MS);
-      return () => {
-        window.cancelAnimationFrame(frame);
-        clearTimeout(timer);
-      };
     }
-  }, [phase, result]);
+  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While pinned, treat everything as if we're still in round_result.
+  // Clean up on unmount only
+  useEffect(() => {
+    return () => {
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, []);
+
+  // While pinned, freeze the phase, result, and round so nothing flickers.
   const effectivePhase = showingResult ? "round_result" : phase;
   const effectiveResult = showingResult ? pinnedResult : result;
+  const effectiveRound = (showingResult && pinnedRound) ? pinnedRound : round;
+  const isTrivia = effectiveRound?.prompt_verse_key?.startsWith("trivia-") ?? false;
 
   // Game over screen
   if (phase === "game_over") {
@@ -655,7 +678,7 @@ function GameInProgress({
               <span className="font-mono text-gray-300">{roomCode}</span>
             </div>
             <span className="text-gray-600">
-              Round {round.round_number}/{round.total_rounds}
+              Round {effectiveRound?.round_number}/{effectiveRound?.total_rounds}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -709,19 +732,24 @@ function GameInProgress({
                 : "font-amiri text-3xl leading-loose"
             }`}
           >
-            {round.prompt_text}
+            {effectiveRound?.prompt_text}
           </p>
           {!isTrivia && (
-            <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
+            <p className="mt-2 text-sm text-gray-500">{effectiveRound?.prompt_verse_key}</p>
           )}
         </div>
 
         {/* Round result — stays visible for RESULT_MIN_MS */}
         {effectivePhase === "round_result" && effectiveResult && (
           <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Round over
-            </p>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                Round over
+              </p>
+              <p className="text-xs text-gray-500">
+                Next question in <span className="font-mono text-gray-300">{countdown}s</span>
+              </p>
+            </div>
             <p className="mb-1 text-sm text-gray-400">Correct answer:</p>
             <p
               dir={isTrivia ? "ltr" : "rtl"}
@@ -775,9 +803,9 @@ function GameInProgress({
         )}
 
         {/* Options */}
-        {!isBuzzerMode && round.options && effectivePhase === "round_active" && (
+        {!isBuzzerMode && effectiveRound?.options && effectivePhase === "round_active" && (
           <div className={`grid gap-3 ${isFillInBlank || isWordMeaning || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
-            {round.options.map((option) => {
+            {effectiveRound.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
                 if (option.verse_key === effectiveResult.correct_verse_key)
