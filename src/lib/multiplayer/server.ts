@@ -1,4 +1,5 @@
 import "server-only";
+import { getSupabaseAdminConfig } from "@/lib/supabase/env";
 
 function normalizeEnvValue(value: string | undefined): string | null {
   const normalized = value?.trim().replace(/^['"]|['"]$/g, "");
@@ -13,8 +14,9 @@ export async function invokeSupabaseEdgeFunction<T>(
   functionName: string,
   body: Record<string, unknown>
 ): Promise<T> {
-  const supabaseUrl = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceRoleKey = normalizeEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const adminConfig = getSupabaseAdminConfig();
+  const supabaseUrl = normalizeEnvValue(adminConfig.url);
+  const serviceRoleKey = normalizeEnvValue(adminConfig.serviceRoleKey);
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("Missing Supabase edge function configuration.");

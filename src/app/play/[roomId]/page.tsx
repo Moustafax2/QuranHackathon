@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { use } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
@@ -17,8 +17,10 @@ interface Props {
 
 type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
 type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
+type RoomMembershipStatus = "loading" | "active" | "left" | "missing";
 
 export default function GameRoomPage({ params, searchParams }: Props) {
+  const router = useRouter();
   const { roomId } = use(params);
   use(searchParams);
   const { player, loading: authLoading } = useAuth();
@@ -28,6 +30,28 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [membershipStatus, setMembershipStatus] = useState<RoomMembershipStatus>("loading");
+  const hasLeftRef = useRef(false);
+
+  const fetchActiveGame = useCallback(async (roomPrimaryId: string) => {
+    const supabase = createClient();
+    const activeGameResponse = await supabase
+      .from("games")
+      .select("id")
+      .eq("room_id", roomPrimaryId)
+      .is("ended_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const activeGame = activeGameResponse.data as ActiveGameLookup | null;
+
+    if (activeGame?.id) {
+      setGameId(activeGame.id);
+      return activeGame.id;
+    }
+
+    return null;
+  }, []);
 
   // Read guest player ID from sessionStorage on mount
   useEffect(() => {
@@ -56,37 +80,201 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         setError("Room not found");
       } else {
         setRoomInfo(data);
-        if (data.status === "in_progress") {
-          const activeGameResponse = await supabase
-            .from("games")
-            .select("id")
-            .eq("room_id", data.id)
-            .is("ended_at", null)
-            .order("started_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          const activeGame = activeGameResponse.data as ActiveGameLookup | null;
-
-          if (activeGame?.id) {
-            setGameId(activeGame.id);
-          }
-        }
+        await fetchActiveGame(data.id);
       }
       setLoading(false);
     }
     fetchRoom();
-  }, [roomId]);
+  }, [fetchActiveGame, roomId]);
+
+  useEffect(() => {
+    if (!roomInfo?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`room-meta:${roomInfo.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "rooms",
+          filter: `id=eq.${roomInfo.id}`,
+        },
+        ({ new: updatedRoom }) => {
+          const nextRoom = updatedRoom as RoomInfo;
+          setRoomInfo(nextRoom);
+          if (nextRoom.status === "in_progress") {
+            void fetchActiveGame(nextRoom.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchActiveGame, roomInfo?.id]);
+
+  useEffect(() => {
+    if (loading || authLoading) return;
+    if (!roomInfo?.id) return;
+
+    if (!player?.id) {
+      setMembershipStatus("missing");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchMembership() {
+      const supabase = createClient();
+      const membershipResponse = await supabase
+        .from("room_players")
+        .select("status")
+        .eq("room_id", roomInfo.id)
+        .eq("player_id", player.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      const membership = membershipResponse.data as { status: "active" | "left" } | null;
+      if (!membership) {
+        setMembershipStatus("missing");
+        return;
+      }
+
+      if (membership.status === "left") {
+        hasLeftRef.current = true;
+        setMembershipStatus("left");
+        return;
+      }
+
+      setMembershipStatus("active");
+      hasLeftRef.current = false;
+    }
+
+    void fetchMembership();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, loading, player?.id, roomInfo?.id]);
+
+  const buildMultiplayerHeaders = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
+    return headers;
+  }, [guestPlayerId]);
+
+  const leaveRoom = useCallback(
+    async ({
+      keepalive = false,
+      suppressErrors = false,
+    }: { keepalive?: boolean; suppressErrors?: boolean } = {}) => {
+      if (!roomInfo?.id || !player?.id || hasLeftRef.current) {
+        return true;
+      }
+
+      hasLeftRef.current = true;
+
+      try {
+        const request = fetch("/api/multiplayer/leave-room", {
+          method: "POST",
+          headers: buildMultiplayerHeaders(),
+          body: JSON.stringify({ room_id: roomInfo.id }),
+          keepalive,
+        });
+
+        if (keepalive) {
+          void request.catch(() => {});
+          return true;
+        }
+
+        const response = await request;
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to leave room.");
+        }
+
+        setMembershipStatus("left");
+        return true;
+      } catch (err) {
+        hasLeftRef.current = false;
+        if (!suppressErrors) {
+          setError((err as Error).message);
+        }
+        return false;
+      }
+    },
+    [buildMultiplayerHeaders, player?.id, roomInfo?.id]
+  );
+
+  useEffect(() => {
+    if (membershipStatus !== "active" || !roomInfo?.id || !player?.id) return;
+
+    let cancelled = false;
+
+    async function sendHeartbeat() {
+      try {
+        await fetch("/api/multiplayer/heartbeat-room", {
+          method: "POST",
+          headers: buildMultiplayerHeaders(),
+          body: JSON.stringify({ room_id: roomInfo.id }),
+        });
+      } catch {
+        if (!cancelled) {
+          // Heartbeats are best-effort; game sync falls back to polling/realtime.
+        }
+      }
+    }
+
+    void sendHeartbeat();
+    const interval = window.setInterval(() => {
+      void sendHeartbeat();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [buildMultiplayerHeaders, membershipStatus, player?.id, roomInfo?.id]);
+
+  useEffect(() => {
+    if (!roomInfo?.id || membershipStatus !== "active" || gameId) return;
+
+    const supabase = createClient();
+    const interval = window.setInterval(async () => {
+      const roomResponse = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", roomInfo.id)
+        .maybeSingle();
+
+      const latestRoom = roomResponse.data as RoomInfo | null;
+      if (!latestRoom) return;
+
+      setRoomInfo(latestRoom);
+      await fetchActiveGame(latestRoom.id);
+    }, 2000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [fetchActiveGame, gameId, membershipStatus, roomInfo?.id]);
 
   // Realtime hooks
   const { players, isConnected } = useRoom(
     roomId,
-    player ? { id: player.id, display_name: player.display_name } : null,
+    membershipStatus === "active" && player
+      ? { id: player.id, display_name: player.display_name }
+      : null,
     roomInfo?.host_id ?? null
   );
 
   const { gameState, submitAnswer, pressBuzzer } = useGame(
     gameId,
-    player?.id ?? null,
+    membershipStatus === "active" ? player?.id ?? null : null,
     guestPlayerId
   );
 
@@ -118,7 +306,14 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     }
   }
 
-  if (loading || authLoading) {
+  async function handleLeave() {
+    const didLeave = await leaveRoom();
+    if (didLeave) {
+      router.push("/play");
+    }
+  }
+
+  if (loading || authLoading || (!!roomInfo && membershipStatus === "loading")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
         <div className="text-gray-500">Loading room...</div>
@@ -139,6 +334,32 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     );
   }
 
+  if (membershipStatus === "left") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="max-w-md text-center">
+          <p className="text-red-400">You already left this game and can&apos;t rejoin it.</p>
+          <Link href="/play" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
+            Back to game modes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (membershipStatus === "missing") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="max-w-md text-center">
+          <p className="text-red-400">You are not an active participant in this room.</p>
+          <Link href="/play" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
+            Back to game modes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Game in progress
   if (phase !== "lobby" && gameState.current_round) {
     return (
@@ -151,6 +372,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
         gameMode={roomInfo?.game_mode ?? "multiple-choice"}
+        onLeave={() => void handleLeave()}
       />
     );
   }
@@ -243,12 +465,13 @@ export default function GameRoomPage({ params, searchParams }: Props) {
               Waiting for host to start...
             </div>
           )}
-          <Link
-            href="/play"
+          <button
+            type="button"
+            onClick={() => void handleLeave()}
             className="rounded-xl border border-gray-700 px-4 py-3 text-sm font-semibold text-gray-400 transition-colors hover:border-gray-500 hover:text-white"
           >
             Leave
-          </Link>
+          </button>
         </div>
       </div>
     </div>
@@ -270,6 +493,7 @@ interface GameProps {
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<{ ok: boolean; error?: string }>;
   onPressBuzzer: (roundId: string) => Promise<{ ok: boolean; error?: string }>;
   gameMode: string;
+  onLeave: () => void;
 }
 
 const RESULT_MIN_MS = 3500; // minimum time to show the round result screen
@@ -282,6 +506,7 @@ function GameInProgress({
   onSubmitAnswer,
   onPressBuzzer,
   gameMode,
+  onLeave,
 }: GameProps) {
   const isBuzzerMode = gameMode === "buzzer";
   const isFillInBlank = gameMode === "fill-in-blank";
@@ -302,8 +527,10 @@ function GameInProgress({
   // When a real round_result arrives, pin it and start the timer.
   useEffect(() => {
     if (phase === "round_result" && result) {
-      setPinnedResult(result);
-      setShowingResult(true);
+      const frame = window.requestAnimationFrame(() => {
+        setPinnedResult(result);
+        setShowingResult(true);
+      });
       const timer = setTimeout(() => {
         setShowingResult(false);
         setPinnedResult(null);
@@ -311,7 +538,10 @@ function GameInProgress({
         setSelected(null);
         setBuzzed(false);
       }, RESULT_MIN_MS);
-      return () => clearTimeout(timer);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
     }
   }, [phase, result]);
 
@@ -335,7 +565,9 @@ function GameInProgress({
             Game Over!
           </h1>
           <p className="mb-8 text-lg text-gray-400">
-            {gameState.winner_id === playerId
+            {!gameState.winner_id
+              ? "Game ended."
+              : gameState.winner_id === playerId
               ? "You won!"
               : `${winnerName ?? "Someone"} wins!`}
           </p>
@@ -424,6 +656,13 @@ function GameInProgress({
             <span className="text-emerald-400">You: {myScore}</span>
             <span className="text-gray-500">|</span>
             <span className="text-gray-400">Others: {othersScore}</span>
+            <button
+              type="button"
+              onClick={onLeave}
+              className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-colors hover:border-gray-500 hover:text-white"
+            >
+              Leave
+            </button>
           </div>
         </div>
 

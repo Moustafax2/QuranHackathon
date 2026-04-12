@@ -72,19 +72,28 @@ export interface Database {
           room_id: string;
           player_id: string;
           score: number;
+          status: "active" | "left";
           joined_at: string;
+          left_at: string | null;
+          last_seen_at: string;
         };
         Insert: {
           room_id: string;
           player_id: string;
           score?: number;
+          status?: "active" | "left";
           joined_at?: string;
+          left_at?: string | null;
+          last_seen_at?: string;
         };
         Update: {
           room_id?: string;
           player_id?: string;
           score?: number;
+          status?: "active" | "left";
           joined_at?: string;
+          left_at?: string | null;
+          last_seen_at?: string;
         };
         Relationships: [];
       };
