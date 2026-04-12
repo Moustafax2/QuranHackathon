@@ -388,7 +388,6 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         players={players}
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
-        gameMode={roomInfo?.game_mode ?? "multiple-choice"}
         onLeave={() => void handleLeave()}
       />
     );
@@ -519,7 +518,6 @@ interface GameProps {
   players: RoomPlayer[];
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<{ ok: boolean; error?: string }>;
   onPressBuzzer: (roundId: string) => Promise<{ ok: boolean; error?: string }>;
-  gameMode: string;
   onLeave: () => void;
 }
 
@@ -532,12 +530,8 @@ function GameInProgress({
   players,
   onSubmitAnswer,
   onPressBuzzer,
-  gameMode,
   onLeave,
 }: GameProps) {
-  const isBuzzerMode = gameMode === "buzzer";
-  const isFillInBlank = gameMode === "fill-in-blank";
-  const isWordMeaning = gameMode === "word-meaning";
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [buzzed, setBuzzed] = useState(false);
@@ -598,7 +592,12 @@ function GameInProgress({
   const effectivePhase = showingResult ? "round_result" : phase;
   const effectiveResult = showingResult ? pinnedResult : result;
   const effectiveRound = (showingResult && pinnedRound) ? pinnedRound : round;
+
+  // Infer per-round mode from the data so mixed-mode games label correctly.
   const isTrivia = effectiveRound?.prompt_verse_key?.startsWith("trivia-") ?? false;
+  const isBuzzerMode = !isTrivia && (!effectiveRound?.options || effectiveRound.options.length === 0);
+  const isFillOrWord = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("fill:")) ?? false);
+  // multiple-choice is the fallback (regular verse key options)
 
   // Game over screen
   if (phase === "game_over") {
@@ -745,20 +744,16 @@ function GameInProgress({
               ? "Quran Trivia"
               : isBuzzerMode
               ? "Recite the next ayah"
-              : isFillInBlank
+              : isFillOrWord
               ? "Fill in the blank"
-              : isWordMeaning
-              ? "What does this word mean?"
-              : "What comes next?"}
+              : "What is the next ayah?"}
           </p>
           <p
-            dir={isTrivia || isWordMeaning ? "ltr" : "rtl"}
-            lang={isTrivia || isWordMeaning ? "en" : "ar"}
+            dir={isTrivia ? "ltr" : "rtl"}
+            lang={isTrivia ? "en" : "ar"}
             className={`text-white ${
               isTrivia
                 ? "text-xl font-medium leading-relaxed"
-                : isWordMeaning
-                ? "font-amiri text-4xl leading-loose"
                 : "font-amiri text-3xl leading-loose"
             }`}
           >
@@ -834,7 +829,7 @@ function GameInProgress({
 
         {/* Options */}
         {!isBuzzerMode && effectiveRound?.options && effectivePhase === "round_active" && (
-          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
+          <div className={`grid gap-3 ${isFillOrWord || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
             {effectiveRound.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
@@ -852,18 +847,16 @@ function GameInProgress({
                   onClick={() => handleSelect(option.verse_key)}
                   disabled={answered}
                   className={`rounded-xl border transition-all ${
-                    isFillInBlank || isWordMeaning || isTrivia
-                      ? "p-4 text-center"
-                      : "p-4 text-right"
+                    isFillOrWord || isTrivia ? "p-4 text-center" : "p-4 text-right"
                   } ${style}`}
                 >
                   <p
-                    dir={isWordMeaning || isTrivia ? "ltr" : "rtl"}
-                    lang={isWordMeaning || isTrivia ? "en" : "ar"}
+                    dir={isTrivia ? "ltr" : "rtl"}
+                    lang={isTrivia ? "en" : "ar"}
                     className={`text-white ${
-                      isWordMeaning || isTrivia
+                      isTrivia
                         ? "text-lg font-medium leading-relaxed"
-                        : isFillInBlank
+                        : isFillOrWord
                         ? "font-amiri text-2xl leading-loose"
                         : "font-amiri text-xl leading-loose"
                     }`}
