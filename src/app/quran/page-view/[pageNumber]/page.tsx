@@ -1,5 +1,5 @@
 import { getVersesByPage } from "@/lib/api";
-import { VerseDisplay } from "@/components/quran/VerseDisplay";
+import { AyahView } from "@/components/quran/AyahView";
 import { PageNavigator } from "@/components/quran/PageNavigator";
 
 interface Props {
@@ -18,7 +18,7 @@ export default async function MushafPageView({ params }: Props) {
       </div>
 
       <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-6">
-        <VerseDisplay verses={verses} />
+        <AyahView verses={verses} />
       </div>
 
       <div className="mt-6">
