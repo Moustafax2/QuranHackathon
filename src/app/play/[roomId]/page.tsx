@@ -263,6 +263,25 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     };
   }, [fetchActiveGame, gameId, membershipStatus, roomInfo?.id]);
 
+  // Watch for the host starting the game — lets non-host players transition
+  // automatically without needing to refresh.
+  useEffect(() => {
+    if (gameId || !roomInfo?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`room-events:${roomInfo.id}`)
+      .on("broadcast", { event: "room_event" }, ({ payload }) => {
+        const event = payload as { type: string; payload: { game_id: string } };
+        if (event.type === "game:started" && event.payload.game_id) {
+          setGameId(event.payload.game_id);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [roomInfo?.id, gameId]);
+
   // Realtime hooks
   const { players, isConnected } = useRoom(
     membershipStatus === "active" ? roomInfo?.id ?? null : null,
