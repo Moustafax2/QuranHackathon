@@ -115,33 +115,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      game_participants: {
-        Row: {
-          game_id: string;
-          player_id: string;
-          is_active: boolean;
-          last_seen_at: string;
-          became_inactive_at: string | null;
-          joined_game_at: string;
-        };
-        Insert: {
-          game_id: string;
-          player_id: string;
-          is_active?: boolean;
-          last_seen_at?: string;
-          became_inactive_at?: string | null;
-          joined_game_at?: string;
-        };
-        Update: {
-          game_id?: string;
-          player_id?: string;
-          is_active?: boolean;
-          last_seen_at?: string;
-          became_inactive_at?: string | null;
-          joined_game_at?: string;
-        };
-        Relationships: [];
-      };
       game_rounds: {
         Row: {
           id: string;
