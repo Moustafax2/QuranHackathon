@@ -403,28 +403,49 @@ function GameInProgress({
     }
   }
 
-  // Build scores display
-  const myScore = gameState.scores[playerId] ?? 0;
-  const othersScore = Object.entries(gameState.scores)
-    .filter(([id]) => id !== playerId)
-    .reduce((sum, [, s]) => sum + s, 0);
+  // Build scores display — sorted by score descending
+  const sortedScores = Object.entries(gameState.scores)
+    .map(([id, score]) => ({
+      id,
+      score,
+      name: players.find((p) => p.player_id === id)?.display_name ?? "Unknown",
+      isMe: id === playerId,
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const rankEmoji = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
       <div className="mx-auto max-w-2xl px-4 py-12">
         {/* Score bar */}
-        <div className="mb-8 flex items-center justify-between rounded-2xl border border-gray-800 bg-gray-900 px-5 py-3">
-          <div className="text-sm">
-            <span className="text-gray-500">Room </span>
-            <span className="font-mono text-gray-300">{roomCode}</span>
-            <span className="ml-3 text-gray-600">
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 px-5 py-3">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <div>
+              <span className="text-gray-500">Room </span>
+              <span className="font-mono text-gray-300">{roomCode}</span>
+            </div>
+            <span className="text-gray-600">
               Round {round.round_number}/{round.total_rounds}
             </span>
           </div>
-          <div className="flex items-center gap-4 text-sm font-semibold">
-            <span className="text-emerald-400">You: {myScore}</span>
-            <span className="text-gray-500">|</span>
-            <span className="text-gray-400">Others: {othersScore}</span>
+          <div className="flex flex-wrap gap-2">
+            {sortedScores.map((p, i) => (
+              <div
+                key={p.id}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                  p.isMe
+                    ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                    : "bg-gray-800 text-gray-300"
+                }`}
+              >
+                <span className="text-xs">{rankEmoji[i] ?? `#${i + 1}`}</span>
+                <span className="max-w-24 truncate">{p.isMe ? "You" : p.name}</span>
+                <span className={`font-mono ${p.isMe ? "text-emerald-400" : "text-gray-400"}`}>
+                  {p.score}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
