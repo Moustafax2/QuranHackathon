@@ -1,4 +1,4 @@
-export type QuestionType = "next-ayah-mc" | "word-meaning-mc" | "blank-word-mc";
+export type QuestionType = "next-ayah-mc" | "word-meaning-mc" | "blank-word-mc" | "trivia";
 
 export interface GameSettings {
   questionTypes: QuestionType[];
