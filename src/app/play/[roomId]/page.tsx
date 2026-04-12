@@ -531,7 +531,16 @@ function GameInProgress({
                 : "font-amiri text-3xl leading-loose"
             }`}
           >
-            {effectiveRound?.prompt_text}
+            {isFillInBlank && effectiveRound?.prompt_text?.includes("___")
+              ? effectiveRound.prompt_text.split("___").map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && (
+                      <span className="inline-block w-16 border-b-2 border-white mx-1 align-bottom mb-2" />
+                    )}
+                  </span>
+                ))
+              : effectiveRound?.prompt_text}
           </p>
           {!isTrivia && (
             <p className="mt-2 text-sm text-gray-500">{effectiveRound?.prompt_verse_key}</p>
