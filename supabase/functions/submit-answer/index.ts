@@ -5,8 +5,8 @@ import {
   corsHeaders,
 } from "../_shared/supabase-admin.ts";
 
-const BASE_POINTS = 10;
-const SPEED_BONUS = 5;
+const BASE_POINTS = 5;
+const SPEED_BONUSES = [3, 2, 1]; // 1st, 2nd, 3rd correct answerer
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -106,15 +106,15 @@ serve(async (req: Request) => {
     // Multiple choice mode
     const isCorrect = answer_verse_key === round.correct_verse_key;
 
-    // Calculate points: count how many already answered to determine speed bonus
-    const { count: answeredCount } = await admin
+    // Calculate points: count how many have already answered CORRECTLY to determine speed bonus
+    const { count: correctCount } = await admin
       .from("round_answers")
       .select("*", { count: "exact", head: true })
-      .eq("round_id", round_id);
+      .eq("round_id", round_id)
+      .eq("is_correct", true);
 
-    const points = isCorrect
-      ? BASE_POINTS + Math.max(0, SPEED_BONUS - (answeredCount ?? 0))
-      : 0;
+    const speedBonus = SPEED_BONUSES[correctCount ?? 0] ?? 0;
+    const points = isCorrect ? BASE_POINTS + speedBonus : 0;
 
     // Insert answer
     await admin.from("round_answers").insert({
