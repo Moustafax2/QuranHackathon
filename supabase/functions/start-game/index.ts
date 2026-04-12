@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import {
   createAdminClient,
   broadcastGameEvent,
+  broadcastRoomEvent,
   corsHeaders,
 } from "../_shared/supabase-admin.ts";
 
@@ -112,6 +113,13 @@ serve(async (req: Request) => {
     // Update room status and reset scores
     await admin.from("rooms").update({ status: "in_progress" }).eq("id", room_id);
     await admin.from("room_players").update({ score: 0 }).eq("room_id", room_id);
+
+    // Notify all room members that the game has started so they can subscribe
+    // to the game channel before the first round broadcast arrives.
+    await broadcastRoomEvent(room_id, {
+      type: "game:started",
+      payload: { game_id: game.id },
+    });
 
     // Broadcast first round
     const firstRound = insertedRounds![0];
