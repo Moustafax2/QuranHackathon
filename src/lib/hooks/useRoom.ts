@@ -33,6 +33,7 @@ export function useRoom(
 
     const supabase = createClient();
     const channel: RealtimeChannel = supabase.channel(`room-db:${roomId}`);
+    let cancelled = false;
 
     async function fetchPlayers() {
       const response = await supabase
@@ -43,6 +44,7 @@ export function useRoom(
         .order("joined_at", { ascending: true });
 
       if (response.error) {
+        if (cancelled) return;
         setError("Failed to load room players");
         return;
       }
@@ -59,8 +61,16 @@ export function useRoom(
         };
       });
 
+      if (cancelled) return;
+      setError(null);
       setPlayers(nextPlayers);
     }
+
+    void fetchPlayers();
+
+    const interval = window.setInterval(() => {
+      void fetchPlayers();
+    }, 2000);
 
     channel
       .on(
@@ -93,10 +103,13 @@ export function useRoom(
           setIsConnected(true);
         } else if (status === "CHANNEL_ERROR") {
           setError("Failed to connect to room");
+          setIsConnected(false);
         }
       });
 
     return () => {
+      cancelled = true;
+      window.clearInterval(interval);
       void supabase.removeChannel(channel);
     };
   }, [hostId, roomId]);
