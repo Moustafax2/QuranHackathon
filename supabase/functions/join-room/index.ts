@@ -35,40 +35,35 @@ serve(async (req: Request) => {
       );
     }
 
-    // Check if already in room first (rejoin eligibility)
+    if (room.status !== "lobby") {
+      return new Response(
+        JSON.stringify({ error: "Game already in progress" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check player count
+    const { count } = await admin
+      .from("room_players")
+      .select("*", { count: "exact", head: true })
+      .eq("room_id", room.id);
+
+    if ((count ?? 0) >= 8) {
+      return new Response(
+        JSON.stringify({ error: "Room is full (max 8 players)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if already in room
     const { data: existing } = await admin
       .from("room_players")
       .select("player_id")
       .eq("room_id", room.id)
       .eq("player_id", player_id)
-      .maybeSingle();
+      .single();
 
-    const isExistingPlayer = Boolean(existing);
-    const isRejoiningInProgress = room.status === "in_progress" && isExistingPlayer;
-
-    if (room.status !== "lobby" && !isExistingPlayer) {
-      return new Response(
-        JSON.stringify({ error: "Cannot join new game already in progress" }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Keep max-player checks for lobby joins only
-    if (room.status === "lobby" && !isExistingPlayer) {
-      const { count } = await admin
-        .from("room_players")
-        .select("*", { count: "exact", head: true })
-        .eq("room_id", room.id);
-
-      if ((count ?? 0) >= 8) {
-        return new Response(
-          JSON.stringify({ error: "Room is full (max 8 players)" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    if (!isExistingPlayer) {
+    if (!existing) {
       // Add player to room
       const { error: joinError } = await admin
         .from("room_players")
@@ -82,26 +77,6 @@ serve(async (req: Request) => {
       }
     }
 
-    if (isRejoiningInProgress) {
-      const { data: activeGame } = await admin
-        .from("games")
-        .select("id")
-        .eq("room_id", room.id)
-        .is("ended_at", null)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (activeGame?.id) {
-        await admin.from("game_participants").upsert({
-          game_id: activeGame.id,
-          player_id,
-          is_active: true,
-          last_seen_at: new Date().toISOString(),
-        });
-      }
-    }
-
     return new Response(
       JSON.stringify({
         room_id: room.id,
@@ -109,7 +84,6 @@ serve(async (req: Request) => {
         host_id: room.host_id,
         game_mode: room.game_mode,
         settings: room.settings,
-        rejoined_in_progress: isRejoiningInProgress,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

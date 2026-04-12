@@ -24,7 +24,6 @@ interface AuthState {
 
 interface SessionResponse {
   isAuthenticated: boolean;
-  isGuest?: boolean;
   user: AuthUser | null;
   player: Player | null;
 }
@@ -44,11 +43,6 @@ export function useAuth(): AuthState {
     try {
       const response = await fetch("/api/auth/qf/session", { cache: "no-store" });
       const payload = (await response.json()) as SessionResponse;
-
-      if (payload.isGuest && payload.player && typeof window !== "undefined") {
-        sessionStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(payload.player));
-        return { ...payload, isGuest: true };
-      }
 
       if (!payload.isAuthenticated && typeof window !== "undefined") {
         const raw = sessionStorage.getItem(GUEST_STORAGE_KEY);
