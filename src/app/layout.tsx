@@ -24,7 +24,7 @@ const amiri = Amiri({
 export const metadata: Metadata = {
   title: "QuranArena",
   description:
-    "Compete with friends to memorize the Quran. Live multiplayer competitions, training modes, and leaderboards.",
+    "Compete with friends to memorize the Quran. Live multiplayer competitions and training modes.",
   manifest: "/manifest.json",
 };
 
