@@ -228,6 +228,9 @@ export default function PlayPage() {
   );
 
   const canCreate = selectedModes.length > 0 && !!player;
+  const selectedModeLabels = selectedModes
+    .map((modeId) => GAME_MODES.find((mode) => mode.id === modeId)?.short)
+    .filter((label): label is string => Boolean(label));
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -435,11 +438,18 @@ export default function PlayPage() {
             <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
               <h3 className="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Game Summary</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Mode</span>
-                  <span className="text-white">
-                    {selectedModes.map((m) => GAME_MODES.find((g) => g.id === m)?.short).join(" + ")}
-                  </span>
+                <div className="grid grid-cols-[auto,1fr] items-start gap-x-3">
+                  <span className="pt-1 text-gray-500">Mode</span>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {selectedModeLabels.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Questions</span>
