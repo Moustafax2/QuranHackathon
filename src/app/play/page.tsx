@@ -7,7 +7,7 @@ import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type GameModeId = "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer";
+type GameModeId = "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer" | "trivia";
 type ScopeType = "all" | "juz" | "surah";
 
 const GAME_MODES: {
@@ -48,6 +48,16 @@ const GAME_MODES: {
     difficultyColor: "text-blue-400 bg-blue-400/10 border-blue-400/20",
     description: "A word is blanked out from an ayah — pick the missing word.",
     icon: "✏️",
+    available: true,
+  },
+  {
+    id: "trivia",
+    title: "Quran Trivia",
+    short: "Trivia",
+    difficulty: "Easy",
+    difficultyColor: "text-purple-400 bg-purple-400/10 border-purple-400/20",
+    description: "Test your general knowledge about the Quran — surahs, prophets, history, and more.",
+    icon: "🧠",
     available: true,
   },
   {
@@ -322,7 +332,8 @@ export default function PlayPage() {
               </div>
             </section>
 
-            {/* 3. Scope */}
+            {/* 3. Scope (hidden when only trivia is selected) */}
+            {selectedModes.some((m) => m !== "trivia") && (
             <section className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
               <h2 className="mb-1 font-semibold text-white">Scope</h2>
               <p className="mb-4 text-sm text-gray-500">
@@ -429,6 +440,7 @@ export default function PlayPage() {
                 </div>
               )}
             </section>
+            )}
           </div>
 
           {/* ── Right col: create / join ── */}
@@ -455,10 +467,12 @@ export default function PlayPage() {
                   <span className="text-gray-500">Questions</span>
                   <span className="text-white">{numQuestions}</span>
                 </div>
+                {selectedModes.some((m) => m !== "trivia") && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Scope</span>
                   <span className="text-right text-white">{scopeLabel()}</span>
                 </div>
+                )}
               </div>
             </div>
 

@@ -520,6 +520,7 @@ function GameInProgress({
   const round = gameState.current_round;
   const result = gameState.round_result;
   const phase = gameState.phase;
+  const isTrivia = round?.prompt_verse_key?.startsWith("trivia-") ?? false;
 
   // When a real round_result arrives, pin it and start the timer.
   useEffect(() => {
@@ -666,7 +667,9 @@ function GameInProgress({
         {/* Prompt */}
         <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            {isBuzzerMode
+            {isTrivia
+              ? "Quran Trivia"
+              : isBuzzerMode
               ? "Recite the next ayah"
               : isFillInBlank
               ? "Fill in the blank"
@@ -675,13 +678,21 @@ function GameInProgress({
               : "What comes next?"}
           </p>
           <p
-            dir="rtl"
-            lang="ar"
-            className={`font-amiri text-white ${isWordMeaning ? "text-4xl leading-loose" : "text-3xl leading-loose"}`}
+            dir={isTrivia || isWordMeaning ? "ltr" : "rtl"}
+            lang={isTrivia || isWordMeaning ? "en" : "ar"}
+            className={`text-white ${
+              isTrivia
+                ? "text-xl font-medium leading-relaxed"
+                : isWordMeaning
+                ? "font-amiri text-4xl leading-loose"
+                : "font-amiri text-3xl leading-loose"
+            }`}
           >
             {round.prompt_text}
           </p>
-          <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
+          {!isTrivia && (
+            <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
+          )}
         </div>
 
         {/* Round result — stays visible for RESULT_MIN_MS */}
@@ -691,7 +702,11 @@ function GameInProgress({
               Round over
             </p>
             <p className="mb-1 text-sm text-gray-400">Correct answer:</p>
-            <p dir="rtl" lang="ar" className="mb-4 font-amiri text-2xl leading-loose text-white">
+            <p
+              dir={isTrivia ? "ltr" : "rtl"}
+              lang={isTrivia ? "en" : "ar"}
+              className={`mb-4 text-white ${isTrivia ? "text-lg font-medium leading-relaxed" : "font-amiri text-2xl leading-loose"}`}
+            >
               {effectiveResult.correct_text}
             </p>
             <div className="space-y-2">
@@ -740,7 +755,7 @@ function GameInProgress({
 
         {/* Options */}
         {!isBuzzerMode && round.options && effectivePhase === "round_active" && (
-          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning ? "grid-cols-2" : "sm:grid-cols-2"}`}>
+          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
             {round.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
@@ -758,16 +773,16 @@ function GameInProgress({
                   onClick={() => handleSelect(option.verse_key)}
                   disabled={answered}
                   className={`rounded-xl border transition-all ${
-                    isFillInBlank || isWordMeaning
+                    isFillInBlank || isWordMeaning || isTrivia
                       ? "p-4 text-center"
                       : "p-4 text-right"
                   } ${style}`}
                 >
                   <p
-                    dir={isWordMeaning ? "ltr" : "rtl"}
-                    lang={isWordMeaning ? "en" : "ar"}
+                    dir={isWordMeaning || isTrivia ? "ltr" : "rtl"}
+                    lang={isWordMeaning || isTrivia ? "en" : "ar"}
                     className={`text-white ${
-                      isWordMeaning
+                      isWordMeaning || isTrivia
                         ? "text-lg font-medium leading-relaxed"
                         : isFillInBlank
                         ? "font-amiri text-2xl leading-loose"
