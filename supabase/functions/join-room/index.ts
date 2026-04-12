@@ -46,7 +46,8 @@ serve(async (req: Request) => {
     const { count } = await admin
       .from("room_players")
       .select("*", { count: "exact", head: true })
-      .eq("room_id", room.id);
+      .eq("room_id", room.id)
+      .eq("status", "active");
 
     if ((count ?? 0) >= 8) {
       return new Response(
@@ -58,16 +59,29 @@ serve(async (req: Request) => {
     // Check if already in room
     const { data: existing } = await admin
       .from("room_players")
-      .select("player_id")
+      .select("player_id, status")
       .eq("room_id", room.id)
       .eq("player_id", player_id)
-      .single();
+      .maybeSingle();
+
+    if (existing?.status === "left") {
+      return new Response(
+        JSON.stringify({ error: "You already left this game and cannot rejoin it." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!existing) {
       // Add player to room
       const { error: joinError } = await admin
         .from("room_players")
-        .insert({ room_id: room.id, player_id });
+        .insert({
+          room_id: room.id,
+          player_id,
+          status: "active",
+          left_at: null,
+          last_seen_at: new Date().toISOString(),
+        });
 
       if (joinError) {
         return new Response(
@@ -75,6 +89,14 @@ serve(async (req: Request) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    }
+    else {
+      await admin
+        .from("room_players")
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq("room_id", room.id)
+        .eq("player_id", player_id)
+        .eq("status", "active");
     }
 
     return new Response(

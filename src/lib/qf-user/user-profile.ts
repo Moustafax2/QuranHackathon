@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Database } from "@/lib/supabase/types";
+import { getSupabaseAdminConfig as getResolvedSupabaseAdminConfig } from "@/lib/supabase/env";
 import type { QfUserProfile } from "./types";
 
 type PlayerRow = Database["public"]["Tables"]["players"]["Row"];
@@ -8,14 +9,7 @@ type PlayerInsert = Database["public"]["Tables"]["players"]["Insert"];
 type PlayerUpdate = Database["public"]["Tables"]["players"]["Update"];
 
 function getSupabaseAdminConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRoleKey) {
-    throw new Error("Missing Supabase admin configuration.");
-  }
-
-  return { url, serviceRoleKey };
+  return getResolvedSupabaseAdminConfig();
 }
 
 async function supabaseRequest<T>(path: string, init?: RequestInit): Promise<T> {

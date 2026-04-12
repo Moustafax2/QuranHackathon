@@ -78,6 +78,9 @@ serve(async (req: Request) => {
     await admin.from("room_players").insert({
       room_id: room.id,
       player_id,
+      status: "active",
+      left_at: null,
+      last_seen_at: new Date().toISOString(),
     });
 
     return new Response(

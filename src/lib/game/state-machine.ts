@@ -57,7 +57,7 @@ export type GameEvent =
   | { type: "answer:result"; payload: PlayerAnswer }
   | { type: "buzzer:winner"; payload: { player_id: string; display_name: string } }
   | { type: "round:end"; payload: RoundResult }
-  | { type: "game:end"; payload: { scores: Record<string, number>; winner_id: string } };
+  | { type: "game:end"; payload: { scores: Record<string, number>; winner_id: string | null } };
 
 export function reduceGameState(state: GameState, event: GameEvent): GameState {
   switch (event.type) {

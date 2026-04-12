@@ -19,16 +19,41 @@ export async function broadcastGameEvent(
   event: { type: string; payload: Record<string, unknown> }
 ) {
   const admin = createAdminClient();
-  const channel = admin.channel(`game:${gameId}`);
-
-  await channel.subscribe();
-  await channel.send({
-    type: "broadcast",
-    event: "game_event",
-    payload: event,
+  const channel = admin.channel(`game:${gameId}`, {
+    config: {
+      broadcast: { ack: true },
+    },
   });
 
-  admin.removeChannel(channel);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timed out subscribing to game channel ${gameId}`));
+      }, 5000);
+
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          clearTimeout(timeout);
+          resolve();
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          clearTimeout(timeout);
+          reject(new Error(`Failed to subscribe to game channel ${gameId}: ${status}`));
+        }
+      });
+    });
+
+    await channel.send({
+      type: "broadcast",
+      event: "game_event",
+      payload: event,
+    });
+  } finally {
+    await admin.removeChannel(channel);
+  }
 }
 
 /**

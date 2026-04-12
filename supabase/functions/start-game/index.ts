@@ -70,6 +70,26 @@ serve(async (req: Request) => {
       );
     }
 
+    const { count: activePlayers, error: activePlayersError } = await admin
+      .from("room_players")
+      .select("*", { count: "exact", head: true })
+      .eq("room_id", room_id)
+      .eq("status", "active");
+
+    if (activePlayersError) {
+      return new Response(
+        JSON.stringify({ error: "Failed to load room participants" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if ((activePlayers ?? 0) === 0) {
+      return new Response(
+        JSON.stringify({ error: "No active players remain in this room" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create game record
     const { data: game, error: gameError } = await admin
       .from("games")
@@ -111,7 +131,15 @@ serve(async (req: Request) => {
 
     // Update room status and reset scores
     await admin.from("rooms").update({ status: "in_progress" }).eq("id", room_id);
-    await admin.from("room_players").update({ score: 0 }).eq("room_id", room_id);
+    await admin
+      .from("room_players")
+      .update({ score: 0 })
+      .eq("room_id", room_id)
+      .eq("status", "active");
+    await admin
+      .from("game_rounds")
+      .update({ started_at: new Date().toISOString() })
+      .eq("id", insertedRounds![0].id);
 
     // Broadcast first round
     const firstRound = insertedRounds![0];

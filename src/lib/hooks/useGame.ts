@@ -40,7 +40,13 @@ export function useGame(
     const currentGameId = gameId;
 
     const supabase = createClient();
-    const channel = supabase.channel(`game:${currentGameId}`);
+    const channel = supabase.channel(`game:${currentGameId}`, {
+      config: {
+        broadcast: {
+          self: false,
+        },
+      },
+    });
     let cancelled = false;
 
     async function hydrateCurrentRound() {
@@ -60,7 +66,8 @@ export function useGame(
         const roomPlayersResponse = await supabase
           .from("room_players")
           .select("player_id, score")
-          .eq("room_id", game.room_id);
+          .eq("room_id", game.room_id)
+          .eq("status", "active");
         const roomPlayers = roomPlayersResponse.data as Pick<
           RoomPlayerRow,
           "player_id" | "score"
@@ -74,7 +81,7 @@ export function useGame(
           type: "game:end",
           payload: {
             scores,
-            winner_id: game.winner_id ?? "",
+            winner_id: game.winner_id,
           },
         });
         return;
@@ -124,6 +131,15 @@ export function useGame(
       .on("broadcast", { event: "game_event" }, ({ payload }) => {
         const event = payload as GameEvent;
         dispatch(event);
+
+        // The server can end one round and immediately broadcast the next.
+        // Re-hydrate after round end so clients recover even if that next
+        // round:start broadcast is missed locally.
+        if (event.type === "round:end") {
+          window.setTimeout(() => {
+            void hydrateCurrentRound();
+          }, 250);
+        }
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
