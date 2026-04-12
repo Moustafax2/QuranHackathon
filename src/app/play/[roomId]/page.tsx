@@ -374,7 +374,8 @@ function GameInProgress({
   // Infer per-round mode from the data so mixed-mode games label correctly.
   const isTrivia = effectiveRound?.prompt_verse_key?.startsWith("trivia-") ?? false;
   const isBuzzerMode = !isTrivia && (!effectiveRound?.options || effectiveRound.options.length === 0);
-  const isFillOrWord = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("fill:")) ?? false);
+  const isFillInBlank = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("fill:")) ?? false);
+  const isWordMeaning = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("meaning:")) ?? false);
   // multiple-choice is the fallback (regular verse key options)
 
   // Game over screen
@@ -513,7 +514,9 @@ function GameInProgress({
               ? "Quran Trivia"
               : isBuzzerMode
               ? "Recite the next ayah"
-              : isFillOrWord
+              : isWordMeaning
+              ? "What does this word mean?"
+              : isFillInBlank
               ? "Fill in the blank"
               : "What is the next ayah?"}
           </p>
@@ -523,6 +526,8 @@ function GameInProgress({
             className={`text-white ${
               isTrivia
                 ? "text-xl font-medium leading-relaxed"
+                : isWordMeaning
+                ? "font-amiri text-5xl leading-loose"
                 : "font-amiri text-3xl leading-loose"
             }`}
           >
@@ -598,7 +603,7 @@ function GameInProgress({
 
         {/* Options */}
         {!isBuzzerMode && effectiveRound?.options && effectivePhase === "round_active" && (
-          <div className={`grid gap-3 ${isFillOrWord || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
+          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
             {effectiveRound.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
@@ -610,22 +615,23 @@ function GameInProgress({
               } else if (option.verse_key === selected) {
                 style = "border-blue-500 bg-blue-500/10";
               }
+              const isEnglishOption = isTrivia || isWordMeaning;
               return (
                 <button
                   key={option.verse_key}
                   onClick={() => handleSelect(option.verse_key)}
                   disabled={answered}
                   className={`rounded-xl border transition-all ${
-                    isFillOrWord || isTrivia ? "p-4 text-center" : "p-4 text-right"
+                    isFillInBlank || isWordMeaning || isTrivia ? "p-4 text-center" : "p-4 text-right"
                   } ${style}`}
                 >
                   <p
-                    dir={isTrivia ? "ltr" : "rtl"}
-                    lang={isTrivia ? "en" : "ar"}
+                    dir={isEnglishOption ? "ltr" : "rtl"}
+                    lang={isEnglishOption ? "en" : "ar"}
                     className={`text-white ${
-                      isTrivia
+                      isEnglishOption
                         ? "text-lg font-medium leading-relaxed"
-                        : isFillOrWord
+                        : isFillInBlank
                         ? "font-amiri text-2xl leading-loose"
                         : "font-amiri text-xl leading-loose"
                     }`}
