@@ -1,0 +1,1211 @@
+[
+  {
+    "id": "trivia-001",
+    "difficulty": "easy",
+    "question": "What does the name 'Al-Baqarah' mean",
+    "options": [
+      "The Cow",
+      "The Bee",
+      "The Ant",
+      "The Spider"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 2"
+  },
+  {
+    "id": "trivia-002",
+    "difficulty": "easy",
+    "question": "What does the name 'Al-Fatihah' mean",
+    "options": [
+      "The Conclusion",
+      "The Opener",
+      "The Beginning",
+      "The Prayer"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 1"
+  },
+  {
+    "id": "trivia-003",
+    "difficulty": "easy",
+    "question": "What does the name 'An-Nahl' mean",
+    "options": [
+      "The Ant",
+      "The Spider",
+      "The Bee",
+      "The Fly"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 16"
+  },
+  {
+    "id": "trivia-004",
+    "difficulty": "easy",
+    "question": "What does the name 'An-Naml' mean",
+    "options": [
+      "The Bee",
+      "The Ant",
+      "The Spider",
+      "The Fly"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 27"
+  },
+  {
+    "id": "trivia-005",
+    "difficulty": "easy",
+    "question": "What does the name 'Al-Kahf' mean",
+    "options": [
+      "The Mountain",
+      "The Valley",
+      "The Cave",
+      "The Desert"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 18"
+  },
+  {
+    "id": "trivia-006",
+    "difficulty": "easy",
+    "question": "What does the name 'Al-Hadid' mean",
+    "options": [
+      "The Gold",
+      "The Silver",
+      "The Copper",
+      "The Iron"
+    ],
+    "correctIndex": 3,
+    "sourceReference": "Surah 57"
+  },
+  {
+    "id": "trivia-007",
+    "difficulty": "easy",
+    "question": "What does the name 'Ar-Ra'd' mean",
+    "options": [
+      "The Lightning",
+      "The Thunder",
+      "The Rain",
+      "The Storm"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 13"
+  },
+  {
+    "id": "trivia-008",
+    "difficulty": "easy",
+    "question": "What does the name 'An-Nur' mean",
+    "options": [
+      "The Fire",
+      "The Sun",
+      "The Light",
+      "The Star"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 24"
+  },
+  {
+    "id": "trivia-009",
+    "difficulty": "easy",
+    "question": "What does the name 'Al-Qamar' mean",
+    "options": [
+      "The Sun",
+      "The Star",
+      "The Sky",
+      "The Moon"
+    ],
+    "correctIndex": 3,
+    "sourceReference": "Surah 54"
+  },
+  {
+    "id": "trivia-010",
+    "difficulty": "easy",
+    "question": "What does the name 'Ash-Shams' mean",
+    "options": [
+      "The Sun",
+      "The Moon",
+      "The Star",
+      "The Dawn"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 91"
+  },
+  {
+    "id": "trivia-011",
+    "difficulty": "medium",
+    "question": "What does the name 'Al-Furqan' mean",
+    "options": [
+      "The Book",
+      "The Criterion",
+      "The Judgment",
+      "The Proof"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 25"
+  },
+  {
+    "id": "trivia-012",
+    "difficulty": "medium",
+    "question": "What does the name 'Ad-Dukhan' mean",
+    "options": [
+      "The Fog",
+      "The Cloud",
+      "The Smoke",
+      "The Dust"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 44"
+  },
+  {
+    "id": "trivia-013",
+    "difficulty": "medium",
+    "question": "What does the name 'Al-Qalam' mean",
+    "options": [
+      "The Book",
+      "The Ink",
+      "The Paper",
+      "The Pen"
+    ],
+    "correctIndex": 3,
+    "sourceReference": "Surah 68"
+  },
+  {
+    "id": "trivia-014",
+    "difficulty": "medium",
+    "question": "What does the name 'Al-Fil' mean",
+    "options": [
+      "The Elephant",
+      "The Horse",
+      "The Camel",
+      "The Lion"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 105"
+  },
+  {
+    "id": "trivia-015",
+    "difficulty": "medium",
+    "question": "What does the name 'Al-'Ankabut' mean",
+    "options": [
+      "The Scorpion",
+      "The Beetle",
+      "The Spider",
+      "The Ant"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 29"
+  },
+  {
+    "id": "trivia-016",
+    "difficulty": "medium",
+    "question": "What does the name 'At-Tin' mean",
+    "options": [
+      "The Olive",
+      "The Fig",
+      "The Date",
+      "The Grape"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 95"
+  },
+  {
+    "id": "trivia-017",
+    "difficulty": "medium",
+    "question": "What does the name 'Al-Ma'idah' mean",
+    "options": [
+      "The Feast",
+      "The Table Spread",
+      "The Banquet",
+      "The Offering"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 5"
+  },
+  {
+    "id": "trivia-018",
+    "difficulty": "hard",
+    "question": "What does the name 'Al-Jathiyah' mean",
+    "options": [
+      "The Kneeling",
+      "The Crouching",
+      "The Bowing",
+      "The Standing"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 45"
+  },
+  {
+    "id": "trivia-019",
+    "difficulty": "hard",
+    "question": "What does the name 'Az-Zukhruf' mean",
+    "options": [
+      "The Silver Lining",
+      "The Precious Stones",
+      "The Ornaments of Gold",
+      "The Royal Crown"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 43"
+  },
+  {
+    "id": "trivia-020",
+    "difficulty": "hard",
+    "question": "What does the name 'Al-Muddaththir' mean",
+    "options": [
+      "The Messenger",
+      "The Cloaked One",
+      "The Book",
+      "The Dawn"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 74"
+  },
+  {
+    "id": "trivia-021",
+    "difficulty": "easy",
+    "question": "Which prophet is the primary subject of Surah Yusuf",
+    "options": [
+      "Prophet Musa",
+      "Prophet Yusuf",
+      "Prophet Ibrahim",
+      "Prophet Nuh"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 12"
+  },
+  {
+    "id": "trivia-022",
+    "difficulty": "easy",
+    "question": "Surah Maryam (Surah 19) is named after the mother of which prophet",
+    "options": [
+      "Prophet Musa",
+      "Prophet Ibrahim",
+      "Prophet Isa (Jesus)",
+      "Prophet Muhammad"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 19"
+  },
+  {
+    "id": "trivia-023",
+    "difficulty": "medium",
+    "question": "Surah Taha (Surah 20) primarily narrates the story of which prophet",
+    "options": [
+      "Prophet Ibrahim",
+      "Prophet Yusuf",
+      "Prophet Musa",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 20"
+  },
+  {
+    "id": "trivia-024",
+    "difficulty": "medium",
+    "question": "Which prophet is associated with Surah Al-Qasas (The Stories)",
+    "options": [
+      "Prophet Nuh",
+      "Prophet Musa",
+      "Prophet Dawud",
+      "Prophet Sulayman"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 28"
+  },
+  {
+    "id": "trivia-025",
+    "difficulty": "hard",
+    "question": "Surah Luqman (Surah 31) features the wisdom of Luqman advising his:",
+    "options": [
+      "Wife",
+      "Son",
+      "Students",
+      "Community"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 31"
+  },
+  {
+    "id": "trivia-026",
+    "difficulty": "medium",
+    "question": "Which surah mentions the story of the People of the Cave (Ashab al-Kahf)",
+    "options": [
+      "Surah Al-Hijr",
+      "Surah Al-Isra",
+      "Surah Al-Kahf",
+      "Surah Maryam"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 18"
+  },
+  {
+    "id": "trivia-027",
+    "difficulty": "hard",
+    "question": "Which prophet is associated with the story of the whale in the Quran",
+    "options": [
+      "Prophet Nuh",
+      "Prophet Yunus",
+      "Prophet Musa",
+      "Prophet Dawud"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 10, 37, 68"
+  },
+  {
+    "id": "trivia-028",
+    "difficulty": "easy",
+    "question": "Which surah does NOT begin with 'Bismillah ir-Rahman ir-Raheem'",
+    "options": [
+      "Al-Fatihah",
+      "Al-Baqarah",
+      "At-Tawbah",
+      "Al-Ikhlas"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 9"
+  },
+  {
+    "id": "trivia-029",
+    "difficulty": "medium",
+    "question": "Which surah contains 'Bismillah ir-Rahman ir-Raheem' within its verses (not just at the beginning)",
+    "options": [
+      "Al-Fatihah",
+      "An-Naml",
+      "Al-Mulk",
+      "Ar-Rahman"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 27:30"
+  },
+  {
+    "id": "trivia-030",
+    "difficulty": "easy",
+    "question": "What is the first surah in the Quran by order in the Mushaf",
+    "options": [
+      "Al-Baqarah",
+      "Al-Fatihah",
+      "Al-Ikhlas",
+      "Al-'Alaq"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 1"
+  },
+  {
+    "id": "trivia-031",
+    "difficulty": "easy",
+    "question": "What is the last surah in the Quran by order in the Mushaf",
+    "options": [
+      "Al-Falaq",
+      "Al-Ikhlas",
+      "An-Nas",
+      "Al-Masad"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 114"
+  },
+  {
+    "id": "trivia-032",
+    "difficulty": "medium",
+    "question": "Which is the longest surah in the Quran",
+    "options": [
+      "Ali 'Imran",
+      "An-Nisa",
+      "Al-Baqarah",
+      "Al-A'raf"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 2 (286 ayahs)"
+  },
+  {
+    "id": "trivia-033",
+    "difficulty": "medium",
+    "question": "Which is the shortest surah in the Quran",
+    "options": [
+      "Al-Kawthar",
+      "Al-'Asr",
+      "Al-Ikhlas",
+      "An-Nasr"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 108 (3 ayahs, fewest words)"
+  },
+  {
+    "id": "trivia-034",
+    "difficulty": "medium",
+    "question": "Ayat al-Kursi (the Throne Verse) is found in which surah",
+    "options": [
+      "Al-Fatihah",
+      "Al-Baqarah",
+      "Ali 'Imran",
+      "An-Nisa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 2:255"
+  },
+  {
+    "id": "trivia-035",
+    "difficulty": "hard",
+    "question": "Which verse number is Ayat al-Kursi in Surah Al-Baqarah",
+    "options": [
+      "250",
+      "253",
+      "255",
+      "260"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 2:255"
+  },
+  {
+    "id": "trivia-036",
+    "difficulty": "medium",
+    "question": "Which two surahs are known as 'Al-Mu'awwidhatayn' (the two surahs of refuge)",
+    "options": [
+      "Al-Ikhlas and Al-Falaq",
+      "Al-Falaq and An-Nas",
+      "Al-Kafirun and Al-Ikhlas",
+      "An-Nasr and Al-Masad"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 113-114"
+  },
+  {
+    "id": "trivia-037",
+    "difficulty": "hard",
+    "question": "The verse 'Fa bi ayyi ala'i Rabbikuma tukadhdhibaan' is repeated many times in which surah",
+    "options": [
+      "Al-Waqi'ah",
+      "Ar-Rahman",
+      "Al-Mulk",
+      "Ya-Sin"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 55"
+  },
+  {
+    "id": "trivia-038",
+    "difficulty": "hard",
+    "question": "Which surah contains the longest verse (ayah) in the Quran",
+    "options": [
+      "Al-Fatihah",
+      "Al-Baqarah",
+      "Ali 'Imran",
+      "An-Nisa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 2:282"
+  },
+  {
+    "id": "trivia-039",
+    "difficulty": "hard",
+    "question": "What is the longest verse in the Quran about",
+    "options": [
+      "Prayer",
+      "Fasting",
+      "Financial transactions and debt",
+      "Pilgrimage"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 2:282"
+  },
+  {
+    "id": "trivia-040",
+    "difficulty": "easy",
+    "question": "How many surahs are in the Quran",
+    "options": [
+      "100",
+      "110",
+      "114",
+      "120"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-041",
+    "difficulty": "easy",
+    "question": "How many juz (parts) is the Quran divided into",
+    "options": [
+      "20",
+      "25",
+      "28",
+      "30"
+    ],
+    "correctIndex": 3,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-042",
+    "difficulty": "medium",
+    "question": "How many sajdah (prostration) verses are there in the Quran",
+    "options": [
+      "10",
+      "13",
+      "15",
+      "18"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-043",
+    "difficulty": "easy",
+    "question": "Which surah is recited in every unit (rak'ah) of the Muslim prayer",
+    "options": [
+      "Al-Baqarah",
+      "Al-Ikhlas",
+      "Al-Fatihah",
+      "Ya-Sin"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 1"
+  },
+  {
+    "id": "trivia-044",
+    "difficulty": "easy",
+    "question": "Surah Al-Ikhlas affirms which core concept of Islam",
+    "options": [
+      "Prayer",
+      "Fasting",
+      "The Oneness of God (Tawhid)",
+      "Charity"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 112"
+  },
+  {
+    "id": "trivia-045",
+    "difficulty": "medium",
+    "question": "Surah Al-Kahf is recommended to be recited on which day of the week",
+    "options": [
+      "Monday",
+      "Thursday",
+      "Friday",
+      "Sunday"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 18"
+  },
+  {
+    "id": "trivia-046",
+    "difficulty": "medium",
+    "question": "Surah Al-Jinn (Surah 72) is about:",
+    "options": [
+      "Angels",
+      "The Jinn who listened to the Quran",
+      "The Day of Judgment",
+      "Creation of the heavens"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 72"
+  },
+  {
+    "id": "trivia-047",
+    "difficulty": "hard",
+    "question": "Surah Al-Hujurat (Surah 49) primarily deals with:",
+    "options": [
+      "Stories of prophets",
+      "Rules of war",
+      "Social manners and etiquette",
+      "Laws of inheritance"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 49"
+  },
+  {
+    "id": "trivia-048",
+    "difficulty": "medium",
+    "question": "The concept of Laylat al-Qadr (the Night of Power) is described in which surah",
+    "options": [
+      "Al-Qadr",
+      "Al-Layl",
+      "Ad-Duhaa",
+      "Al-'Alaq"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 97"
+  },
+  {
+    "id": "trivia-049",
+    "difficulty": "medium",
+    "question": "According to Surah Al-Qadr, the Night of Power is better than:",
+    "options": [
+      "A hundred nights",
+      "A thousand months",
+      "A thousand years",
+      "Ten thousand nights"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 97:3"
+  },
+  {
+    "id": "trivia-050",
+    "difficulty": "easy",
+    "question": "Which surah declares 'Say: He is Allah, the One'",
+    "options": [
+      "Al-Fatihah",
+      "Al-Kafirun",
+      "Al-Ikhlas",
+      "An-Nas"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 112:1"
+  },
+  {
+    "id": "trivia-051",
+    "difficulty": "hard",
+    "question": "Which surah was the first to be revealed to Prophet Muhammad",
+    "options": [
+      "Al-Fatihah",
+      "Al-Baqarah",
+      "Al-'Alaq",
+      "Al-Muddaththir"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 96"
+  },
+  {
+    "id": "trivia-052",
+    "difficulty": "medium",
+    "question": "The Quran was revealed over a period of how many years",
+    "options": [
+      "28 years",
+      "4 years",
+      "23 years",
+      "32 years"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran revelation history"
+  },
+  {
+    "id": "trivia-053",
+    "difficulty": "easy",
+    "question": "In which language was the Quran revealed",
+    "options": [
+      "Hebrew",
+      "Syriac",
+      "Arabic",
+      "Aramaic"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-054",
+    "difficulty": "medium",
+    "question": "What is the first word revealed in the Quran",
+    "options": [
+      "Qul",
+      "Iqra",
+      "Subhan",
+      "Bismillah"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 96:1"
+  },
+  {
+    "id": "trivia-055",
+    "difficulty": "hard",
+    "question": "Which prophet is mentioned the most times in the Quran",
+    "options": [
+      "Prophet Ibrahim",
+      "Prophet Musa",
+      "Prophet Yusuf",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-056",
+    "difficulty": "hard",
+    "question": "Which prophet was called Kalimullah, the one who spoke to Allah",
+    "options": [
+      "Prophet Muhammad",
+      "Prophet Ibrahim",
+      "Prophet Musa",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-057",
+    "difficulty": "hard",
+    "question": "Which prophet is called Khalilullah, the Friend of Allah",
+    "options": [
+      "Prophet Dawud",
+      "Prophet Ibrahim",
+      "Prophet Nuh",
+      "Prophet Yusuf"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 4:125"
+  },
+  {
+    "id": "trivia-058",
+    "difficulty": "easy",
+    "question": "According to the Quran, who was the first person and prophet on Earth?",
+    "options": [
+      "Prophet Nuh",
+      "Prophet Adam",
+      "Prophet Idris",
+      "Prophet Hud"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-059",
+    "difficulty": "hard",
+    "question": "Which prophet had control over the jinn, animals, and the wind by Allah's permission",
+    "options": [
+      "Prophet Dawud",
+      "Prophet Sulayman",
+      "Prophet Musa",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 27, Surah 34"
+  },
+  {
+    "id": "trivia-060",
+    "difficulty": "medium",
+    "question": "Which prophet was granted the Zabur (Psalms)",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Dawud",
+      "Prophet Sulayman",
+      "Prophet Musa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 4:163"
+  },
+  {
+    "id": "trivia-061",
+    "difficulty": "medium",
+    "question": "Which prophet prayed for a son and was blessed with Yahya",
+    "options": [
+      "Prophet Dawud",
+      "Prophet Zakariyya",
+      "Prophet Ilyas",
+      "Prophet Musa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 19:2-9"
+  },
+  {
+    "id": "trivia-062",
+    "difficulty": "medium",
+    "question": "Which prophet was sent to the people of Madyan",
+    "options": [
+      "Prophet Hud",
+      "Prophet Salih",
+      "Prophet Shu'ayb",
+      "Prophet Ibrahim"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 7:85"
+  },
+  {
+    "id": "trivia-063",
+    "difficulty": "hard",
+    "question": "According to the Quran, what is the greatest sin in Islam",
+    "options": [
+      "Lying",
+      "Killing an innocent person",
+      "Shirk (associating partners with Allah)",
+      "Breaking a promise"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 4:48"
+  },
+  {
+    "id": "trivia-064",
+    "difficulty": "medium",
+    "question": "What is the Quranic term used for faith",
+    "options": [
+      "Islam",
+      "Taqwa",
+      "Imaan",
+      "Ihsan"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Islamic terminology"
+  },
+  {
+    "id": "trivia-065",
+    "difficulty": "medium",
+    "question": "Fasting in Ramadan was made obligatory in which surah",
+    "options": [
+      "Al-Baqarah",
+      "Al-Mu'minun",
+      "At-Tawbah",
+      "An-Nisa"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah 2:183"
+  },
+  {
+    "id": "trivia-066",
+    "difficulty": "medium",
+    "question": "What term is used in the Quran for hypocrites",
+    "options": [
+      "Mushrikun",
+      "Kafirun",
+      "Munafiqoon",
+      "Zalimun"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Quran"
+  },
+  {
+    "id": "trivia-067",
+    "difficulty": "medium",
+    "question": "According to the Quran, what is the purpose of human creation",
+    "options": [
+      "To populate the earth",
+      "To seek knowledge",
+      "To worship Allah",
+      "To serve humanity"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Surah 51:56"
+  },
+  {
+    "id": "trivia-068",
+    "difficulty": "hard",
+    "question": "What does the Quran say about the origin of iron",
+    "options": [
+      "It was created on Earth",
+      "It came down from the heavens",
+      "It formed from lava",
+      "It was made from rocks"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 57:25"
+  },
+  {
+    "id": "trivia-069",
+    "difficulty": "hard",
+    "question": "What Arabic word is used in the Quran for the barrier between two seas",
+    "options": [
+      "Hijr",
+      "Barzakh",
+      "Sitr",
+      "Hijab"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah 55:19-20"
+  },
+  {
+    "id": "trivia-070",
+    "difficulty": "hard",
+    "question": "Which Surah has two Basmalahs 'Bismillah ir-Rahman ir-Raheem'",
+    "options": [
+      "Surah An-Naml",
+      "Surah Al-Furqan",
+      "Surah Al-Qasas",
+      "Surah Al-Hajj"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-071",
+    "difficulty": "hard",
+    "question": "Which Surah mentions the splitting of the moon",
+    "options": [
+      "Surah Al-Qamar",
+      "Surah Al-Isra",
+      "Surah Al-Anbiya",
+      "Surah Al-Qiyamah"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-072",
+    "difficulty": "hard",
+    "question": "Which Surah begins with the word 'Iqra'",
+    "options": [
+      "Surah Al-Qalam",
+      "Surah Al-Alaq",
+      "Surah Al-Muzzammil",
+      "Surah Al-Muddaththir"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-073",
+    "difficulty": "hard",
+    "question": "Which Surah discusses the incident of the elephant",
+    "options": [
+      "Surah Quraysh",
+      "Surah Al-Fil",
+      "Surah Al-Masad",
+      "Surah Al-Qari'ah"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-074",
+    "difficulty": "hard",
+    "question": "Which Prophet built the Ka'bah along with his son",
+    "options": [
+      "Prophet Nuh",
+      "Prophet Ibrahim",
+      "Prophet Ismail",
+      "Prophet Yaqub"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-075",
+    "difficulty": "hard",
+    "question": "Which Prophet has a whole surah named after him that narrates his story in detail",
+    "options": [
+      "Prophet Yusuf",
+      "Prophet Musa",
+      "Prophet Ibrahim",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-076",
+    "difficulty": "hard",
+    "question": "Which Prophet was born without a father",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Musa",
+      "Prophet Dawud",
+      "Prophet Muhammad"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-077",
+    "difficulty": "hard",
+    "question": "Which Prophet's miracle included bringing the dead to life by Allah's permission",
+    "options": [
+      "Prophet Musa",
+      "Prophet Isa (Jesus)",
+      "Prophet Muhammad",
+      "Prophet Dawud"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-078",
+    "difficulty": "hard",
+    "question": "Which Prophet's people were known as 'Ad'",
+    "options": [
+      "Prophet Hud",
+      "Prophet Salih",
+      "Prophet Nuh",
+      "Prophet Shu'ayb"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-079",
+    "difficulty": "hard",
+    "question": "Which Prophet's people were known as Thamud",
+    "options": [
+      "Prophet Hud",
+      "Prophet Salih",
+      "Prophet Shu'ayb",
+      "Prophet Musa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-080",
+    "difficulty": "hard",
+    "question": "Which Prophet is associated with the miracle of the she-camel",
+    "options": [
+      "Prophet Hud",
+      "Prophet Salih",
+      "Prophet Lut",
+      "Prophet Nuh"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-081",
+    "difficulty": "hard",
+    "question": "Which Prophet was known as 'Seal of the Prophets' (Khatam an-Nabiyyin)",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Muhammad",
+      "Prophet Ibrahim",
+      "Prophet Musa"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-082",
+    "difficulty": "hard",
+    "question": "Which Prophet was raised to the heavens and will return before the Day of Judgment",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Idris",
+      "Prophet Ilyas",
+      "Prophet Yunus"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-083",
+    "difficulty": "hard",
+    "question": "Who was the Prophet commanded to pray facing the Kaaba after initially facing Jerusalem",
+    "options": [
+      "Prophet Musa",
+      "Prophet Muhammad",
+      "Prophet Isa (Jesus)",
+      "Prophet Ibrahim"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah Al-Baqarah 2:144"
+  },
+  {
+    "id": "trivia-084",
+    "difficulty": "hard",
+    "question": "Which Prophet was blessed with the ability to speak to birds and jinn",
+    "options": [
+      "Prophet Dawud",
+      "Prophet Sulayman",
+      "Prophet Isa (Jesus)",
+      "Prophet Idris"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah An-Naml 27:16–19"
+  },
+  {
+    "id": "trivia-085",
+    "difficulty": "hard",
+    "question": "Which Prophet was given the miracle of the staff turning into a serpent",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Musa",
+      "Prophet Ibrahim",
+      "Prophet Yusuf"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah Taha 20:17–21"
+  },
+  {
+    "id": "trivia-086",
+    "difficulty": "hard",
+    "question": "Who was the father of Prophet Yusuf",
+    "options": [
+      "Prophet Yaqub",
+      "Prophet Ishaq",
+      "Prophet Ibrahim",
+      "Prophet Lut"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-087",
+    "difficulty": "hard",
+    "question": "Which Prophet's people were known as the 'Ad'",
+    "options": [
+      "Prophet Hud",
+      "Prophet Nuh",
+      "Prophet Salih",
+      "Prophet Shu'aib"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah Al-Ahqaf 46:21"
+  },
+  {
+    "id": "trivia-088",
+    "difficulty": "hard",
+    "question": "Which Prophet received the Torah",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Musa",
+      "Prophet Dawud",
+      "Prophet Harun"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Islamic Quiz PDF"
+  },
+  {
+    "id": "trivia-089",
+    "difficulty": "hard",
+    "question": "Which Prophet was tested by the command to sacrifice his son",
+    "options": [
+      "Prophet Yaqub",
+      "Prophet Ibrahim",
+      "Prophet Ishaq",
+      "Prophet Nuh"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah As-Saffat 37:102–107"
+  },
+  {
+    "id": "trivia-090",
+    "difficulty": "hard",
+    "question": "Which Prophet's son was drowned because he refused to believe",
+    "options": [
+      "Prophet Nuh",
+      "Prophet Lut",
+      "Prophet Ibrahim",
+      "Prophet Yaqub"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah Hud 11:42–43"
+  },
+  {
+    "id": "trivia-091",
+    "difficulty": "hard",
+    "question": "Which Prophet talked as an infant in the cradle",
+    "options": [
+      "Prophet Isa (Jesus)",
+      "Prophet Yahya",
+      "Prophet Musa",
+      "Prophet Muhammad"
+    ],
+    "correctIndex": 0,
+    "sourceReference": "Surah Maryam 19:29–30"
+  },
+  {
+    "id": "trivia-092",
+    "difficulty": "hard",
+    "question": "Which Prophet debated with King Nimrod",
+    "options": [
+      "Prophet Musa",
+      "Prophet Ibrahim",
+      "Prophet Yusuf",
+      "Prophet Dawud"
+    ],
+    "correctIndex": 1,
+    "sourceReference": "Surah Al-Baqarah 2:258"
+  },
+  {
+    "id": "trivia-093",
+    "difficulty": "hard",
+    "question": "Which Prophet will intercede on behalf of the believers on the Day of Judgment",
+    "options": [
+      "Prophet Ibrahim",
+      "Prophet Musa",
+      "Prophet Muhammad",
+      "Prophet Isa (Jesus)"
+    ],
+    "correctIndex": 2,
+    "sourceReference": "Islamic Quiz PDF"
+  }
+]

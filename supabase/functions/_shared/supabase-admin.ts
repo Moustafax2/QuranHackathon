@@ -57,6 +57,27 @@ export async function broadcastGameEvent(
 }
 
 /**
+ * Broadcast a room-level event to all players in a room channel.
+ * Used for signalling game start before players know the game ID.
+ */
+export async function broadcastRoomEvent(
+  roomId: string,
+  event: { type: string; payload: Record<string, unknown> }
+) {
+  const admin = createAdminClient();
+  const channel = admin.channel(`room-events:${roomId}`);
+
+  await channel.subscribe();
+  await channel.send({
+    type: "broadcast",
+    event: "room_event",
+    payload: event,
+  });
+
+  admin.removeChannel(channel);
+}
+
+/**
  * Standard CORS headers for Edge Functions.
  */
 export const corsHeaders = {

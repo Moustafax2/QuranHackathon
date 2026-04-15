@@ -39,7 +39,7 @@ export function useRoom(
       const response = await supabase
         .from("room_players")
         .select("player_id, joined_at, players!inner(display_name)")
-        .eq("room_id", roomId)
+        .eq("room_id", roomId!)
         .eq("status", "active")
         .order("joined_at", { ascending: true });
 
@@ -49,7 +49,7 @@ export function useRoom(
         return;
       }
 
-      const nextPlayers = ((response.data ?? []) as Array<{
+      const nextPlayers = ((response.data ?? []) as unknown as Array<{
         player_id: string;
         players: { display_name: string } | { display_name: string }[];
       }>).map((row) => {
