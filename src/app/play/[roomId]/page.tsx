@@ -133,8 +133,8 @@ export default function GameRoomPage({ params, searchParams }: Props) {
       const membershipResponse = await supabase
         .from("room_players")
         .select("status")
-        .eq("room_id", roomInfo.id)
-        .eq("player_id", player.id)
+        .eq("room_id", roomInfo!.id)
+        .eq("player_id", player!.id)
         .maybeSingle();
 
       if (cancelled) return;
@@ -183,7 +183,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         const request = fetch("/api/multiplayer/leave-room", {
           method: "POST",
           headers: buildMultiplayerHeaders(),
-          body: JSON.stringify({ room_id: roomInfo.id }),
+          body: JSON.stringify({ room_id: roomInfo!.id }),
           keepalive,
         });
 
@@ -221,7 +221,7 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         await fetch("/api/multiplayer/heartbeat-room", {
           method: "POST",
           headers: buildMultiplayerHeaders(),
-          body: JSON.stringify({ room_id: roomInfo.id }),
+          body: JSON.stringify({ room_id: roomInfo!.id }),
         });
       } catch {
         if (!cancelled) {
