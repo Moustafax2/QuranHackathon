@@ -19,12 +19,58 @@ export async function broadcastGameEvent(
   event: { type: string; payload: Record<string, unknown> }
 ) {
   const admin = createAdminClient();
-  const channel = admin.channel(`game:${gameId}`);
+  const channel = admin.channel(`game:${gameId}`, {
+    config: {
+      broadcast: { ack: true },
+    },
+  });
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timed out subscribing to game channel ${gameId}`));
+      }, 5000);
+
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          clearTimeout(timeout);
+          resolve();
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          clearTimeout(timeout);
+          reject(new Error(`Failed to subscribe to game channel ${gameId}: ${status}`));
+        }
+      });
+    });
+
+    await channel.send({
+      type: "broadcast",
+      event: "game_event",
+      payload: event,
+    });
+  } finally {
+    await admin.removeChannel(channel);
+  }
+}
+
+/**
+ * Broadcast a room-level event to all players in a room channel.
+ * Used for signalling game start before players know the game ID.
+ */
+export async function broadcastRoomEvent(
+  roomId: string,
+  event: { type: string; payload: Record<string, unknown> }
+) {
+  const admin = createAdminClient();
+  const channel = admin.channel(`room-events:${roomId}`);
 
   await channel.subscribe();
   await channel.send({
     type: "broadcast",
-    event: "game_event",
+    event: "room_event",
     payload: event,
   });
 

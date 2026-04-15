@@ -5,12 +5,11 @@ import Link from "next/link";
 import { getFlashcards, getReviewLog, migrateFromLocalStorage } from "@/lib/storage/flashcard-storage-supabase";
 import { getDueCardsCount, getNewCardsCount } from "@/lib/flashcard/session-manager";
 import type { ReviewLogEntry } from "@/lib/types/flashcard";
-import { addDemoCards } from "@/lib/flashcard/demo-helper";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 function HowItWorksModal({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(0);
-  const totalPages = 3;
+  const totalPages = 4;
 
   const pages = [
     {
@@ -61,7 +60,14 @@ function HowItWorksModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           </div>
-
+        </div>
+      ),
+    },
+    {
+      title: "Reference sources",
+      subtitle: "Extra context available on every review card",
+      content: (
+        <div className="space-y-4 text-sm text-gray-300">
           <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-5">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-lg">📜</span>
@@ -353,14 +359,17 @@ export default function FlashcardsHubPage() {
   const [totalCards, setTotalCards] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [addingDemo, setAddingDemo] = useState(false);
-  const [showSRExplainer, setShowSRExplainer] = useState(false);
+const [showSRExplainer, setShowSRExplainer] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   useEffect(() => {
     async function initializeAndLoad() {
       await migrateFromLocalStorage();
       await loadStats();
+      const seen = localStorage.getItem("flashcard_how_it_works_seen");
+      if (!seen) {
+        setShowHowItWorks(true);
+      }
     }
     initializeAndLoad();
   }, []);
@@ -379,19 +388,7 @@ export default function FlashcardsHubPage() {
     setLoading(false);
   }
 
-  async function handleAddDemo() {
-    setAddingDemo(true);
-    try {
-      await addDemoCards();
-      await loadStats();
-    } catch (error) {
-      console.error("Failed to add demo cards:", error);
-    } finally {
-      setAddingDemo(false);
-    }
-  }
-
-  if (loading) {
+if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="text-center">
@@ -407,14 +404,14 @@ export default function FlashcardsHubPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 px-4 py-12">
       {showSRExplainer && <SRExplainerModal onClose={() => setShowSRExplainer(false)} />}
-      {showHowItWorks && <HowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+      {showHowItWorks && <HowItWorksModal onClose={() => { localStorage.setItem("flashcard_how_it_works_seen", "1"); setShowHowItWorks(false); }} />}
       <div className="mx-auto max-w-4xl">
         {!authLoading && !isAuthenticated && (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
             <span>⚠️</span>
             <span>
               Your progress is saved on this device only.{" "}
-              <Link href="/api/auth/qf/login" className="underline hover:text-amber-200">
+              <Link href="/login?next=/train/flashcards" className="underline hover:text-amber-200">
                 Sign in
               </Link>{" "}
               to sync across devices.
@@ -515,13 +512,6 @@ export default function FlashcardsHubPage() {
               >
                 Choose a Surah
               </Link>
-              <button
-                onClick={handleAddDemo}
-                disabled={addingDemo}
-                className="inline-block rounded-xl border border-emerald-600 bg-emerald-600/10 px-8 py-4 font-semibold text-emerald-400 shadow-lg transition-all hover:scale-105 hover:bg-emerald-600/20 hover:shadow-xl disabled:opacity-50"
-              >
-                {addingDemo ? "Adding..." : "Quick Demo (5 cards)"}
-              </button>
             </div>
           </div>
         )}

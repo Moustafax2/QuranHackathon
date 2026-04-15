@@ -7,7 +7,7 @@ import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type GameModeId = "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer";
+type GameModeId = "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer" | "trivia";
 type ScopeType = "all" | "juz" | "surah";
 
 const GAME_MODES: {
@@ -48,6 +48,16 @@ const GAME_MODES: {
     difficultyColor: "text-blue-400 bg-blue-400/10 border-blue-400/20",
     description: "A word is blanked out from an ayah — pick the missing word.",
     icon: "✏️",
+    available: true,
+  },
+  {
+    id: "trivia",
+    title: "Quran Trivia",
+    short: "Trivia",
+    difficulty: "Easy",
+    difficultyColor: "text-purple-400 bg-purple-400/10 border-purple-400/20",
+    description: "Test your general knowledge about the Quran — surahs, prophets, history, and more.",
+    icon: "🧠",
     available: true,
   },
   {
@@ -228,6 +238,9 @@ export default function PlayPage() {
   );
 
   const canCreate = selectedModes.length > 0 && !!player;
+  const selectedModeLabels = selectedModes
+    .map((modeId) => GAME_MODES.find((mode) => mode.id === modeId)?.short)
+    .filter((label): label is string => Boolean(label));
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -319,7 +332,8 @@ export default function PlayPage() {
               </div>
             </section>
 
-            {/* 3. Scope */}
+            {/* 3. Scope (hidden when only trivia is selected) */}
+            {selectedModes.some((m) => m !== "trivia") && (
             <section className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
               <h2 className="mb-1 font-semibold text-white">Scope</h2>
               <p className="mb-4 text-sm text-gray-500">
@@ -426,6 +440,7 @@ export default function PlayPage() {
                 </div>
               )}
             </section>
+            )}
           </div>
 
           {/* ── Right col: create / join ── */}
@@ -435,20 +450,29 @@ export default function PlayPage() {
             <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
               <h3 className="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Game Summary</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Mode</span>
-                  <span className="text-white">
-                    {selectedModes.map((m) => GAME_MODES.find((g) => g.id === m)?.short).join(" + ")}
-                  </span>
+                <div className="grid grid-cols-[auto,1fr] items-start gap-x-3">
+                  <span className="pt-1 text-gray-500">Mode</span>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {selectedModeLabels.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Questions</span>
                   <span className="text-white">{numQuestions}</span>
                 </div>
+                {selectedModes.some((m) => m !== "trivia") && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Scope</span>
                   <span className="text-right text-white">{scopeLabel()}</span>
                 </div>
+                )}
               </div>
             </div>
 
@@ -464,7 +488,7 @@ export default function PlayPage() {
               <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5 space-y-3">
                 <p className="text-sm text-gray-400 text-center">Choose how to play</p>
                 <a
-                  href="/api/auth/qf/login?next=/play"
+                  href="/login?next=/play"
                   className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
                 >
                   Sign in with Quran.com
@@ -487,7 +511,7 @@ export default function PlayPage() {
                   <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm">
                     <span className="text-amber-300">Playing as {player.display_name}</span>
                     <a
-                      href="/api/auth/qf/login?next=/play"
+                      href="/login?next=/play"
                       className="text-xs text-amber-400 underline hover:text-amber-300"
                     >
                       Sign in

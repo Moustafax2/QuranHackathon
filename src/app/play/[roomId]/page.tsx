@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { use } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
@@ -17,8 +17,10 @@ interface Props {
 
 type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
 type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
+type RoomMembershipStatus = "loading" | "active" | "left" | "missing";
 
 export default function GameRoomPage({ params, searchParams }: Props) {
+  const router = useRouter();
   const { roomId } = use(params);
   use(searchParams);
   const { player, loading: authLoading } = useAuth();
@@ -28,6 +30,29 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [membershipStatus, setMembershipStatus] = useState<RoomMembershipStatus>("loading");
+  const hasLeftRef = useRef(false);
+  const [copied, setCopied] = useState(false);
+
+  const fetchActiveGame = useCallback(async (roomPrimaryId: string) => {
+    const supabase = createClient();
+    const activeGameResponse = await supabase
+      .from("games")
+      .select("id")
+      .eq("room_id", roomPrimaryId)
+      .is("ended_at", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const activeGame = activeGameResponse.data as ActiveGameLookup | null;
+
+    if (activeGame?.id) {
+      setGameId(activeGame.id);
+      return activeGame.id;
+    }
+
+    return null;
+  }, []);
 
   // Read guest player ID from sessionStorage on mount
   useEffect(() => {
@@ -56,37 +81,217 @@ export default function GameRoomPage({ params, searchParams }: Props) {
         setError("Room not found");
       } else {
         setRoomInfo(data);
-        if (data.status === "in_progress") {
-          const activeGameResponse = await supabase
-            .from("games")
-            .select("id")
-            .eq("room_id", data.id)
-            .is("ended_at", null)
-            .order("started_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          const activeGame = activeGameResponse.data as ActiveGameLookup | null;
-
-          if (activeGame?.id) {
-            setGameId(activeGame.id);
-          }
-        }
+        await fetchActiveGame(data.id);
       }
       setLoading(false);
     }
     fetchRoom();
-  }, [roomId]);
+  }, [fetchActiveGame, roomId]);
+
+  useEffect(() => {
+    if (!roomInfo?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`room-meta:${roomInfo.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "rooms",
+          filter: `id=eq.${roomInfo.id}`,
+        },
+        ({ new: updatedRoom }) => {
+          const nextRoom = updatedRoom as RoomInfo;
+          setRoomInfo(nextRoom);
+          if (nextRoom.status === "in_progress") {
+            void fetchActiveGame(nextRoom.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchActiveGame, roomInfo?.id]);
+
+  useEffect(() => {
+    if (loading || authLoading) return;
+    if (!roomInfo?.id) return;
+
+    if (!player?.id) {
+      setMembershipStatus("missing");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchMembership() {
+      const supabase = createClient();
+      const membershipResponse = await supabase
+        .from("room_players")
+        .select("status")
+        .eq("room_id", roomInfo!.id)
+        .eq("player_id", player!.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      const membership = membershipResponse.data as { status: "active" | "left" } | null;
+      if (!membership) {
+        setMembershipStatus("missing");
+        return;
+      }
+
+      if (membership.status === "left") {
+        hasLeftRef.current = true;
+        setMembershipStatus("left");
+        return;
+      }
+
+      setMembershipStatus("active");
+      hasLeftRef.current = false;
+    }
+
+    void fetchMembership();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, loading, player?.id, roomInfo?.id]);
+
+  const buildMultiplayerHeaders = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (guestPlayerId) headers["X-Guest-Player-Id"] = guestPlayerId;
+    return headers;
+  }, [guestPlayerId]);
+
+  const leaveRoom = useCallback(
+    async ({
+      keepalive = false,
+      suppressErrors = false,
+    }: { keepalive?: boolean; suppressErrors?: boolean } = {}) => {
+      if (!roomInfo?.id || !player?.id || hasLeftRef.current) {
+        return true;
+      }
+
+      hasLeftRef.current = true;
+
+      try {
+        const request = fetch("/api/multiplayer/leave-room", {
+          method: "POST",
+          headers: buildMultiplayerHeaders(),
+          body: JSON.stringify({ room_id: roomInfo!.id }),
+          keepalive,
+        });
+
+        if (keepalive) {
+          void request.catch(() => {});
+          return true;
+        }
+
+        const response = await request;
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to leave room.");
+        }
+
+        setMembershipStatus("left");
+        return true;
+      } catch (err) {
+        hasLeftRef.current = false;
+        if (!suppressErrors) {
+          setError((err as Error).message);
+        }
+        return false;
+      }
+    },
+    [buildMultiplayerHeaders, player?.id, roomInfo?.id]
+  );
+
+  useEffect(() => {
+    if (membershipStatus !== "active" || !roomInfo?.id || !player?.id) return;
+
+    let cancelled = false;
+
+    async function sendHeartbeat() {
+      try {
+        await fetch("/api/multiplayer/heartbeat-room", {
+          method: "POST",
+          headers: buildMultiplayerHeaders(),
+          body: JSON.stringify({ room_id: roomInfo!.id }),
+        });
+      } catch {
+        if (!cancelled) {
+          // Heartbeats are best-effort; game sync falls back to polling/realtime.
+        }
+      }
+    }
+
+    void sendHeartbeat();
+    const interval = window.setInterval(() => {
+      void sendHeartbeat();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [buildMultiplayerHeaders, membershipStatus, player?.id, roomInfo?.id]);
+
+  useEffect(() => {
+    if (!roomInfo?.id || membershipStatus !== "active" || gameId) return;
+
+    const supabase = createClient();
+    const interval = window.setInterval(async () => {
+      const roomResponse = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", roomInfo.id)
+        .maybeSingle();
+
+      const latestRoom = roomResponse.data as RoomInfo | null;
+      if (!latestRoom) return;
+
+      setRoomInfo(latestRoom);
+      await fetchActiveGame(latestRoom.id);
+    }, 2000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [fetchActiveGame, gameId, membershipStatus, roomInfo?.id]);
+
+  // Watch for the host starting the game — lets non-host players transition
+  // automatically without needing to refresh.
+  useEffect(() => {
+    if (gameId || !roomInfo?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`room-events:${roomInfo.id}`)
+      .on("broadcast", { event: "room_event" }, ({ payload }) => {
+        const event = payload as { type: string; payload: { game_id: string } };
+        if (event.type === "game:started" && event.payload.game_id) {
+          setGameId(event.payload.game_id);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [roomInfo?.id, gameId]);
 
   // Realtime hooks
   const { players, isConnected } = useRoom(
-    roomId,
-    player ? { id: player.id, display_name: player.display_name } : null,
+    membershipStatus === "active" ? roomInfo?.id ?? null : null,
     roomInfo?.host_id ?? null
   );
 
   const { gameState, submitAnswer, pressBuzzer } = useGame(
     gameId,
-    player?.id ?? null,
+    membershipStatus === "active" ? player?.id ?? null : null,
     guestPlayerId
   );
 
@@ -118,7 +323,14 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     }
   }
 
-  if (loading || authLoading) {
+  async function handleLeave() {
+    const didLeave = await leaveRoom();
+    if (didLeave) {
+      router.push("/play");
+    }
+  }
+
+  if (loading || authLoading || (!!roomInfo && membershipStatus === "loading")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
         <div className="text-gray-500">Loading room...</div>
@@ -139,18 +351,44 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     );
   }
 
+  if (membershipStatus === "left") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="max-w-md text-center">
+          <p className="text-red-400">You already left this game and can&apos;t rejoin it.</p>
+          <Link href="/play" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
+            Back to game modes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (membershipStatus === "missing") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+        <div className="max-w-md text-center">
+          <p className="text-red-400">You are not an active participant in this room.</p>
+          <Link href="/play" className="mt-4 inline-block text-sm text-emerald-400 hover:underline">
+            Back to game modes
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Game in progress
   if (phase !== "lobby" && gameState.current_round) {
     return (
       <GameInProgress
-        key={gameState.current_round.round_id}
+        key={gameId}
         roomCode={roomId}
         gameState={gameState}
         playerId={player?.id ?? ""}
         players={players}
         onSubmitAnswer={submitAnswer}
         onPressBuzzer={pressBuzzer}
-        gameMode={roomInfo?.game_mode ?? "multiple-choice"}
+        onLeave={() => void handleLeave()}
       />
     );
   }
@@ -167,13 +405,23 @@ export default function GameRoomPage({ params, searchParams }: Props) {
               {roomId}
             </span>
             <button
-              onClick={() => navigator.clipboard.writeText(roomId)}
-              className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-300"
+              onClick={() => {
+                void navigator.clipboard.writeText(roomId);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className={`rounded-lg p-1.5 transition-colors ${copied ? "text-emerald-400" : "text-gray-500 hover:bg-gray-800 hover:text-gray-300"}`}
               title="Copy code"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-              </svg>
+              {copied ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                </svg>
+              )}
             </button>
           </div>
           <p className="mt-3 text-sm text-gray-500">
@@ -243,12 +491,13 @@ export default function GameRoomPage({ params, searchParams }: Props) {
               Waiting for host to start...
             </div>
           )}
-          <Link
-            href="/play"
+          <button
+            type="button"
+            onClick={() => void handleLeave()}
             className="rounded-xl border border-gray-700 px-4 py-3 text-sm font-semibold text-gray-400 transition-colors hover:border-gray-500 hover:text-white"
           >
             Leave
-          </Link>
+          </button>
         </div>
       </div>
     </div>
@@ -269,7 +518,7 @@ interface GameProps {
   players: RoomPlayer[];
   onSubmitAnswer: (roundId: string, answerVerseKey: string) => Promise<{ ok: boolean; error?: string }>;
   onPressBuzzer: (roundId: string) => Promise<{ ok: boolean; error?: string }>;
-  gameMode: string;
+  onLeave: () => void;
 }
 
 const RESULT_MIN_MS = 3500; // minimum time to show the round result screen
@@ -281,11 +530,8 @@ function GameInProgress({
   players,
   onSubmitAnswer,
   onPressBuzzer,
-  gameMode,
+  onLeave,
 }: GameProps) {
-  const isBuzzerMode = gameMode === "buzzer";
-  const isFillInBlank = gameMode === "fill-in-blank";
-  const isWordMeaning = gameMode === "word-meaning";
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [buzzed, setBuzzed] = useState(false);
@@ -293,31 +539,66 @@ function GameInProgress({
   // Pinned result — keeps the result screen visible for at least RESULT_MIN_MS
   // even after the server moves to the next round.
   const [pinnedResult, setPinnedResult] = useState<typeof gameState.round_result>(null);
+  const [pinnedRound, setPinnedRound] = useState<typeof gameState.current_round>(null);
   const [showingResult, setShowingResult] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const round = gameState.current_round;
   const result = gameState.round_result;
   const phase = gameState.phase;
 
-  // When a real round_result arrives, pin it and start the timer.
+  // When a real round_result arrives, pin both the result and the round so the
+  // display stays frozen for RESULT_MIN_MS even after the server moves on.
+  // We use a ref for the timer so phase changes don't cancel it via effect cleanup.
   useEffect(() => {
-    if (phase === "round_result" && result) {
+    if (phase === "round_result" && result && !showingResult) {
       setPinnedResult(result);
+      setPinnedRound(round);
       setShowingResult(true);
-      const timer = setTimeout(() => {
+      setCountdown(Math.ceil(RESULT_MIN_MS / 1000));
+
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((c) => c - 1);
+      }, 1000);
+
+      resultTimerRef.current = setTimeout(() => {
+        resultTimerRef.current = null;
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
         setShowingResult(false);
         setPinnedResult(null);
+        setPinnedRound(null);
+        setCountdown(0);
         setAnswered(false);
         setSelected(null);
         setBuzzed(false);
       }, RESULT_MIN_MS);
-      return () => clearTimeout(timer);
     }
-  }, [phase, result]);
+  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While pinned, treat everything as if we're still in round_result.
+  // Clean up on unmount only
+  useEffect(() => {
+    return () => {
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, []);
+
+  // While pinned, freeze the phase, result, and round so nothing flickers.
   const effectivePhase = showingResult ? "round_result" : phase;
   const effectiveResult = showingResult ? pinnedResult : result;
+  const effectiveRound = (showingResult && pinnedRound) ? pinnedRound : round;
+
+  // Infer per-round mode from the data so mixed-mode games label correctly.
+  const isTrivia = effectiveRound?.prompt_verse_key?.startsWith("trivia-") ?? false;
+  const isBuzzerMode = !isTrivia && (!effectiveRound?.options || effectiveRound.options.length === 0);
+  const isFillInBlank = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("fill:")) ?? false);
+  const isWordMeaning = !isTrivia && (effectiveRound?.options?.some((o) => o.verse_key.startsWith("meaning:")) ?? false);
+  // multiple-choice is the fallback (regular verse key options)
 
   // Game over screen
   if (phase === "game_over") {
@@ -335,7 +616,9 @@ function GameInProgress({
             Game Over!
           </h1>
           <p className="mb-8 text-lg text-gray-400">
-            {gameState.winner_id === playerId
+            {!gameState.winner_id
+              ? "Game ended."
+              : gameState.winner_id === playerId
               ? "You won!"
               : `${winnerName ?? "Someone"} wins!`}
           </p>
@@ -402,60 +685,117 @@ function GameInProgress({
     }
   }
 
-  // Build scores display
-  const myScore = gameState.scores[playerId] ?? 0;
-  const othersScore = Object.entries(gameState.scores)
-    .filter(([id]) => id !== playerId)
-    .reduce((sum, [, s]) => sum + s, 0);
+  // Build scores display — sorted by score descending
+  const sortedScores = Object.entries(gameState.scores)
+    .map(([id, score]) => ({
+      id,
+      score,
+      name: players.find((p) => p.player_id === id)?.display_name ?? "Unknown",
+      isMe: id === playerId,
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const rankEmoji = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
       <div className="mx-auto max-w-2xl px-4 py-12">
         {/* Score bar */}
-        <div className="mb-8 flex items-center justify-between rounded-2xl border border-gray-800 bg-gray-900 px-5 py-3">
-          <div className="text-sm">
-            <span className="text-gray-500">Room </span>
-            <span className="font-mono text-gray-300">{roomCode}</span>
-            <span className="ml-3 text-gray-600">
-              Round {round.round_number}/{round.total_rounds}
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 px-5 py-3">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <div>
+              <span className="text-gray-500">Room </span>
+              <span className="font-mono text-gray-300">{roomCode}</span>
+            </div>
+            <span className="text-gray-600">
+              Round {effectiveRound?.round_number}/{effectiveRound?.total_rounds}
             </span>
           </div>
-          <div className="flex items-center gap-4 text-sm font-semibold">
-            <span className="text-emerald-400">You: {myScore}</span>
-            <span className="text-gray-500">|</span>
-            <span className="text-gray-400">Others: {othersScore}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {sortedScores.map((p, i) => (
+              <div
+                key={p.id}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                  p.isMe
+                    ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                    : "bg-gray-800 text-gray-300"
+                }`}
+              >
+                <span className="text-xs">{rankEmoji[i] ?? `#${i + 1}`}</span>
+                <span className="max-w-24 truncate">{p.isMe ? "You" : p.name}</span>
+                <span className={`font-mono ${p.isMe ? "text-emerald-400" : "text-gray-400"}`}>
+                  {p.score}
+                </span>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={onLeave}
+              className="ml-auto rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-colors hover:border-gray-500 hover:text-white"
+            >
+              Leave
+            </button>
           </div>
         </div>
 
         {/* Prompt */}
         <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-6 text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            {isBuzzerMode
+            {isTrivia
+              ? "Quran Trivia"
+              : isBuzzerMode
               ? "Recite the next ayah"
-              : isFillInBlank
-              ? "Fill in the blank"
               : isWordMeaning
               ? "What does this word mean?"
-              : "What comes next?"}
+              : isFillInBlank
+              ? "Fill in the blank"
+              : "What is the next ayah?"}
           </p>
           <p
-            dir="rtl"
-            lang="ar"
-            className={`font-amiri text-white ${isWordMeaning ? "text-4xl leading-loose" : "text-3xl leading-loose"}`}
+            dir={isTrivia ? "ltr" : "rtl"}
+            lang={isTrivia ? "en" : "ar"}
+            className={`text-white ${
+              isTrivia
+                ? "text-xl font-medium leading-relaxed"
+                : isWordMeaning
+                ? "font-amiri text-5xl leading-loose"
+                : "font-amiri text-3xl leading-loose"
+            }`}
           >
-            {round.prompt_text}
+            {isFillInBlank && effectiveRound?.prompt_text?.includes("___")
+              ? effectiveRound.prompt_text.split("___").map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && (
+                      <span className="inline-block w-16 border-b-2 border-white mx-1 align-bottom mb-2" />
+                    )}
+                  </span>
+                ))
+              : effectiveRound?.prompt_text}
           </p>
-          <p className="mt-2 text-sm text-gray-500">{round.prompt_verse_key}</p>
+          {!isTrivia && (
+            <p className="mt-2 text-sm text-gray-500">{effectiveRound?.prompt_verse_key}</p>
+          )}
         </div>
+
 
         {/* Round result — stays visible for RESULT_MIN_MS */}
         {effectivePhase === "round_result" && effectiveResult && (
           <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Round over
-            </p>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                Round over
+              </p>
+              <p className="text-xs text-gray-500">
+                Next question in <span className="font-mono text-gray-300">{countdown}s</span>
+              </p>
+            </div>
             <p className="mb-1 text-sm text-gray-400">Correct answer:</p>
-            <p dir="rtl" lang="ar" className="mb-4 font-amiri text-2xl leading-loose text-white">
+            <p
+              dir={isTrivia ? "ltr" : "rtl"}
+              lang={isTrivia ? "en" : "ar"}
+              className={`mb-4 text-white ${isTrivia ? "text-lg font-medium leading-relaxed" : "font-amiri text-2xl leading-loose"}`}
+            >
               {effectiveResult.correct_text}
             </p>
             <div className="space-y-2">
@@ -503,9 +843,9 @@ function GameInProgress({
         )}
 
         {/* Options */}
-        {!isBuzzerMode && round.options && effectivePhase === "round_active" && (
-          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning ? "grid-cols-2" : "sm:grid-cols-2"}`}>
-            {round.options.map((option) => {
+        {!isBuzzerMode && effectiveRound?.options && effectivePhase === "round_active" && (
+          <div className={`grid gap-3 ${isFillInBlank || isWordMeaning || isTrivia ? "grid-cols-2" : "sm:grid-cols-2"}`}>
+            {effectiveRound.options.map((option) => {
               let style = "border-gray-800 bg-gray-900 hover:border-gray-600";
               if (answered && effectiveResult) {
                 if (option.verse_key === effectiveResult.correct_verse_key)
@@ -516,22 +856,21 @@ function GameInProgress({
               } else if (option.verse_key === selected) {
                 style = "border-blue-500 bg-blue-500/10";
               }
+              const isEnglishOption = isTrivia || isWordMeaning;
               return (
                 <button
                   key={option.verse_key}
                   onClick={() => handleSelect(option.verse_key)}
                   disabled={answered}
                   className={`rounded-xl border transition-all ${
-                    isFillInBlank || isWordMeaning
-                      ? "p-4 text-center"
-                      : "p-4 text-right"
+                    isFillInBlank || isWordMeaning || isTrivia ? "p-4 text-center" : "p-4 text-right"
                   } ${style}`}
                 >
                   <p
-                    dir={isWordMeaning ? "ltr" : "rtl"}
-                    lang={isWordMeaning ? "en" : "ar"}
+                    dir={isEnglishOption ? "ltr" : "rtl"}
+                    lang={isEnglishOption ? "en" : "ar"}
                     className={`text-white ${
-                      isWordMeaning
+                      isEnglishOption
                         ? "text-lg font-medium leading-relaxed"
                         : isFillInBlank
                         ? "font-amiri text-2xl leading-loose"

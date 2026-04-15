@@ -1,5 +1,7 @@
 import "server-only";
 
+import { pickTriviaQuestions } from "@/lib/data/trivia-questions";
+
 const QURAN_API = "https://api.quran.com/api/v4";
 
 interface Verse {
@@ -234,35 +236,70 @@ export async function generateQuestions(
 ): Promise<GeneratedQuestion[]> {
   const pool = surahFilter?.length ? surahFilter : ALL_SURAHS;
 
-  // Pre-fetch a selection of surahs
-  const surahsToFetch = new Set<number>();
-  for (let i = 0; i < numRounds; i++) {
-    surahsToFetch.add(pool[randInt(0, pool.length)]);
-  }
-  while (surahsToFetch.size < Math.min(3, pool.length)) {
-    surahsToFetch.add(pool[randInt(0, pool.length)]);
-  }
-
   const verseCache = new Map<number, Verse[]>();
   const verseCacheWithWords = new Map<number, VerseWithWords[]>();
-  await Promise.all(
-    [...surahsToFetch].map(async (surahId) => {
-      const needsWordData = gameModes.includes("word-meaning");
-      const verses = needsWordData
-        ? await fetchSurahVersesWithWords(surahId)
-        : await fetchSurahVerses(surahId);
-      verseCache.set(surahId, verses);
-      if (needsWordData) {
-        verseCacheWithWords.set(surahId, verses as VerseWithWords[]);
-      }
-    })
-  );
+
+  // Only fetch verse data if we have non-trivia modes
+  const nonTriviaModes = gameModes.filter((m) => m !== "trivia");
+  if (nonTriviaModes.length > 0) {
+    const surahsToFetch = new Set<number>();
+    for (let i = 0; i < numRounds; i++) {
+      surahsToFetch.add(pool[randInt(0, pool.length)]);
+    }
+    while (surahsToFetch.size < Math.min(3, pool.length)) {
+      surahsToFetch.add(pool[randInt(0, pool.length)]);
+    }
+
+    await Promise.all(
+      [...surahsToFetch].map(async (surahId) => {
+        const needsWordData = gameModes.includes("word-meaning");
+        const verses = needsWordData
+          ? await fetchSurahVersesWithWords(surahId)
+          : await fetchSurahVerses(surahId);
+        verseCache.set(surahId, verses);
+        if (needsWordData) {
+          verseCacheWithWords.set(surahId, verses as VerseWithWords[]);
+        }
+      })
+    );
+  }
+
+  // Pre-pick trivia questions so we can draw from them without repeats
+  const triviaCount = gameModes.includes("trivia")
+    ? Math.ceil(numRounds / gameModes.length)
+    : 0;
+  const triviaPool = triviaCount > 0 ? pickTriviaQuestions(triviaCount + 5) : [];
+  let triviaIdx = 0;
 
   const questions: GeneratedQuestion[] = [];
   const usedPrompts = new Set<string>();
   let retries = 0;
 
   for (let i = 0; i < numRounds; i++) {
+    // Deterministically assign modes: distribute evenly, not randomly, so you
+    // always get a fair spread across all selected modes.
+    const gameMode = gameModes[i % gameModes.length];
+
+    // Trivia rounds draw from the static bank — no API/verse data needed
+    if (gameMode === "trivia") {
+      if (triviaIdx < triviaPool.length) {
+        const t = triviaPool[triviaIdx++];
+        const options = t.options.map((text, j) => ({
+          verse_key: `${t.id}:${j}`,
+          text,
+        }));
+        questions.push({
+          prompt_verse_key: t.id,
+          prompt_text: t.question,
+          correct_verse_key: `${t.id}:${t.correctIndex}`,
+          correct_text: t.options[t.correctIndex],
+          options: shuffle(options),
+          game_mode: "trivia",
+        });
+      }
+      continue;
+    }
+
     const surahIds = [...verseCache.keys()];
     const surahId = surahIds[randInt(0, surahIds.length)];
     const verses = verseCache.get(surahId)!;
@@ -279,10 +316,6 @@ export async function generateQuestions(
     const prompt = verses[promptIdx];
     const correct = verses[promptIdx + 1];
     usedPrompts.add(prompt.verse_key);
-
-    // Deterministically assign modes: distribute evenly, not randomly, so you
-    // always get a fair spread across all selected modes.
-    const gameMode = gameModes[i % gameModes.length];
 
     if (gameMode === "buzzer") {
       questions.push({

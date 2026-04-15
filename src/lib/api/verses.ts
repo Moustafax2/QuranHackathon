@@ -8,7 +8,7 @@ export async function getVersesByChapter(
 ): Promise<VersesResponse> {
   const firstPage = await apiGet<VersesResponse>(
     `/verses/by_chapter/${chapterNumber}`,
-    { language: "en", words: "false", translations: "131", fields: "text_uthmani", per_page: 50, page: 1 }
+    { language: "en", words: "false", translations: "20", fields: "text_uthmani", per_page: 50, page: 1 }
   );
 
   const { total_pages } = firstPage.pagination;
@@ -19,7 +19,7 @@ export async function getVersesByChapter(
       apiGet<VersesResponse>(`/verses/by_chapter/${chapterNumber}`, {
         language: "en",
         words: "false",
-        translations: "131",
+        translations: "20",
         fields: "text_uthmani",
         per_page: 50,
         page: i + 2,
@@ -38,7 +38,7 @@ export async function getVersesByJuz(
 ): Promise<VersesResponse> {
   const firstPage = await apiGet<VersesResponse>(
     `/verses/by_juz/${juzNumber}`,
-    { language: "en", words: "false", translations: "131", fields: "text_uthmani", per_page: 50, page: 1 }
+    { language: "en", words: "false", translations: "20", fields: "text_uthmani", per_page: 50, page: 1 }
   );
 
   const { total_pages } = firstPage.pagination;
@@ -49,7 +49,7 @@ export async function getVersesByJuz(
       apiGet<VersesResponse>(`/verses/by_juz/${juzNumber}`, {
         language: "en",
         words: "false",
-        translations: "131",
+        translations: "20",
         fields: "text_uthmani",
         per_page: 50,
         page: i + 2,
@@ -68,7 +68,7 @@ export async function getVersesByJuzWithWords(
 ): Promise<VersesResponse> {
   const firstPage = await apiGet<VersesResponse>(
     `/verses/by_juz/${juzNumber}`,
-    { language: "en", words: "true", translations: "131", fields: "text_uthmani", word_fields: "text_uthmani", per_page: 50, page: 1 }
+    { language: "en", words: "true", translations: "20", fields: "text_uthmani", word_fields: "text_uthmani", per_page: 50, page: 1 }
   );
 
   const { total_pages } = firstPage.pagination;
@@ -79,7 +79,7 @@ export async function getVersesByJuzWithWords(
       apiGet<VersesResponse>(`/verses/by_juz/${juzNumber}`, {
         language: "en",
         words: "true",
-        translations: "131",
+        translations: "20",
         fields: "text_uthmani",
         word_fields: "text_uthmani",
         per_page: 50,
@@ -100,7 +100,7 @@ export async function getVersesByPage(
   return apiGet<VersesResponse>(`/verses/by_page/${pageNumber}`, {
     language: "en",
     words: "false",
-    translations: "131",
+    translations: "20",
     fields: "text_uthmani",
     per_page: 50,
   });

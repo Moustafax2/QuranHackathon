@@ -7,6 +7,25 @@ import { execSync } from 'child_process';
 import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
+const QUTRUB_PATH = join(process.cwd(), 'misc', 'qutrub-master', 'qutrub-master');
+
+// Set to true to enable Qutrub conjugation fallback (requires Python + libqutrub in misc/qutrub-master)
+const QUTRUB_ENABLED = true;
+
+// Probe for Python+qutrub availability once — avoids hundreds of 5s timeouts during builds
+let _qutrubAvailable: boolean | null = null;
+function isQutrubAvailable(): boolean {
+  if (!QUTRUB_ENABLED) return false;
+  if (_qutrubAvailable !== null) return _qutrubAvailable;
+  try {
+    execSync(`python -c "import sys; sys.path.insert(0, '${QUTRUB_PATH.replace(/\\/g, '\\\\')}'); import libqutrub"`, { stdio: 'pipe', timeout: 3000 });
+    _qutrubAvailable = true;
+  } catch {
+    _qutrubAvailable = false;
+  }
+  return _qutrubAvailable;
+}
+
 interface QutrubResult {
   past_3ms: string;
   present_3ms: string;
@@ -23,6 +42,9 @@ export function getQutrubConjugation(
   root: string,
   futureType: 'ضمة' | 'كسرة' | 'فتحة' = 'ضمة'
 ): QutrubResult {
+  if (!isQutrubAvailable()) {
+    return { past_3ms: '-', present_3ms: '-', imperative_2ms: '-', success: false, error: 'qutrub not available' };
+  }
   try {
     // Clean the root
     const cleanRoot = root.replace(/\s/g, '');
@@ -31,10 +53,12 @@ export function getQutrubConjugation(
     const tempScript = join(process.cwd(), 'temp-qutrub-call.py');
     const tempOutput = join(process.cwd(), 'temp-qutrub-output.json');
     
+    const qutrubPathEscaped = QUTRUB_PATH.replace(/\\/g, '\\\\');
     const pythonScript = `
 # -*- coding: utf-8 -*-
 import json
 import sys
+sys.path.insert(0, '${qutrubPathEscaped}')
 import libqutrub.conjugator
 
 root = "${cleanRoot}"

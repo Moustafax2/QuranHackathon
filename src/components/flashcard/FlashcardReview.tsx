@@ -20,6 +20,8 @@ interface FlashcardReviewProps {
   showHansWehr?: boolean;
   showMuyassar?: boolean;
   onMuyassarAvailable?: (available: boolean) => void;
+  initialFlipped?: boolean;
+  previewMode?: boolean;
 }
 
 // ── Arabic normalization helpers ──────────────────────────────────────────────
@@ -96,8 +98,8 @@ const SURAH_NAMES: Record<number, string> = {
 };
 
 function surahRef(surah: number, ayah: number): string {
-  const name = SURAH_NAMES[surah] ?? `Surah ${surah}`;
-  return `Surah ${name} ${ayah}`;
+  const name = SURAH_NAMES[surah];
+  return name ? `${name} ${surah}:${ayah}` : `${surah}:${ayah}`;
 }
 
 // Simple module-level cache so we don't re-fetch the same verse across cards
@@ -111,8 +113,10 @@ export function FlashcardReview({
   showHansWehr = false,
   showMuyassar = false,
   onMuyassarAvailable,
+  initialFlipped = false,
+  previewMode = false,
 }: FlashcardReviewProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(initialFlipped);
   const [showAlternateMeanings, setShowAlternateMeanings] = useState(false);
   const [startTime] = useState(Date.now());
   const [hansWehrDef, setHansWehrDef] = useState<string | null>(null);
@@ -314,7 +318,7 @@ export function FlashcardReview({
       <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
         <div dir="rtl" className="font-amiri text-2xl text-white text-center whitespace-nowrap">
           {forms.singular}
-          {hasPlural ? ` (${forms.plural})` : " (n/a)"}
+          {hasPlural ? ` (${forms.plural})` : ""}
         </div>
       </div>
     );
@@ -344,7 +348,9 @@ export function FlashcardReview({
           >
             <div className="mb-6">{getCardTypeBadge()}</div>
             <div className="mb-8 font-amiri text-6xl font-bold text-white">
-              {word.canonical_form}
+              {word.type === CardType.VERB && word.forms && "past" in word.forms && word.forms.past && word.forms.past !== "-"
+                ? word.forms.past
+                : word.canonical_form}
             </div>
             <div className="text-sm text-gray-500">
               Click or press Space to reveal
@@ -499,7 +505,7 @@ export function FlashcardReview({
         </div>
       </div>
 
-      {isFlipped && (
+      {isFlipped && !previewMode && (
         <div className="mt-6 grid grid-cols-4 gap-3">
           <button
             onClick={() => handleReview(1)}

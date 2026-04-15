@@ -4,6 +4,17 @@ import { getUsableSession } from "@/lib/qf-user/session";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 
+const GUEST_COOKIE = "qalamspace_guest_player_id";
+
+function readCookie(request: Request, name: string): string | null {
+  const rawCookie = request.headers.get("cookie");
+  if (!rawCookie) return null;
+
+  const cookies = rawCookie.split(";").map((part) => part.trim());
+  const match = cookies.find((part) => part.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
 /**
  * Resolves a player_id from either:
  * 1. A valid QF session cookie (authenticated users)
@@ -18,7 +29,7 @@ export async function resolvePlayerId(
   const session = await getUsableSession(cookieStore);
   if (session) return session.player_id;
 
-  const guestId = request.headers.get("X-Guest-Player-Id");
+  const guestId = request.headers.get("X-Guest-Player-Id") ?? readCookie(request, GUEST_COOKIE);
   if (!guestId) return null;
 
   // Verify the guest player row actually exists (prevents arbitrary ID injection)

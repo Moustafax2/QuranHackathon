@@ -26,18 +26,6 @@ const modes = [
     badge: "Solo",
   },
   {
-    href: "/leaderboard",
-    title: "Leaderboard",
-    description: "Track your rank among friends and globally. See who's leading the memorization race.",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m4.992 0 .124-3.957a.75.75 0 0 1 .75-.733h.372m-5.614.266A.75.75 0 0 1 9.37 9.75h5.26a.75.75 0 0 1 .75.816l-.124 3.957" />
-      </svg>
-    ),
-    color: "from-amber-500/20 to-amber-600/10 border-amber-500/30 hover:border-amber-400",
-    badge: "Rankings",
-  },
-  {
     href: "/quran",
     title: "Read Quran",
     description: "Full Arabic text with English translations, audio recitations, and bookmarks.",
@@ -62,7 +50,7 @@ export default function LandingPage() {
           <span className="text-emerald-400">together.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-400">
-          Compete with friends, train your memorization, and climb the leaderboard.
+          Compete with friends and train your memorization.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -83,7 +71,7 @@ export default function LandingPage() {
 
       {/* Mode cards */}
       <div className="mx-auto max-w-6xl px-4 pb-24">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {modes.map((mode) => (
             <Link
               key={mode.href}

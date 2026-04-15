@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
   const mode = searchParams.get("mode") ?? "ayah";
   const selectionType = searchParams.get("selectionType") ?? "juz";
   const selectionIdsParam = searchParams.get("selectionIds") ?? "";
-  const showFullAyah = searchParams.get("showFullAyah") === "true";
+  const difficulty = (searchParams.get("difficulty") ?? "medium") as "easy" | "medium" | "hard";
 
   const selectionIds = selectionIdsParam
     .split(",")
@@ -86,21 +86,42 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const id = pickRandom(selectionIds);
-    const verses =
-      selectionType === "surah"
-        ? await fetchVersesByChapter(id)
-        : await fetchVersesByJuz(id);
-
-    if (verses.length === 0) {
-      return NextResponse.json({ error: "No verses found" }, { status: 500 });
-    }
-
     if (mode === "page-blank") {
+      const id = pickRandom(selectionIds);
+      const verses =
+        selectionType === "surah"
+          ? await fetchVersesByChapter(id)
+          : await fetchVersesByJuz(id);
+      if (verses.length === 0) {
+        return NextResponse.json({ error: "No verses found" }, { status: 500 });
+      }
       return NextResponse.json(buildPageBlankQuestion(verses));
     }
 
-    return NextResponse.json(await buildAyahQuestion(verses, showFullAyah));
+    // Ayah mode
+    if (difficulty === "hard") {
+      // Fetch all verses across all selected juz/surahs to compute unique prefixes
+      const allVerseArrays = await Promise.all(
+        selectionIds.map((id) =>
+          selectionType === "surah" ? fetchVersesByChapter(id) : fetchVersesByJuz(id)
+        )
+      );
+      const allVerses = allVerseArrays.flat();
+      if (allVerses.length === 0) {
+        return NextResponse.json({ error: "No verses found" }, { status: 500 });
+      }
+      return NextResponse.json(await buildAyahQuestion([pickRandom(allVerses)], "hard", allVerses));
+    } else {
+      const id = pickRandom(selectionIds);
+      const verses =
+        selectionType === "surah"
+          ? await fetchVersesByChapter(id)
+          : await fetchVersesByJuz(id);
+      if (verses.length === 0) {
+        return NextResponse.json({ error: "No verses found" }, { status: 500 });
+      }
+      return NextResponse.json(await buildAyahQuestion(verses, difficulty));
+    }
   } catch (err) {
     console.error("Memorization question error:", err);
     return NextResponse.json({ error: "Failed to generate question" }, { status: 500 });
@@ -111,7 +132,24 @@ export async function GET(req: NextRequest) {
 // Question builders
 // ---------------------------------------------------------------------------
 
-async function buildAyahQuestion(verses: Verse[], showFullAyah: boolean): Promise<AyahQuestion> {
+function findMinUniquePrefix(verseText: string, allTexts: string[]): string {
+  const words = verseText.split(" ");
+  for (let n = 1; n <= words.length; n++) {
+    const prefix = words.slice(0, n).join(" ");
+    const isUnique = allTexts.every((other) => {
+      if (other === verseText) return true;
+      return other.split(" ").slice(0, n).join(" ") !== prefix;
+    });
+    if (isUnique) return prefix;
+  }
+  return verseText;
+}
+
+async function buildAyahQuestion(
+  verses: Verse[],
+  difficulty: "easy" | "medium" | "hard",
+  allSelectionVerses?: Verse[]
+): Promise<AyahQuestion> {
   const verse = pickRandom(verses);
   const surahId = parseInt(verse.verse_key.split(":")[0]);
 
@@ -129,9 +167,15 @@ async function buildAyahQuestion(verses: Verse[], showFullAyah: boolean): Promis
   const positionOnPage = firstLineNumber !== null ? (firstLineNumber - 1) / maxLine : 0.5;
 
   const words = verse.text_uthmani.split(" ");
-  const displayText = showFullAyah
-    ? verse.text_uthmani
-    : words.slice(0, Math.ceil(words.length / 2)).join(" ");
+  let displayText: string;
+  if (difficulty === "easy") {
+    displayText = verse.text_uthmani;
+  } else if (difficulty === "hard") {
+    const allTexts = (allSelectionVerses ?? verses).map((v) => v.text_uthmani);
+    displayText = findMinUniquePrefix(verse.text_uthmani, allTexts);
+  } else {
+    displayText = words.slice(0, Math.ceil(words.length / 2)).join(" ");
+  }
 
   return {
     mode: "ayah",

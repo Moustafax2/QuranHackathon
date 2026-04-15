@@ -1,7 +1,7 @@
 import type { LexicalEntry, VerbForms, NounForms } from "@/lib/types/flashcard";
 import { CardType } from "@/lib/types/flashcard";
-import { ensureCompleteVerbForms } from "./verb-generator";
-import { getQutrubConjugation, detectFutureType, isWeakRoot } from "./qutrub-integration";
+import { ensureCompleteVerbForms, derive3MSPresent } from "./verb-generator";
+import { getQutrubConjugation, detectFutureType } from "./qutrub-integration";
 
 interface RawWord {
   text: string;
@@ -30,29 +30,12 @@ function cleanLemma(lemma: string): string {
 }
 
 function chooseVerbPast(verbWords: RawWord[]): string | undefined {
+  // Only use PERF 3MS — other persons/numbers are not the canonical past form.
+  // If absent, return undefined so the fallback chain (Qutrub/verb-generator) derives it.
   const perfect3ms = verbWords.find(
     (w) => w.tense === "PERF" && w.person === "3MS" && !w.is_passive
   );
-  if (perfect3ms) {
-    return perfect3ms.text;
-  }
-
-  const perfectLemma = verbWords.find(
-    (w) => w.tense === "PERF" && !w.is_passive && w.lemma
-  );
-  if (perfectLemma?.lemma) {
-    const cleaned = cleanLemma(perfectLemma.lemma);
-    const lastChar = cleaned[cleaned.length - 1];
-    // If lemma ends in sukun (ْ), damma (ُ), or kasra (ِ), it's likely a stem form
-    // Convert to fatha (َ) for 3MS past tense
-    if (lastChar === 'ْ' || lastChar === 'ُ' || lastChar === 'ِ') {
-      return cleaned.slice(0, -1) + 'َ';
-    }
-    
-    return cleaned;
-  }
-
-  return undefined;
+  return perfect3ms?.text;
 }
 
 function chooseVerbPresent(verbWords: RawWord[]): string | undefined {
@@ -63,11 +46,12 @@ function chooseVerbPresent(verbWords: RawWord[]): string | undefined {
     return imperfect3ms.text;
   }
 
+  // No 3MS in corpus — try to derive it from any other IMPF active form
   const imperfect = verbWords.find(
     (w) => w.tense === "IMPF" && !w.is_passive
   );
   if (imperfect) {
-    return imperfect.text;
+    return derive3MSPresent(imperfect.text) ?? imperfect.text;
   }
 
   return undefined;
@@ -117,59 +101,78 @@ function chooseNounPlural(nounWords: RawWord[], singular: string): string | unde
   return undefined;
 }
 
+// Hard-coded corrections for verbs where the corpus + fallback chain produces wrong forms.
+// Hollow/weak verbs whose 3MS perfect never appears in the Quran are the main culprits.
+// Key: Arabic root as stored in the DB (no spaces for roots stored that way).
+const VERB_FORM_OVERRIDES: Record<string, Partial<VerbForms>> = {
+  "عوذ": { past: "عَاذَ", present: "يَعُوذُ", imperative: "عُذْ" },
+};
+
+// PHASE 1: Extract verb forms directly from corpus data (primary source).
+// Mapping: past → PERF, present → IMPF, command → IMPV, masdar → noun with VN feature.
+function extractCorpusForms(verbWords: RawWord[], allWords: RawWord[]): Partial<VerbForms> {
+  return {
+    past: chooseVerbPast(verbWords),
+    present: chooseVerbPresent(verbWords),
+    imperative: chooseVerbImperative(verbWords),
+    verbal_noun: chooseVerbalNoun(allWords),
+  };
+}
+
+// PHASE 2: Fallback enrichment — fills any forms still missing after corpus extraction.
+// Uses Qutrub conjugation (for weak/defective verbs) then verb-generator as final backup.
+function enrichWithFallbacks(
+  root: string,
+  corpusForms: Partial<VerbForms>
+): VerbForms {
+  let { past, present, imperative, verbal_noun: verbalNoun } = corpusForms;
+
+  const hasMissingForms = past === undefined || present === undefined || imperative === undefined;
+
+  if (hasMissingForms && root) {
+    try {
+      const futureType = detectFutureType(present);
+      console.log(`    [qutrub] root=${root} futureType=${futureType} missing=${[!past && "past", !present && "present", !imperative && "imp"].filter(Boolean).join(",")}`);
+      const qutrubResult = getQutrubConjugation(root, futureType);
+
+      if (qutrubResult.success) {
+        const filled: string[] = [];
+        if (!past || past === "-") { past = qutrubResult.past_3ms !== "-" ? qutrubResult.past_3ms : past; if (past && past !== "-") filled.push(`past=${past}`); }
+        if (!present || present === "-") { present = qutrubResult.present_3ms !== "-" ? qutrubResult.present_3ms : present; if (present && present !== "-") filled.push(`present=${present}`); }
+        if (!imperative || imperative === "-") { imperative = qutrubResult.imperative_2ms !== "-" ? qutrubResult.imperative_2ms : imperative; if (imperative && imperative !== "-") filled.push(`imp=${imperative}`); }
+        console.log(`    [qutrub] ✓ filled: ${filled.length ? filled.join(" ") : "(nothing new)"}`);
+      } else {
+        console.log(`    [qutrub] ✗ failed: ${qutrubResult.error}`);
+      }
+    } catch (error) {
+      console.warn(`    [qutrub] ✗ exception for root ${root}:`, error);
+    }
+  }
+
+  return ensureCompleteVerbForms(root, { past, present, imperative, verbal_noun: verbalNoun });
+}
+
 export function normalizeVerb(words: RawWord[]): LexicalEntry | null {
   const verbWords = words.filter((w) => w.pos?.startsWith("V"));
   if (verbWords.length === 0) return null;
 
   const root = verbWords[0].root || "";
-  let past = chooseVerbPast(verbWords);
-  let present = chooseVerbPresent(verbWords);
-  let imperative = chooseVerbImperative(verbWords);
-  const verbalNoun = chooseVerbalNoun(words);
 
-  // OPTION 1 & 3: Use Qutrub as fallback for missing forms, especially weak verbs
-  const hasMissingForms = past === undefined || present === undefined || imperative === undefined;
-  const isWeak = root ? isWeakRoot(root) : false;
-  
-  if (hasMissingForms && root && (isWeak || hasMissingForms)) {
-    try {
-      const futureType = detectFutureType(present);
-      const qutrubResult = getQutrubConjugation(root, futureType);
-      
-      if (qutrubResult.success) {
-        // Use Qutrub for missing forms
-        if (!past || past === '-') {
-          past = qutrubResult.past_3ms !== '-' ? qutrubResult.past_3ms : past;
-        }
-        if (!present || present === '-') {
-          present = qutrubResult.present_3ms !== '-' ? qutrubResult.present_3ms : present;
-        }
-        if (!imperative || imperative === '-') {
-          imperative = qutrubResult.imperative_2ms !== '-' ? qutrubResult.imperative_2ms : imperative;
-        }
-      }
-    } catch (error) {
-      // Silently fail and continue with existing forms
-      console.warn(`Qutrub fallback failed for root ${root}:`, error);
-    }
-  }
-  
-  // Use the verb generator to ensure all forms are present
-  const completeForms = ensureCompleteVerbForms(root, {
-    past,
-    present,
-    imperative,
-    verbal_noun: verbalNoun,
-  });
-  
-  const lemma = completeForms.past !== "-" ? completeForms.past : 
-                completeForms.present !== "-" ? completeForms.present : 
+  // Phase 1: source from corpus
+  const corpusForms = extractCorpusForms(verbWords, words);
+
+  // Phase 2: fill any gaps via Qutrub + verb-generator (backup)
+  const completeForms = enrichWithFallbacks(root, corpusForms);
+
+  // Phase 3: apply manual overrides for roots where the pipeline produces wrong forms
+  const override = VERB_FORM_OVERRIDES[root];
+  if (override) Object.assign(completeForms, override);
+
+  const lemma = completeForms.past !== "-" ? completeForms.past :
+                completeForms.present !== "-" ? completeForms.present :
                 completeForms.imperative;
-  
-  const forms: VerbForms = completeForms;
 
   const translation = verbWords[0].translation || "";
-  // Include all examples (will be deduplicated and limited per surah later)
   const examples = verbWords.map((w) => ({
     surah: w.surah,
     ayah: w.ayah,
@@ -182,7 +185,7 @@ export function normalizeVerb(words: RawWord[]): LexicalEntry | null {
     canonical_form: lemma,
     root,
     lemma,
-    forms,
+    forms: completeForms,
     translation,
     examples,
     source: "corpus",
