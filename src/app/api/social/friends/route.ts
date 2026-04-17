@@ -20,7 +20,8 @@ export async function GET() {
 
   try {
     const profile = await getCurrentUserProfile(session);
-    const friends = await getQfFollowing(session, profile.id, { limit: 20, page: 1 });
+    const viewerId = profile.id || session.user.sub;
+    const friends = await getQfFollowing(session, viewerId, { limit: 20, page: 1 });
 
     return NextResponse.json(
       {
