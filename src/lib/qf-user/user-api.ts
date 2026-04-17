@@ -70,6 +70,19 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
+function unwrapDataEnvelope<T>(payload: T | { data?: T }): T {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    payload.data
+  ) {
+    return payload.data;
+  }
+
+  return payload as T;
+}
+
 export async function getUserBookmarks(session: QfSession): Promise<QfBookmarkListResponse> {
   const data: QfBookmark[] = [];
   const seen = new Set<string>();
@@ -140,7 +153,11 @@ export async function deleteUserBookmark(
 }
 
 export async function getCurrentUserProfile(session: QfSession): Promise<QfSocialUser> {
-  return request<QfSocialUser>(session, "/users/profile");
+  const payload = await request<QfSocialUser | { data?: QfSocialUser }>(
+    session,
+    "/users/profile"
+  );
+  return unwrapDataEnvelope(payload);
 }
 
 export async function searchQfUsers(
