@@ -2,6 +2,7 @@ import "server-only";
 
 import { getQfClientId, getQfUserApiBaseUrl } from "./config";
 import type {
+  QfBookmark,
   QfBookmarkListResponse,
   QfBookmarkMutationResponse,
   QfSession,
@@ -67,12 +68,48 @@ async function request<T>(
 }
 
 export async function getUserBookmarks(session: QfSession): Promise<QfBookmarkListResponse> {
-  const params = new URLSearchParams({
-    type: "ayah",
-    mushafId: "4",
-    first: "100",
-  });
-  return request<QfBookmarkListResponse>(session, `/bookmarks?${params.toString()}`);
+  const data: QfBookmark[] = [];
+  const seen = new Set<string>();
+  let after: string | null = null;
+  let pagination: QfBookmarkListResponse["pagination"];
+
+  // Quran Foundation caps bookmark pagination at 20 items per request.
+  for (let page = 0; page < 50; page += 1) {
+    const params = new URLSearchParams({
+      type: "ayah",
+      mushafId: "4",
+      first: "20",
+    });
+
+    if (after) {
+      params.set("after", after);
+    }
+
+    const response = await request<QfBookmarkListResponse>(
+      session,
+      `/bookmarks?${params.toString()}`
+    );
+
+    for (const bookmark of response.data) {
+      if (seen.has(bookmark.id)) continue;
+      seen.add(bookmark.id);
+      data.push(bookmark);
+    }
+
+    pagination = response.pagination;
+    const nextCursor = response.pagination?.endCursor ?? null;
+    if (!response.pagination?.hasNextPage || !nextCursor) {
+      return {
+        success: response.success,
+        data,
+        pagination,
+      };
+    }
+
+    after = nextCursor;
+  }
+
+  throw new Error("Exceeded Quran Foundation bookmark pagination limit while syncing bookmarks.");
 }
 
 export async function addUserBookmark(
