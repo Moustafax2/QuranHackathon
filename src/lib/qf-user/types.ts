@@ -37,6 +37,38 @@ export interface QfUserProfile {
   avatar: string | null;
 }
 
+export interface QfAvatarUrls {
+  small?: string | null;
+  medium?: string | null;
+  large?: string | null;
+}
+
+export interface QfSocialUser {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  bio: string | null;
+  country: string | null;
+  verified: boolean;
+  followed: boolean;
+  isFollowed: boolean;
+  followersCount: number;
+  avatarUrls: QfAvatarUrls;
+}
+
+export interface QfPaginatedUsersResponse {
+  total: number;
+  currentPage: number;
+  limit: number;
+  pages: number;
+  data: QfSocialUser[];
+}
+
+export interface QfToggleFollowResponse {
+  followed: boolean;
+}
+
 export interface QfSession {
   access_token: string;
   refresh_token: string | null;

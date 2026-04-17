@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
+import { UserInvitePicker } from "@/components/social/UserInvitePicker";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import type { GamePhase } from "@/lib/game/state-machine";
+import type { SocialUserSummary } from "@/lib/social/qf-users";
 
 interface Props {
   params: Promise<{ roomId: string }>;
@@ -23,16 +25,22 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   const router = useRouter();
   const { roomId } = use(params);
   use(searchParams);
-  const { player, loading: authLoading } = useAuth();
+  const { player, isAuthenticated, loading: authLoading, refresh } = useAuth();
   const [guestPlayerId, setGuestPlayerId] = useState<string | null>(null);
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [autoJoining, setAutoJoining] = useState(false);
+  const [hasAttemptedAutoJoin, setHasAttemptedAutoJoin] = useState(false);
+  const [creatingGuest, setCreatingGuest] = useState(false);
+  const [sendingInvites, setSendingInvites] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [membershipStatus, setMembershipStatus] = useState<RoomMembershipStatus>("loading");
   const hasLeftRef = useRef(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [selectedInvitees, setSelectedInvitees] = useState<SocialUserSummary[]>([]);
 
   const fetchActiveGame = useCallback(async (roomPrimaryId: string) => {
     const supabase = createClient();
@@ -168,6 +176,25 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     return headers;
   }, [guestPlayerId]);
 
+  const joinRoom = useCallback(async () => {
+    const response = await fetch("/api/multiplayer/join-room", {
+      method: "POST",
+      headers: buildMultiplayerHeaders(),
+      body: JSON.stringify({ room_code: roomId }),
+    });
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+
+    if (!response.ok) {
+      throw new Error(data?.error ?? "Failed to join room.");
+    }
+
+    setError(null);
+    // Clear the joining overlay before flipping membership state. Otherwise the
+    // effect cleanup can mark the attempt as cancelled and skip clearing it.
+    setAutoJoining(false);
+    setMembershipStatus("active");
+  }, [buildMultiplayerHeaders, roomId]);
+
   const leaveRoom = useCallback(
     async ({
       keepalive = false,
@@ -210,6 +237,53 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     },
     [buildMultiplayerHeaders, player?.id, roomInfo?.id]
   );
+
+  useEffect(() => {
+    if (loading || authLoading || !roomInfo?.id) return;
+    if (!player?.id) return;
+    if (membershipStatus !== "missing") return;
+    if (roomInfo.status !== "lobby") return;
+    if (hasAttemptedAutoJoin) return;
+
+    let cancelled = false;
+
+    async function attemptAutoJoin() {
+      setHasAttemptedAutoJoin(true);
+      setAutoJoining(true);
+
+      try {
+        await joinRoom();
+      } catch (joinError) {
+        if (cancelled) return;
+
+        const message =
+          joinError instanceof Error ? joinError.message : "Failed to join room.";
+        if (message.toLowerCase().includes("already left")) {
+          setMembershipStatus("left");
+        }
+        setError(message);
+      } finally {
+        if (!cancelled) {
+          setAutoJoining(false);
+        }
+      }
+    }
+
+    void attemptAutoJoin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authLoading,
+    hasAttemptedAutoJoin,
+    joinRoom,
+    loading,
+    membershipStatus,
+    player?.id,
+    roomInfo?.id,
+    roomInfo?.status,
+  ]);
 
   useEffect(() => {
     if (membershipStatus !== "active" || !roomInfo?.id || !player?.id) return;
@@ -330,10 +404,88 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     }
   }
 
-  if (loading || authLoading || (!!roomInfo && membershipStatus === "loading")) {
+  async function handleContinueAsGuest() {
+    setCreatingGuest(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/multiplayer/guest-token", {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { id?: string; error?: string }
+        | null;
+
+      if (!response.ok || !payload?.id) {
+        throw new Error(payload?.error ?? "Failed to create guest profile.");
+      }
+
+      sessionStorage.setItem("qalamspace_guest_player", JSON.stringify(payload));
+      setGuestPlayerId(payload.id);
+      await refresh();
+    } catch (guestError) {
+      setError(guestError instanceof Error ? guestError.message : "Failed to join as guest.");
+    } finally {
+      setCreatingGuest(false);
+    }
+  }
+
+  async function handleCopyShareLink() {
+    const shareUrl = `${window.location.origin}/play/${roomId}`;
+    await navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  async function handleNativeShare() {
+    const shareUrl = `${window.location.origin}/play/${roomId}`;
+    if (!navigator.share) {
+      await handleCopyShareLink();
+      return;
+    }
+
+    try {
+      await navigator.share({
+        title: "Join my QuranArena lobby",
+        text: `Join my QuranArena lobby with room code ${roomId}.`,
+        url: shareUrl,
+      });
+    } catch {
+      // Ignore aborted shares.
+    }
+  }
+
+  async function handleSendInvites() {
+    if (!selectedInvitees.length) return;
+
+    setSendingInvites(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/social/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomCode: roomId,
+          invitees: selectedInvitees,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to send invitations.");
+      }
+      setSelectedInvitees([]);
+    } catch (inviteError) {
+      setError(inviteError instanceof Error ? inviteError.message : "Failed to send invitations.");
+    } finally {
+      setSendingInvites(false);
+    }
+  }
+
+  if (loading || authLoading || autoJoining || (!!roomInfo && membershipStatus === "loading")) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
-        <div className="text-gray-500">Loading room...</div>
+        <div className="text-gray-500">{autoJoining ? "Joining room..." : "Loading room..."}</div>
       </div>
     );
   }
@@ -365,6 +517,50 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   }
 
   if (membershipStatus === "missing") {
+    if (!player) {
+      return (
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
+          <div className="w-full max-w-lg rounded-3xl border border-gray-800 bg-gray-900 p-8 text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-400">
+              Join Lobby
+            </p>
+            <h1 className="mt-4 text-3xl font-bold">Room {roomId}</h1>
+            <p className="mt-3 text-gray-400">
+              {roomInfo?.status === "lobby"
+                ? "Sign in with Quran.com to auto-join this lobby, or continue as a guest."
+                : "This room is no longer in the lobby, so new players can’t join right now."}
+            </p>
+
+            {roomInfo?.status === "lobby" ? (
+              <div className="mt-8 space-y-3">
+                <Link
+                  href={`/login?next=${encodeURIComponent(`/play/${roomId}`)}`}
+                  className="flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+                >
+                  Sign in with Quran.com
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleContinueAsGuest()}
+                  disabled={creatingGuest}
+                  className="w-full rounded-2xl border border-gray-700 bg-gray-800 px-6 py-3 text-sm font-semibold text-gray-300 transition-colors hover:border-gray-600 hover:text-white disabled:opacity-60"
+                >
+                  {creatingGuest ? "Preparing guest access..." : "Join as Guest"}
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/play"
+                className="mt-8 inline-flex rounded-2xl border border-gray-700 px-6 py-3 text-sm font-semibold text-gray-300 transition-colors hover:border-gray-500 hover:text-white"
+              >
+                Back to game modes
+              </Link>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gray-950 text-white">
         <div className="max-w-md text-center">
@@ -425,11 +621,31 @@ export default function GameRoomPage({ params, searchParams }: Props) {
             </button>
           </div>
           <p className="mt-3 text-sm text-gray-500">
-            Share this code with friends to join
+            Share the code or the lobby link with friends to join
           </p>
           {!isConnected && (
             <p className="mt-2 text-xs text-amber-400">Connecting...</p>
           )}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCopyShareLink()}
+              className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                linkCopied
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : "border-gray-700 text-gray-300 hover:border-gray-600 hover:text-white"
+              }`}
+            >
+              {linkCopied ? "Link Copied" : "Copy Lobby Link"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleNativeShare()}
+              className="rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:border-gray-600 hover:text-white"
+            >
+              Share Link
+            </button>
+          </div>
         </div>
 
         {/* Players */}
@@ -468,6 +684,24 @@ export default function GameRoomPage({ params, searchParams }: Props) {
             )}
           </div>
         </div>
+
+        {roomInfo && isAuthenticated && player && roomInfo.status === "lobby" && roomInfo.host_id === player.id && (
+          <div className="mb-6 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+            <UserInvitePicker
+              selectedUsers={selectedInvitees}
+              onChange={setSelectedInvitees}
+              disabled={sendingInvites}
+            />
+            <button
+              type="button"
+              onClick={() => void handleSendInvites()}
+              disabled={!selectedInvitees.length || sendingInvites}
+              className="mt-4 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {sendingInvites ? "Sending invites..." : "Send Invites"}
+            </button>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -553,31 +787,41 @@ function GameInProgress({
   // display stays frozen for RESULT_MIN_MS even after the server moves on.
   // We use a ref for the timer so phase changes don't cancel it via effect cleanup.
   useEffect(() => {
+    let cancelled = false;
+
     if (phase === "round_result" && result && !showingResult) {
-      setPinnedResult(result);
-      setPinnedRound(round);
-      setShowingResult(true);
-      setCountdown(Math.ceil(RESULT_MIN_MS / 1000));
+      queueMicrotask(() => {
+        if (cancelled) return;
 
-      countdownIntervalRef.current = setInterval(() => {
-        setCountdown((c) => c - 1);
-      }, 1000);
+        setPinnedResult(result);
+        setPinnedRound(round);
+        setShowingResult(true);
+        setCountdown(Math.ceil(RESULT_MIN_MS / 1000));
 
-      resultTimerRef.current = setTimeout(() => {
-        resultTimerRef.current = null;
-        if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
-        }
-        setShowingResult(false);
-        setPinnedResult(null);
-        setPinnedRound(null);
-        setCountdown(0);
-        setAnswered(false);
-        setSelected(null);
-        setBuzzed(false);
-      }, RESULT_MIN_MS);
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown((c) => c - 1);
+        }, 1000);
+
+        resultTimerRef.current = setTimeout(() => {
+          resultTimerRef.current = null;
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          setShowingResult(false);
+          setPinnedResult(null);
+          setPinnedRound(null);
+          setCountdown(0);
+          setAnswered(false);
+          setSelected(null);
+          setBuzzed(false);
+        }, RESULT_MIN_MS);
+      });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clean up on unmount only
