@@ -137,24 +137,26 @@ function normalizePlayEvents(
   answers: RoundAnswerRow[],
   roundsById: Map<string, GameRoundRow>
 ): PlayProgressEvent[] {
-  return answers
-    .map((answer) => {
-      const round = roundsById.get(answer.round_id);
-      if (!round) return null;
+  const events: PlayProgressEvent[] = [];
 
-      return {
-        id: answer.id,
-        mode: round.game_mode ?? "multiple-choice",
-        correct: answer.is_correct,
-        points_awarded: answer.points_awarded,
-        tested_at: answer.server_received_at,
-        prompt_verse_key: round.prompt_verse_key,
-        prompt_surah_id: round.prompt_surah_id,
-        prompt_juz_number: round.prompt_juz_number,
-        prompt_page_number: round.prompt_page_number,
-      };
-    })
-    .filter((event): event is PlayProgressEvent => Boolean(event));
+  for (const answer of answers) {
+    const round = roundsById.get(answer.round_id);
+    if (!round) continue;
+
+    events.push({
+      id: answer.id,
+      mode: round.game_mode ?? "multiple-choice",
+      correct: answer.is_correct,
+      points_awarded: answer.points_awarded,
+      tested_at: answer.server_received_at,
+      prompt_verse_key: round.prompt_verse_key,
+      prompt_surah_id: round.prompt_surah_id,
+      prompt_juz_number: round.prompt_juz_number,
+      prompt_page_number: round.prompt_page_number,
+    });
+  }
+
+  return events;
 }
 
 export async function getPlayerPlayProgress(playerId: string): Promise<PlayProgressResponse> {
