@@ -1,6 +1,8 @@
 import { getChapter, getVersesByChapter } from "@/lib/api";
 import { AyahView } from "@/components/quran/AyahView";
 import { MushafView } from "@/components/quran/MushafView";
+import { VersePlayerProvider } from "@/contexts/VersePlayerContext";
+import { VersePlayerBar } from "@/components/quran/verse-player/VersePlayerBar";
 import Link from "next/link";
 
 interface Props {
@@ -57,12 +59,17 @@ export default async function SurahPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      {mode === "mushaf" ? (
-        <MushafView pageNumbers={pageNumbers} />
-      ) : (
-        <AyahView verses={verses} />
-      )}
-
+      <VersePlayerProvider
+        chapterNumber={chapterNumber}
+        versesCount={chapter.verses_count}
+      >
+        {mode === "mushaf" ? (
+          <MushafView pageNumbers={pageNumbers} verses={verses} />
+        ) : (
+          <AyahView verses={verses} />
+        )}
+        <VersePlayerBar />
+      </VersePlayerProvider>
     </div>
   );
 }
