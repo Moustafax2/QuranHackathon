@@ -42,7 +42,7 @@ export interface Database {
           id: string;
           code: string;
           host_id: string;
-          game_mode: "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer";
+          game_mode: PlayGameMode;
           status: "lobby" | "in_progress" | "finished";
           settings: RoomSettings;
           created_at: string;
@@ -51,7 +51,7 @@ export interface Database {
           id?: string;
           code: string;
           host_id: string;
-          game_mode: "multiple-choice" | "word-meaning" | "fill-in-blank" | "buzzer";
+          game_mode: PlayGameMode;
           status?: "lobby" | "in_progress" | "finished";
           settings?: RoomSettings;
           created_at?: string;
@@ -60,7 +60,7 @@ export interface Database {
           id?: string;
           code?: string;
           host_id?: string;
-          game_mode?: "buzzer" | "multiple-choice";
+          game_mode?: PlayGameMode;
           status?: "lobby" | "in_progress" | "finished";
           settings?: RoomSettings;
           created_at?: string;
@@ -129,7 +129,11 @@ export interface Database {
           id: string;
           game_id: string;
           round_number: number;
+          game_mode: PlayGameMode | null;
           prompt_verse_key: string;
+          prompt_surah_id: number | null;
+          prompt_juz_number: number | null;
+          prompt_page_number: number | null;
           correct_verse_key: string;
           prompt_text: string | null;
           correct_text: string | null;
@@ -141,7 +145,11 @@ export interface Database {
           id?: string;
           game_id: string;
           round_number: number;
+          game_mode?: PlayGameMode | null;
           prompt_verse_key: string;
+          prompt_surah_id?: number | null;
+          prompt_juz_number?: number | null;
+          prompt_page_number?: number | null;
           correct_verse_key: string;
           prompt_text?: string | null;
           correct_text?: string | null;
@@ -153,7 +161,11 @@ export interface Database {
           id?: string;
           game_id?: string;
           round_number?: number;
+          game_mode?: PlayGameMode | null;
           prompt_verse_key?: string;
+          prompt_surah_id?: number | null;
+          prompt_juz_number?: number | null;
+          prompt_page_number?: number | null;
           correct_verse_key?: string;
           prompt_text?: string | null;
           correct_text?: string | null;
@@ -291,6 +303,10 @@ export interface Database {
           status: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
           fsrs_state: FSRSCard;
           created_at: string;
+          source_surah_id: number | null;
+          source_ayah_number: number | null;
+          source_juz_number: number | null;
+          source_page_number: number | null;
         };
         Insert: {
           id?: string;
@@ -299,6 +315,10 @@ export interface Database {
           status?: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
           fsrs_state: FSRSCard;
           created_at?: string;
+          source_surah_id?: number | null;
+          source_ayah_number?: number | null;
+          source_juz_number?: number | null;
+          source_page_number?: number | null;
         };
         Update: {
           id?: string;
@@ -306,6 +326,61 @@ export interface Database {
           word_id?: string;
           status?: "IN_BANK" | "KNOWN_NOT_IN_BANK" | "UNKNOWN_SELECTED";
           fsrs_state?: FSRSCard;
+          created_at?: string;
+          source_surah_id?: number | null;
+          source_ayah_number?: number | null;
+          source_juz_number?: number | null;
+          source_page_number?: number | null;
+        };
+        Relationships: [];
+      };
+      memorization_attempts: {
+        Row: {
+          id: string;
+          player_id: string;
+          client_attempt_id: string;
+          mode: "ayah" | "page-blank";
+          rating_level: number;
+          verse_key: string | null;
+          surah_id: number | null;
+          ayah_number: number | null;
+          juz_number: number | null;
+          page_number: number | null;
+          selection_type: "juz" | "surah" | null;
+          cover_region: "top" | "middle" | "bottom" | null;
+          tested_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          client_attempt_id: string;
+          mode: "ayah" | "page-blank";
+          rating_level: number;
+          verse_key?: string | null;
+          surah_id?: number | null;
+          ayah_number?: number | null;
+          juz_number?: number | null;
+          page_number?: number | null;
+          selection_type?: "juz" | "surah" | null;
+          cover_region?: "top" | "middle" | "bottom" | null;
+          tested_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          client_attempt_id?: string;
+          mode?: "ayah" | "page-blank";
+          rating_level?: number;
+          verse_key?: string | null;
+          surah_id?: number | null;
+          ayah_number?: number | null;
+          juz_number?: number | null;
+          page_number?: number | null;
+          selection_type?: "juz" | "surah" | null;
+          cover_region?: "top" | "middle" | "bottom" | null;
+          tested_at?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -405,9 +480,21 @@ export interface Database {
   };
 }
 
+export type PlayGameMode =
+  | "multiple-choice"
+  | "word-meaning"
+  | "fill-in-blank"
+  | "trivia"
+  | "buzzer";
+
+export type QuranScopeType = "all" | "juz" | "surah";
+
 export interface RoomSettings {
   num_rounds: number;
-  surah_filter: number[] | null;
+  game_modes?: PlayGameMode[] | null;
+  scope?: QuranScopeType;
+  surah_filter?: number[] | null;
+  juz_filter?: number[] | null;
   time_per_question: number;
 }
 

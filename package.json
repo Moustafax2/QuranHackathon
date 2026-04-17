@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx ./scripts/run-progress-tests.ts",
     "build-lexical-db": "tsx scripts/build-lexical-db.ts",
     "build-lexical-db:full": "tsx scripts/build-lexical-db.ts --full"
   },

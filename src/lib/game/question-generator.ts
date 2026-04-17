@@ -7,6 +7,8 @@ const QURAN_API = "https://api.quran.com/api/v4";
 interface Verse {
   verse_key: string;
   text_uthmani: string;
+  page_number: number;
+  juz_number: number;
 }
 
 interface VerseWord {
@@ -22,6 +24,9 @@ interface VerseWithWords extends Verse {
 export interface GeneratedQuestion {
   prompt_verse_key: string;
   prompt_text: string;
+  prompt_surah_id: number | null;
+  prompt_juz_number: number | null;
+  prompt_page_number: number | null;
   correct_verse_key: string;
   correct_text: string;
   options: { verse_key: string; text: string }[];
@@ -30,22 +35,36 @@ export interface GeneratedQuestion {
 
 async function fetchSurahVerses(surahId: number): Promise<Verse[]> {
   const res = await fetch(
-    `${QURAN_API}/verses/by_chapter/${surahId}?language=en&fields=text_uthmani&per_page=300`,
-    { cache: "force-cache" }
-  );
-  const data = await res.json() as { verses: { verse_key: string; text_uthmani: string }[] };
-  return data.verses.map((v) => ({ verse_key: v.verse_key, text_uthmani: v.text_uthmani }));
-}
-
-async function fetchSurahVersesWithWords(surahId: number): Promise<VerseWithWords[]> {
-  const res = await fetch(
-    `${QURAN_API}/verses/by_chapter/${surahId}?language=en&words=true&word_fields=text_uthmani,translation_text&fields=text_uthmani&per_page=300`,
+    `${QURAN_API}/verses/by_chapter/${surahId}?language=en&fields=text_uthmani,page_number,juz_number&per_page=300`,
     { cache: "force-cache" }
   );
   const data = await res.json() as {
     verses: {
       verse_key: string;
       text_uthmani: string;
+      page_number: number;
+      juz_number: number;
+    }[];
+  };
+  return data.verses.map((v) => ({
+    verse_key: v.verse_key,
+    text_uthmani: v.text_uthmani,
+    page_number: v.page_number,
+    juz_number: v.juz_number,
+  }));
+}
+
+async function fetchSurahVersesWithWords(surahId: number): Promise<VerseWithWords[]> {
+  const res = await fetch(
+    `${QURAN_API}/verses/by_chapter/${surahId}?language=en&words=true&word_fields=text_uthmani,translation_text&fields=text_uthmani,page_number,juz_number&per_page=300`,
+    { cache: "force-cache" }
+  );
+  const data = await res.json() as {
+    verses: {
+      verse_key: string;
+      text_uthmani: string;
+      page_number: number;
+      juz_number: number;
       words?: {
         position: number;
         text_uthmani: string;
@@ -57,12 +76,27 @@ async function fetchSurahVersesWithWords(surahId: number): Promise<VerseWithWord
   return data.verses.map((v) => ({
     verse_key: v.verse_key,
     text_uthmani: v.text_uthmani,
+    page_number: v.page_number,
+    juz_number: v.juz_number,
     words: (v.words ?? []).map((w) => ({
       position: w.position,
       text_uthmani: w.text_uthmani,
       translation: w.translation?.text ? { text: w.translation.text } : null,
     })),
   }));
+}
+
+function getPromptSurahId(promptVerseKey: string): number | null {
+  const surahId = Number(promptVerseKey.split(":")[0]);
+  return Number.isFinite(surahId) ? surahId : null;
+}
+
+function buildPromptMeta(prompt: Verse) {
+  return {
+    prompt_surah_id: getPromptSurahId(prompt.verse_key),
+    prompt_juz_number: prompt.juz_number,
+    prompt_page_number: prompt.page_number,
+  };
 }
 
 function randInt(min: number, max: number): number {
@@ -170,6 +204,7 @@ function makeFillInBlankQuestion(
   return {
     prompt_verse_key: prompt.verse_key,
     prompt_text: blankedText,
+    ...buildPromptMeta(prompt),
     correct_verse_key: correctKey,
     correct_text: blankWord,
     options,
@@ -222,6 +257,7 @@ function makeWordMeaningQuestion(
   return {
     prompt_verse_key: prompt.verse_key,
     prompt_text: chosenWord.text_uthmani,
+    ...buildPromptMeta(prompt),
     correct_verse_key: correctKey,
     correct_text: correctMeaning,
     options,
@@ -291,6 +327,9 @@ export async function generateQuestions(
         questions.push({
           prompt_verse_key: t.id,
           prompt_text: t.question,
+          prompt_surah_id: null,
+          prompt_juz_number: null,
+          prompt_page_number: null,
           correct_verse_key: `${t.id}:${t.correctIndex}`,
           correct_text: t.options[t.correctIndex],
           options: shuffle(options),
@@ -321,6 +360,7 @@ export async function generateQuestions(
       questions.push({
         prompt_verse_key: prompt.verse_key,
         prompt_text: prompt.text_uthmani,
+        ...buildPromptMeta(prompt),
         correct_verse_key: correct.verse_key,
         correct_text: correct.text_uthmani,
         options: [],
@@ -369,6 +409,7 @@ export async function generateQuestions(
       questions.push({
         prompt_verse_key: prompt.verse_key,
         prompt_text: prompt.text_uthmani,
+        ...buildPromptMeta(prompt),
         correct_verse_key: correct.verse_key,
         correct_text: correct.text_uthmani,
         options,

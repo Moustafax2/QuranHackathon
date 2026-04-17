@@ -45,6 +45,10 @@ export async function POST(request: Request) {
       status: body.status,
       fsrs_state: body.fsrs_state,
       created_at: body.created_at,
+      source_surah_id: body.source_surah_id ?? null,
+      source_ayah_number: body.source_ayah_number ?? null,
+      source_juz_number: body.source_juz_number ?? null,
+      source_page_number: body.source_page_number ?? null,
     },
     { onConflict: "user_id,word_id" }
   );
@@ -77,6 +81,10 @@ export async function PUT(request: Request) {
     status: card.status,
     fsrs_state: card.fsrs_state,
     created_at: card.created_at,
+    source_surah_id: card.source_surah_id ?? null,
+    source_ayah_number: card.source_ayah_number ?? null,
+    source_juz_number: card.source_juz_number ?? null,
+    source_page_number: card.source_page_number ?? null,
   }));
 
   const { error } = await supabase

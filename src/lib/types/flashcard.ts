@@ -97,6 +97,10 @@ export interface UserFlashcard {
   sm2_state?: SM2Card;    // populated from localStorage when SM-2 mode is active
   created_at: Date;
   status: WordStatus;
+  source_surah_id?: number | null;
+  source_ayah_number?: number | null;
+  source_juz_number?: number | null;
+  source_page_number?: number | null;
 }
 
 export interface ReviewLogEntry {

@@ -93,6 +93,24 @@ export default function AccountPage() {
           {bookmarksLoading ? "Loading bookmarks..." : `${bookmarks.length} bookmarks available.`}
         </p>
       </section>
+
+      <section className="mt-4 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Global Progress</h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Review your play results, flashcard momentum, memorization trends, and Quran coverage from
+              one reflection-focused dashboard.
+            </p>
+          </div>
+          <Link
+            href="/progress"
+            className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Open progress
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

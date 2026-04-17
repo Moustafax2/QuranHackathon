@@ -4,8 +4,16 @@ import { useState } from "react";
 import type { Verse } from "@/lib/types";
 import { VerseDisplay } from "./VerseDisplay";
 
-export function AyahView({ verses }: { verses: Verse[] }) {
-  const [showTranslation, setShowTranslation] = useState(false);
+interface AyahViewProps {
+  verses: Verse[];
+  initialShowTranslation?: boolean;
+}
+
+export function AyahView({
+  verses,
+  initialShowTranslation = false,
+}: AyahViewProps) {
+  const [showTranslation, setShowTranslation] = useState(initialShowTranslation);
 
   return (
     <div>

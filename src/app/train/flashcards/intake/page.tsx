@@ -63,10 +63,10 @@ function IntakeContent() {
     });
 
     if (learnWords.length > 0) {
-      await addWordsToBank(learnWords, WordStatus.IN_BANK);
+      await addWordsToBank(learnWords, WordStatus.IN_BANK, surahNumber);
     }
     if (knownWords.length > 0) {
-      await addWordsToBank(knownWords, WordStatus.KNOWN_NOT_IN_BANK);
+      await addWordsToBank(knownWords, WordStatus.KNOWN_NOT_IN_BANK, surahNumber);
     }
 
     router.push("/train/flashcards");
