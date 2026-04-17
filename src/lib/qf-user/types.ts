@@ -74,6 +74,8 @@ export interface QfBookmark {
   verseNumber?: number;
   group?: string | null;
   isInDefaultCollection: boolean;
+  isReading?: boolean | null;
+  collectionsCount?: number;
 }
 
 export interface QfBookmarkListResponse {

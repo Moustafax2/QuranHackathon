@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import type { Verse } from "@/lib/types";
 import { useVersePlayer } from "@/contexts/VersePlayerContext";
 import { MushafPlayButton } from "@/components/quran/verse-player/MushafPlayButton";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { useBookmarks } from "@/lib/hooks/useBookmarks";
 
 function mushafPageUrl(page: number): string {
   return `https://files.quran.app/hafs/madani/width_1260/page${String(page).padStart(3, "0")}.png`;
@@ -19,12 +22,24 @@ export function MushafView({ pageNumbers, verses }: Props) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const { currentVerseKey, isPlaying, skipBack, skipForward } = useVersePlayer();
+  const {
+    bookmarks,
+    isBookmarked,
+    addBookmark,
+    removeBookmark,
+    provider,
+    loading: bookmarksLoading,
+    error: bookmarksError,
+  } = useBookmarks();
 
   const currentPage = pageNumbers[currentIndex];
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < pageNumbers.length - 1;
 
   const versesOnCurrentPage = verses.filter((v) => v.page_number === currentPage);
+  const bookmarkedOnCurrentPage = versesOnCurrentPage.filter((verse) =>
+    isBookmarked(verse.verse_key)
+  );
 
   function goTo(index: number) {
     setCurrentIndex(index);
@@ -136,6 +151,74 @@ export function MushafView({ pageNumbers, verses }: Props) {
       {imageLoaded && (
         <p className="text-center text-xs text-gray-600">Page {currentPage}</p>
       )}
+
+      <section className="rounded-2xl border border-gray-800 bg-gray-950/70 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Ayah bookmarks on this page</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              {bookmarksLoading
+                ? "Loading bookmark sync..."
+                : provider === "qf"
+                  ? `Synced with Quran Foundation. ${bookmarks.length} total bookmarks loaded.`
+                  : "Saved locally on this device until you sign in."}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              {bookmarkedOnCurrentPage.length} of {versesOnCurrentPage.length} ayahs bookmarked on page {currentPage}.
+            </p>
+          </div>
+
+          <Link
+            href="/quran/bookmarks"
+            className="rounded-lg border border-gray-700 px-3 py-2 text-xs font-medium text-gray-300 transition-colors hover:border-gray-600 hover:text-white"
+          >
+            View all bookmarks
+          </Link>
+        </div>
+
+        {bookmarksError && (
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {bookmarksError}
+          </p>
+        )}
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {versesOnCurrentPage.map((verse) => {
+            const bookmarked = isBookmarked(verse.verse_key);
+
+            return (
+              <div
+                key={verse.id}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors ${
+                  bookmarked
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : "border-gray-800 bg-gray-900/70"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white">{verse.verse_key}</p>
+                  <p className="text-xs text-gray-500">
+                    Ayah {verse.verse_number} on page {currentPage}
+                  </p>
+                </div>
+
+                <BookmarkButton
+                  isBookmarked={bookmarked}
+                  onToggle={() => {
+                    if (bookmarked) {
+                      void removeBookmark(verse.verse_key);
+                      return;
+                    }
+
+                    const [chapterId, verseNumber] = verse.verse_key.split(":").map(Number);
+                    void addBookmark(chapterId, verseNumber);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
