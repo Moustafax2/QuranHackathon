@@ -34,7 +34,7 @@ interface RemoteBookmarkResponse {
   data: {
     id: string;
     createdAt: string;
-    type: string;
+    type?: string;
     key: number;
     verseNumber?: number;
   }[];
@@ -77,7 +77,11 @@ export function useBookmarks() {
 
       const payload = (await response.json()) as RemoteBookmarkResponse;
       const bookmarks = payload.data
-        .filter((item) => item.type === "ayah" && item.verseNumber)
+        .filter(
+          (item) =>
+            typeof item.verseNumber === "number" &&
+            (typeof item.type === "undefined" || item.type === "ayah")
+        )
         .map((item) => ({
           verseKey: `${item.key}:${item.verseNumber}`,
           chapterId: item.key,
