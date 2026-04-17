@@ -21,7 +21,24 @@ export async function GET() {
   try {
     const profile = await getCurrentUserProfile(session);
     const viewerId = profile.id || session.user.sub;
-    const friends = await getQfFollowing(session, viewerId, { limit: 20, page: 1 });
+    let friends;
+
+    try {
+      friends = await getQfFollowing(session, viewerId, { limit: 20, page: 1 });
+    } catch (error) {
+      if (error instanceof QfUserApiError && error.status === 404) {
+        return NextResponse.json(
+          {
+            profile: serializeSocialUser(profile),
+            total: 0,
+            data: [],
+          },
+          { headers: cookieCarrier.headers }
+        );
+      }
+
+      throw error;
+    }
 
     return NextResponse.json(
       {
