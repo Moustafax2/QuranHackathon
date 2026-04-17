@@ -226,6 +226,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      game_invitations: {
+        Row: {
+          id: string;
+          room_id: string;
+          inviter_player_id: string;
+          invitee_qf_user_id: string;
+          invitee_display_name: string;
+          invitee_username: string | null;
+          invitee_avatar_url: string | null;
+          status: "pending" | "accepted" | "declined" | "revoked";
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          inviter_player_id: string;
+          invitee_qf_user_id: string;
+          invitee_display_name: string;
+          invitee_username?: string | null;
+          invitee_avatar_url?: string | null;
+          status?: "pending" | "accepted" | "declined" | "revoked";
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          room_id?: string;
+          inviter_player_id?: string;
+          invitee_qf_user_id?: string;
+          invitee_display_name?: string;
+          invitee_username?: string | null;
+          invitee_avatar_url?: string | null;
+          status?: "pending" | "accepted" | "declined" | "revoked";
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Relationships: [];
+      };
       verse_mistakes: {
         Row: {
           player_id: string;

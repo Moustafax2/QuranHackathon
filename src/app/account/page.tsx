@@ -111,6 +111,19 @@ export default function AccountPage() {
           </Link>
         </div>
       </section>
+
+      <section className="mt-4 rounded-2xl border border-gray-800 bg-gray-900 p-5">
+        <h2 className="text-lg font-semibold">Social</h2>
+        <p className="mt-2 text-sm text-gray-400">
+          Manage your Quran.com friends list and incoming game invitations.
+        </p>
+        <Link
+          href="/friends"
+          className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
+        >
+          Open Friends
+        </Link>
+      </section>
     </div>
   );
 }

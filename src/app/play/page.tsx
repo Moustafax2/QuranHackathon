@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
+import { UserInvitePicker } from "@/components/social/UserInvitePicker";
+import type { SocialUserSummary } from "@/lib/social/qf-users";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +94,7 @@ const SURAH_JUZ: Record<number, number> = {
 
 export default function PlayPage() {
   const router = useRouter();
-  const { player, isGuest, loading: authLoading, refresh } = useAuth();
+  const { player, isAuthenticated, isGuest, loading: authLoading, refresh } = useAuth();
 
   // Game config state
   const [selectedModes, setSelectedModes] = useState<GameModeId[]>(["multiple-choice"]);
@@ -101,6 +103,7 @@ export default function PlayPage() {
   const [selectedJuz, setSelectedJuz] = useState<number[]>([]);
   const [selectedSurahs, setSelectedSurahs] = useState<number[]>([]);
   const [surahSearch, setSurahSearch] = useState("");
+  const [selectedInvitees, setSelectedInvitees] = useState<SocialUserSummary[]>([]);
 
   // Join state
   const [roomCode, setRoomCode] = useState("");
@@ -197,10 +200,12 @@ export default function PlayPage() {
         body: JSON.stringify({
           game_mode: primaryMode,   // stored on the room row (used as fallback)
           settings: buildSettings(), // includes game_modes[], scope, filters
+          invitees: selectedInvitees,
         }),
       });
       const data = (await response.json()) as { code?: string; error?: string };
       if (!response.ok || !data.code) throw new Error(data.error ?? "Failed to create room.");
+      setSelectedInvitees([]);
       router.push(`/play/${data.code}?mode=${primaryMode}`);
     } catch (err) {
       setError((err as Error).message);
@@ -447,9 +452,9 @@ export default function PlayPage() {
           <div className="space-y-4 lg:sticky lg:top-6">
 
             {/* Config summary */}
-            <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
-              <h3 className="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Game Summary</h3>
-              <div className="space-y-2 text-sm">
+                <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+                  <h3 className="mb-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Game Summary</h3>
+                  <div className="space-y-2 text-sm">
                 <div className="grid grid-cols-[auto,1fr] items-start gap-x-3">
                   <span className="pt-1 text-gray-500">Mode</span>
                   <div className="flex flex-wrap justify-end gap-2">
@@ -473,8 +478,18 @@ export default function PlayPage() {
                   <span className="text-right text-white">{scopeLabel()}</span>
                 </div>
                 )}
-              </div>
-            </div>
+                  </div>
+                </div>
+
+                {isAuthenticated && !isGuest && player && (
+                  <div className="rounded-2xl border border-gray-800 bg-gray-900 p-5">
+                    <UserInvitePicker
+                      selectedUsers={selectedInvitees}
+                      onChange={setSelectedInvitees}
+                      disabled={creating}
+                    />
+                  </div>
+                )}
 
             {/* Error */}
             {error && (

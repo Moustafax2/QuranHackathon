@@ -5,7 +5,10 @@ import type {
   QfBookmark,
   QfBookmarkListResponse,
   QfBookmarkMutationResponse,
+  QfPaginatedUsersResponse,
   QfSession,
+  QfSocialUser,
+  QfToggleFollowResponse,
 } from "./types";
 
 export class QfUserApiError extends Error {
@@ -134,4 +137,64 @@ export async function deleteUserBookmark(
   return request<QfBookmarkMutationResponse>(session, `/bookmarks/${bookmarkId}`, {
     method: "DELETE",
   });
+}
+
+export async function getCurrentUserProfile(session: QfSession): Promise<QfSocialUser> {
+  return request<QfSocialUser>(session, "/users/profile");
+}
+
+export async function searchQfUsers(
+  session: QfSession,
+  input: {
+    query: string;
+    limit?: number;
+    page?: number;
+    all?: boolean;
+  }
+): Promise<QfPaginatedUsersResponse> {
+  const params = new URLSearchParams({
+    query: input.query,
+    limit: String(input.limit ?? 8),
+    page: String(input.page ?? 1),
+  });
+
+  if (input.all) {
+    params.set("all", "true");
+  }
+
+  return request<QfPaginatedUsersResponse>(session, `/users/search?${params.toString()}`);
+}
+
+export async function getQfFollowing(
+  session: QfSession,
+  userId: string,
+  input?: {
+    limit?: number;
+    page?: number;
+  }
+): Promise<QfPaginatedUsersResponse> {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 20),
+    page: String(input?.page ?? 1),
+  });
+
+  return request<QfPaginatedUsersResponse>(
+    session,
+    `/users/${encodeURIComponent(userId)}/following?${params.toString()}`
+  );
+}
+
+export async function toggleQfFollowUser(
+  session: QfSession,
+  followeeId: string,
+  action?: "follow" | "unfollow"
+): Promise<QfToggleFollowResponse> {
+  return request<QfToggleFollowResponse>(
+    session,
+    `/users/${encodeURIComponent(followeeId)}/follow`,
+    {
+      method: "POST",
+      body: action ? JSON.stringify({ action }) : JSON.stringify({}),
+    }
+  );
 }
