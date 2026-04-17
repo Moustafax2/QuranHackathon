@@ -194,6 +194,11 @@ function buildPageBlankQuestion(verses: Verse[]): PageBlankQuestion {
   const pages = [...new Set(verses.map((v) => v.page_number))];
   const pageNumber = pickRandom(pages);
   const regions: Array<"top" | "middle" | "bottom"> = ["top", "middle", "bottom"];
+  const pageVerses = verses.filter((verse) => verse.page_number === pageNumber);
+  const pageJuzNumbers = [...new Set(pageVerses.map((verse) => verse.juz_number))];
+  const pageSurahIds = [
+    ...new Set(pageVerses.map((verse) => Number(verse.verse_key.split(":")[0]))),
+  ];
   // A surah header appears on pages where verse 1 of any surah begins
   const hasSurahHeader = verses.some(
     (v) => v.page_number === pageNumber && v.verse_key.endsWith(":1")
@@ -201,6 +206,8 @@ function buildPageBlankQuestion(verses: Verse[]): PageBlankQuestion {
   return {
     mode: "page-blank",
     pageNumber,
+    juzNumber: pageJuzNumbers.length === 1 ? pageJuzNumbers[0] : null,
+    surahId: pageSurahIds.length === 1 ? pageSurahIds[0] : null,
     coverRegion: pickRandom(regions),
     hasSurahHeader,
   };

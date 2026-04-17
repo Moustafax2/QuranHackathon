@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
-import { addRating, getSurahScores, clearAllRecords, type RatingLevel } from "@/lib/memorization/storage";
+import {
+  clearAllRecords,
+  getSurahScores,
+  saveMemorizationAttempt,
+  type RatingLevel,
+} from "@/lib/memorization/storage";
 import type { AyahQuestion, PageBlankQuestion, MemorizationQuestion } from "@/lib/memorization/types";
 
 type Mode = "ayah" | "page-blank";
@@ -121,7 +126,20 @@ export function MemorizationTester() {
 
   // Load heat map data on mount and after ratings
   useEffect(() => {
-    setSurahScores(getSurahScores());
+    let cancelled = false;
+
+    async function loadScores() {
+      const scores = await getSurahScores();
+      if (!cancelled) {
+        setSurahScores(scores);
+      }
+    }
+
+    void loadScores();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // When switching selectionType, reset selectedIds to all
@@ -217,21 +235,36 @@ export function MemorizationTester() {
     setError(null);
   };
 
-  const handleRate = useCallback((level: RatingLevel) => {
+  const handleRate = useCallback(async (level: RatingLevel) => {
     if (!currentQuestion) return;
     if (currentQuestion.mode === "ayah") {
       const q = currentQuestion as AyahQuestion;
-      addRating(q.verseKey, q.surahId, level, {
-        pageNumber: q.pageNumber,
-        juzNumber: q.juzNumber,
+      await saveMemorizationAttempt({
+        mode: "ayah",
+        verse_key: q.verseKey,
+        surah_id: q.surahId,
+        rating_level: level,
+        page_number: q.pageNumber,
+        juz_number: q.juzNumber,
+        selection_type: selectionType,
       });
     } else {
+      const q = currentQuestion as PageBlankQuestion;
+      await saveMemorizationAttempt({
+        mode: "page-blank",
+        rating_level: level,
+        surah_id: q.surahId,
+        juz_number: q.juzNumber,
+        page_number: q.pageNumber,
+        selection_type: selectionType,
+        cover_region: q.coverRegion,
+      });
       // For page-blank, we don't have a single verse key — skip storing per-verse
       // Could be extended later to store page-level data
     }
-    setSurahScores(getSurahScores());
-    fetchQuestion();
-  }, [currentQuestion, fetchQuestion]);
+    setSurahScores(await getSurahScores());
+    await fetchQuestion();
+  }, [currentQuestion, fetchQuestion, selectionType]);
 
   useEffect(() => {
     if (phase !== "testing") return;
@@ -301,9 +334,10 @@ export function MemorizationTester() {
         {showHeatmapReset && (
           <HeatmapResetModal
             onConfirm={() => {
-              clearAllRecords();
-              setSurahScores({});
-              setShowHeatmapReset(false);
+              void clearAllRecords().then(() => {
+                setSurahScores({});
+                setShowHeatmapReset(false);
+              });
             }}
             onCancel={() => setShowHeatmapReset(false)}
           />

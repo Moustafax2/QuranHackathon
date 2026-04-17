@@ -7,13 +7,15 @@ import Link from "next/link";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; translations?: string }>;
 }
 
 export default async function SurahPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { mode = "ayah" } = await searchParams;
+  const { mode = "ayah", translations } = await searchParams;
   const chapterNumber = parseInt(id, 10);
+  const showTranslations =
+    translations === "1" || translations === "true" || translations === "on";
   const [{ chapter }, { verses }] = await Promise.all([
     getChapter(chapterNumber),
     getVersesByChapter(chapterNumber),
@@ -66,7 +68,7 @@ export default async function SurahPage({ params, searchParams }: Props) {
         {mode === "mushaf" ? (
           <MushafView pageNumbers={pageNumbers} verses={verses} />
         ) : (
-          <AyahView verses={verses} />
+          <AyahView verses={verses} initialShowTranslation={showTranslations} />
         )}
         <VersePlayerBar />
       </VersePlayerProvider>

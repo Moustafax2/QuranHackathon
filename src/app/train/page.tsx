@@ -35,10 +35,36 @@ export default function TrainPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold">Training</h1>
-          <p className="mt-2 text-gray-400">
-            Build your memorization solo before taking it into competition.
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Training</h1>
+              <p className="mt-2 text-gray-400">
+                Build your memorization solo before taking it into competition.
+              </p>
+            </div>
+            <Link
+              href="/progress"
+              className="inline-flex rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:border-emerald-400/50 hover:text-emerald-200"
+            >
+              View global progress
+            </Link>
+          </div>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-gradient-to-r from-gray-900 to-emerald-950/40 p-5">
+          <h2 className="text-lg font-semibold text-white">Reflect across every mode</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-gray-400">
+            The progress dashboard combines flashcards, memorization tester, and play history so you
+            can see consistency, weak spots, and Quran coverage in one place.
           </p>
+          <div className="mt-4">
+            <Link
+              href="/progress"
+              className="inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            >
+              Open dashboard
+            </Link>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -77,7 +103,6 @@ export default function TrainPage() {
             </Link>
           ))}
         </div>
-
       </div>
     </div>
   );

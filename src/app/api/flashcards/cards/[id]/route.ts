@@ -22,6 +22,10 @@ export async function PATCH(
   const dbUpdates: Record<string, unknown> = {};
   if (updates.word_id !== undefined) dbUpdates.word_id = updates.word_id;
   if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.source_surah_id !== undefined) dbUpdates.source_surah_id = updates.source_surah_id;
+  if (updates.source_ayah_number !== undefined) dbUpdates.source_ayah_number = updates.source_ayah_number;
+  if (updates.source_juz_number !== undefined) dbUpdates.source_juz_number = updates.source_juz_number;
+  if (updates.source_page_number !== undefined) dbUpdates.source_page_number = updates.source_page_number;
   if (updates.fsrs_state !== undefined) dbUpdates.fsrs_state = updates.fsrs_state;
 
   const { error } = await supabase

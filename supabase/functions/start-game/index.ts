@@ -9,6 +9,9 @@ import {
 interface Question {
   prompt_verse_key: string;
   prompt_text: string;
+  prompt_surah_id?: number | null;
+  prompt_juz_number?: number | null;
+  prompt_page_number?: number | null;
   correct_verse_key: string;
   correct_text: string;
   options: { verse_key: string; text: string }[];
@@ -109,7 +112,11 @@ serve(async (req: Request) => {
     const rounds = questions.map((q, i) => ({
       game_id: game.id,
       round_number: i + 1,
+      game_mode: q.game_mode ?? null,
       prompt_verse_key: q.prompt_verse_key,
+      prompt_surah_id: q.prompt_surah_id ?? null,
+      prompt_juz_number: q.prompt_juz_number ?? null,
+      prompt_page_number: q.prompt_page_number ?? null,
       correct_verse_key: q.correct_verse_key,
       prompt_text: q.prompt_text,
       correct_text: q.correct_text,

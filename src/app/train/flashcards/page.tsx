@@ -359,20 +359,8 @@ export default function FlashcardsHubPage() {
   const [totalCards, setTotalCards] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
-const [showSRExplainer, setShowSRExplainer] = useState(false);
+  const [showSRExplainer, setShowSRExplainer] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-
-  useEffect(() => {
-    async function initializeAndLoad() {
-      await migrateFromLocalStorage();
-      await loadStats();
-      const seen = localStorage.getItem("flashcard_how_it_works_seen");
-      if (!seen) {
-        setShowHowItWorks(true);
-      }
-    }
-    initializeAndLoad();
-  }, []);
 
   async function loadStats() {
     const [due, newCards, cards, reviews] = await Promise.all([
@@ -388,7 +376,19 @@ const [showSRExplainer, setShowSRExplainer] = useState(false);
     setLoading(false);
   }
 
-if (loading) {
+  useEffect(() => {
+    async function initializeAndLoad() {
+      await migrateFromLocalStorage();
+      await loadStats();
+      const seen = localStorage.getItem("flashcard_how_it_works_seen");
+      if (!seen) {
+        setShowHowItWorks(true);
+      }
+    }
+    initializeAndLoad();
+  }, []);
+
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="text-center">
@@ -516,7 +516,7 @@ if (loading) {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Link
             href="/train/flashcards/settings"
             className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900 p-4 transition-all hover:border-gray-700 hover:bg-gray-800"
@@ -535,6 +535,16 @@ if (loading) {
             <div>
               <div className="font-medium text-white">Statistics</div>
               <div className="text-sm text-gray-500">View your progress</div>
+            </div>
+          </Link>
+          <Link
+            href="/progress"
+            className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900 p-4 transition-all hover:border-gray-700 hover:bg-gray-800"
+          >
+            <div className="text-xl font-semibold text-emerald-300">GP</div>
+            <div>
+              <div className="font-medium text-white">Global Progress</div>
+              <div className="text-sm text-gray-500">See every mode together</div>
             </div>
           </Link>
           <Link

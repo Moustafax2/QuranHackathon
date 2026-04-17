@@ -103,6 +103,10 @@ type RawCard = {
   status: string;
   fsrs_state: { due: string; last_review?: string; [k: string]: unknown };
   created_at: string;
+  source_surah_id: number | null;
+  source_ayah_number: number | null;
+  source_juz_number: number | null;
+  source_page_number: number | null;
 };
 
 type RawReview = {
@@ -131,6 +135,10 @@ function hydrateCard(row: RawCard): UserFlashcard {
       learning_steps: ((row.fsrs_state as unknown as FSRSCard).learning_steps) ?? 0,
     },
     created_at: new Date(row.created_at),
+    source_surah_id: row.source_surah_id,
+    source_ayah_number: row.source_ayah_number,
+    source_juz_number: row.source_juz_number,
+    source_page_number: row.source_page_number,
   };
 }
 
@@ -159,6 +167,10 @@ function cardToBody(card: UserFlashcard) {
       last_review: card.fsrs_state.last_review?.toISOString(),
     },
     created_at: card.created_at.toISOString(),
+    source_surah_id: card.source_surah_id ?? null,
+    source_ayah_number: card.source_ayah_number ?? null,
+    source_juz_number: card.source_juz_number ?? null,
+    source_page_number: card.source_page_number ?? null,
   };
 }
 
@@ -195,6 +207,10 @@ export async function updateFlashcard(
   const body: Record<string, unknown> = {};
   if (updates.word_id !== undefined) body.word_id = updates.word_id;
   if (updates.status !== undefined) body.status = updates.status;
+  if (updates.source_surah_id !== undefined) body.source_surah_id = updates.source_surah_id;
+  if (updates.source_ayah_number !== undefined) body.source_ayah_number = updates.source_ayah_number;
+  if (updates.source_juz_number !== undefined) body.source_juz_number = updates.source_juz_number;
+  if (updates.source_page_number !== undefined) body.source_page_number = updates.source_page_number;
   if (updates.fsrs_state !== undefined) {
     body.fsrs_state = {
       ...updates.fsrs_state,
