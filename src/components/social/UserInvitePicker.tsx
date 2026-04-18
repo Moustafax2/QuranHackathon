@@ -95,7 +95,7 @@ export function UserInvitePicker({
         <div>
           <h3 className="text-sm font-semibold text-white">Invite Friends</h3>
           <p className="mt-1 text-xs text-gray-500">
-            Search Quran.com users and send lobby invites right after room creation.
+            Search signed-in app users and send lobby invites right after room creation.
           </p>
         </div>
         <span className="rounded-full border border-gray-700 px-2.5 py-1 text-xs text-gray-400">
@@ -107,7 +107,7 @@ export function UserInvitePicker({
         type="text"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by name or username..."
+        placeholder="Search by display name or email..."
         disabled={disabled}
         className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
       />
@@ -147,7 +147,7 @@ export function UserInvitePicker({
                         {user.displayName}
                       </p>
                       <p className="truncate text-xs text-gray-500">
-                        {user.username ? `@${user.username}` : "Quran.com user"}
+                        {user.username ? `@${user.username}` : "Signed-in app user"}
                       </p>
                     </div>
                     <button

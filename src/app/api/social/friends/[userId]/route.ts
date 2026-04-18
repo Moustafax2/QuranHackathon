@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
-import { QfUserApiError, toggleQfFollowUser } from "@/lib/qf-user/user-api";
+import { addLocalFriend, removeLocalFriend } from "@/lib/social/friends";
 
 function unauthorized() {
   return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -22,15 +22,18 @@ export async function POST(
     | null;
 
   try {
-    const result = await toggleQfFollowUser(session, userId, body?.action);
+    const result =
+      body?.action === "unfollow"
+        ? await removeLocalFriend(session.player_id, userId)
+        : await addLocalFriend(session.player_id, userId);
+
     return NextResponse.json(result, { headers: cookieCarrier.headers });
   } catch (error) {
-    const status = error instanceof QfUserApiError ? error.status : 500;
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to update follow status.",
       },
-      { status, headers: cookieCarrier.headers }
+      { status: 500, headers: cookieCarrier.headers }
     );
   }
 }

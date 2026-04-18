@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
-import { QfUserApiError, searchQfUsers } from "@/lib/qf-user/user-api";
-import { serializeSocialUser } from "@/lib/social/qf-users";
+import { searchLocalPlayers } from "@/lib/social/friends";
 
 function unauthorized() {
   return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -35,41 +34,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await searchQfUsers(session, {
-      query,
-      limit,
-      page,
-      all: true,
-    });
+    const results = await searchLocalPlayers(query, session.player_id, limit);
 
     return NextResponse.json(
       {
-        ...result,
-        data: result.data.map(serializeSocialUser),
+        total: results.length,
+        currentPage: page,
+        limit,
+        pages: 1,
+        data: results,
       },
       { headers: cookieCarrier.headers }
     );
   } catch (error) {
-    if (error instanceof QfUserApiError && error.status === 404) {
-      return NextResponse.json(
-        {
-          total: 0,
-          currentPage: 1,
-          limit,
-          pages: 0,
-          data: [],
-          error: "Quran Foundation user search is not available for this app or environment yet.",
-        },
-        { headers: cookieCarrier.headers }
-      );
-    }
-
-    const status = error instanceof QfUserApiError ? error.status : 500;
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to search users.",
       },
-      { status, headers: cookieCarrier.headers }
+      { status: 500, headers: cookieCarrier.headers }
     );
   }
 }
