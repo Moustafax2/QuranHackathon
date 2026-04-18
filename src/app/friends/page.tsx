@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import type { SocialUserSummary } from "@/lib/social/qf-users";
 
 interface FriendsResponse {
-  profile: SocialUserSummary;
   total: number;
   data: SocialUserSummary[];
   error?: string;
@@ -252,7 +251,7 @@ export default function FriendsPage() {
       <div className="mx-auto max-w-3xl px-4 py-12 text-white">
         <h1 className="text-3xl font-bold">Friends</h1>
         <p className="mt-3 text-gray-400">
-          Sign in with Quran.com to search users, follow friends, and respond to game invites.
+          Sign in to search app users, add friends, and respond to game invites.
         </p>
         <Link
           href="/login?next=/friends"
@@ -271,7 +270,7 @@ export default function FriendsPage() {
           <div>
             <h1 className="text-3xl font-bold">Friends</h1>
             <p className="mt-2 max-w-2xl text-gray-400">
-              Search Quran.com users, follow them into your friends list, and manage multiplayer invitations in one place.
+              Search users who have signed into your app, add them to your local friends list, and manage multiplayer invitations in one place.
             </p>
           </div>
           <div className="rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-400">
@@ -292,7 +291,7 @@ export default function FriendsPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Search Users</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Results appear as you type. Follow someone to add them to your in-app friends list.
+                    Results appear as you type. Add someone to keep them in your in-app friends list.
                   </p>
                 </div>
               </div>
@@ -339,7 +338,7 @@ export default function FriendsPage() {
                               )}
                             </div>
                             <p className="truncate text-xs text-gray-500">
-                              {user.username ? `@${user.username}` : "Quran.com user"}
+                              {user.username ? `@${user.username}` : "Signed-in app user"}
                             </p>
                             {user.bio && (
                               <p className="mt-1 text-xs text-gray-400">{user.bio}</p>
@@ -371,7 +370,7 @@ export default function FriendsPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Your Friends</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    This list reflects the users you currently follow through Quran Foundation.
+                    This list reflects the users you have added locally inside this app.
                   </p>
                 </div>
               </div>
@@ -397,7 +396,7 @@ export default function FriendsPage() {
                           )}
                         </div>
                         <p className="truncate text-xs text-gray-500">
-                          {friend.username ? `@${friend.username}` : "Quran.com user"}
+                          {friend.username ? `@${friend.username}` : "Signed-in app user"}
                         </p>
                       </div>
                       <button
