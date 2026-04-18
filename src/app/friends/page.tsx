@@ -145,6 +145,9 @@ export default function FriendsPage() {
         if (!response.ok) {
           throw new Error(payload?.error ?? "Failed to search users.");
         }
+        if (payload?.error) {
+          setSearchError(payload.error);
+        }
         setSearchResults(payload?.data ?? []);
       } catch (searchLoadError) {
         if ((searchLoadError as Error).name === "AbortError") {

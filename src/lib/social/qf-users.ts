@@ -17,8 +17,15 @@ export function getQfUserDisplayName(user: Pick<QfSocialUser, "firstName" | "las
   return fullName || user.username || "Quran.com user";
 }
 
-export function getQfUserAvatarUrl(user: Pick<QfSocialUser, "avatarUrls">): string | null {
-  return user.avatarUrls.medium || user.avatarUrls.small || user.avatarUrls.large || null;
+export function getQfUserAvatarUrl(
+  user: Partial<Pick<QfSocialUser, "avatarUrls">>
+): string | null {
+  const avatarUrls = user.avatarUrls;
+  if (!avatarUrls) {
+    return null;
+  }
+
+  return avatarUrls.medium || avatarUrls.small || avatarUrls.large || null;
 }
 
 export function serializeSocialUser(user: QfSocialUser): SocialUserSummary {

@@ -50,6 +50,20 @@ export async function GET(request: NextRequest) {
       { headers: cookieCarrier.headers }
     );
   } catch (error) {
+    if (error instanceof QfUserApiError && error.status === 404) {
+      return NextResponse.json(
+        {
+          total: 0,
+          currentPage: 1,
+          limit,
+          pages: 0,
+          data: [],
+          error: "Quran Foundation user search is not available for this app or environment yet.",
+        },
+        { headers: cookieCarrier.headers }
+      );
+    }
+
     const status = error instanceof QfUserApiError ? error.status : 500;
     return NextResponse.json(
       {
