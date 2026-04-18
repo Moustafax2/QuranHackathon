@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getUsableSession } from "@/lib/qf-user/session";
+import { listAcceptedFriendQfUserIds } from "@/lib/social/friends";
 import {
   createGameInvitations,
   listIncomingInvitationsForQfUser,
@@ -113,6 +114,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const acceptedFriendIds = await listAcceptedFriendQfUserIds(session.player_id);
+    const invalidRecipients = recipients.filter(
+      (recipient) => !acceptedFriendIds.has(recipient.qfUserId)
+    );
+
+    if (invalidRecipients.length) {
+      return NextResponse.json(
+        { error: "You can only invite users who are already on your friends list." },
+        { status: 403, headers: cookieCarrier.headers }
+      );
+    }
+
     const invitations = await createGameInvitations({
       roomId: roomResponse.data.id,
       inviterPlayerId: session.player_id,

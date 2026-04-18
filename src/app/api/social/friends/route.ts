@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
-import { listLocalFriends } from "@/lib/social/friends";
+import { listLocalFriendDirectory } from "@/lib/social/friends";
 
 function unauthorized() {
   return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -14,12 +14,14 @@ export async function GET() {
   }
 
   try {
-    const friends = await listLocalFriends(session.player_id);
+    const directory = await listLocalFriendDirectory(session.player_id);
 
     return NextResponse.json(
       {
-        total: friends.length,
-        data: friends,
+        total: directory.friends.length,
+        friends: directory.friends,
+        incomingRequests: directory.incomingRequests,
+        outgoingRequests: directory.outgoingRequests,
       },
       { headers: cookieCarrier.headers }
     );

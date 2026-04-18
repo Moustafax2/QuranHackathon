@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
 import {
+  deleteInvitationById,
   getInvitationById,
-  updateInvitationStatus,
 } from "@/lib/social/invitations";
 import { invokeSupabaseEdgeFunction } from "@/lib/multiplayer/server";
 
@@ -33,6 +33,7 @@ export async function POST(
     }
 
     if (invitation.status !== "pending") {
+      await deleteInvitationById(id);
       return NextResponse.json(
         { error: "This invitation has already been handled." },
         { status: 400 }
@@ -41,6 +42,7 @@ export async function POST(
 
     const room = Array.isArray(invitation.rooms) ? invitation.rooms[0] : invitation.rooms;
     if (room.status !== "lobby") {
+      await deleteInvitationById(id);
       return NextResponse.json(
         { error: "This room is no longer accepting players." },
         { status: 400 }
@@ -52,7 +54,7 @@ export async function POST(
       room_code: room.code,
     });
 
-    await updateInvitationStatus(id, "accepted");
+    await deleteInvitationById(id);
 
     return NextResponse.json(
       { success: true, roomCode: room.code },

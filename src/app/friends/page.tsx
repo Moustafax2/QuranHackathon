@@ -4,16 +4,26 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
-import type { SocialUserSummary } from "@/lib/social/qf-users";
+import type {
+  SocialRelationshipStatus,
+  SocialUserSummary,
+} from "@/lib/social/qf-users";
 
 interface FriendsResponse {
   total: number;
-  data: SocialUserSummary[];
+  friends: SocialUserSummary[];
+  incomingRequests: SocialUserSummary[];
+  outgoingRequests: SocialUserSummary[];
   error?: string;
 }
 
 interface SearchResponse {
   data: SocialUserSummary[];
+  error?: string;
+}
+
+interface FriendMutationResponse {
+  relationshipStatus?: SocialRelationshipStatus;
   error?: string;
 }
 
@@ -55,7 +65,7 @@ interface InvitationsResponse {
   error?: string;
 }
 
-function formatRelativeDate(value: string) {
+function formatDateTime(value: string) {
   const date = new Date(value);
   return new Intl.DateTimeFormat("en-CA", {
     dateStyle: "medium",
@@ -63,10 +73,28 @@ function formatRelativeDate(value: string) {
   }).format(date);
 }
 
+function relationshipCopy(status: SocialRelationshipStatus) {
+  if (status === "friend") {
+    return "Friend";
+  }
+
+  if (status === "incoming_request") {
+    return "Sent you a request";
+  }
+
+  if (status === "outgoing_request") {
+    return "Request pending";
+  }
+
+  return "Signed-in app user";
+}
+
 export default function FriendsPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [friends, setFriends] = useState<SocialUserSummary[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<SocialUserSummary[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<SocialUserSummary[]>([]);
   const [searchResults, setSearchResults] = useState<SocialUserSummary[]>([]);
   const [incomingInvites, setIncomingInvites] = useState<IncomingInvitation[]>([]);
   const [outgoingInvites, setOutgoingInvites] = useState<OutgoingInvitation[]>([]);
@@ -74,12 +102,16 @@ export default function FriendsPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [friendActionKey, setFriendActionKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim());
   const [isPending, startTransition] = useTransition();
 
-  async function loadPageData() {
-    setLoading(true);
+  async function loadPageData(options?: { background?: boolean }) {
+    const background = options?.background ?? false;
+    if (!background) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -99,14 +131,48 @@ export default function FriendsPage() {
         throw new Error(invitationsPayload?.error ?? "Failed to load invitations.");
       }
 
-      setFriends(friendsPayload?.data ?? []);
+      setFriends(friendsPayload?.friends ?? []);
+      setIncomingRequests(friendsPayload?.incomingRequests ?? []);
+      setOutgoingRequests(friendsPayload?.outgoingRequests ?? []);
       setIncomingInvites(invitationsPayload?.incoming ?? []);
       setOutgoingInvites(invitationsPayload?.outgoing ?? []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load social features.");
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
+  }
+
+  function getRelationshipStatus(user: SocialUserSummary): SocialRelationshipStatus {
+    if (friends.some((friend) => friend.id === user.id)) {
+      return "friend";
+    }
+
+    if (incomingRequests.some((request) => request.id === user.id)) {
+      return "incoming_request";
+    }
+
+    if (outgoingRequests.some((request) => request.id === user.id)) {
+      return "outgoing_request";
+    }
+
+    return user.relationshipStatus ?? (user.followed ? "friend" : "none");
+  }
+
+  function syncSearchRelationship(userId: string, relationshipStatus: SocialRelationshipStatus) {
+    setSearchResults((current) =>
+      current.map((candidate) =>
+        candidate.id === userId
+          ? {
+              ...candidate,
+              followed: relationshipStatus === "friend",
+              relationshipStatus,
+            }
+          : candidate
+      )
+    );
   }
 
   useEffect(() => {
@@ -144,9 +210,6 @@ export default function FriendsPage() {
         if (!response.ok) {
           throw new Error(payload?.error ?? "Failed to search users.");
         }
-        if (payload?.error) {
-          setSearchError(payload.error);
-        }
         setSearchResults(payload?.data ?? []);
       } catch (searchLoadError) {
         if ((searchLoadError as Error).name === "AbortError") {
@@ -166,27 +229,14 @@ export default function FriendsPage() {
     return () => controller.abort();
   }, [deferredQuery, isAuthenticated]);
 
-  async function toggleFollow(user: SocialUserSummary, action: "follow" | "unfollow") {
+  async function updateFriendship(
+    user: SocialUserSummary,
+    action: "request" | "accept" | "decline" | "cancel" | "remove"
+  ) {
     setSearchError(null);
-
-    const previousFriends = friends;
-    const previousSearch = searchResults;
-
-    if (action === "follow") {
-      setFriends((current) =>
-        current.some((friend) => friend.id === user.id) ? current : [user, ...current]
-      );
-    } else {
-      setFriends((current) => current.filter((friend) => friend.id !== user.id));
-    }
-
-    setSearchResults((current) =>
-      current.map((candidate) =>
-        candidate.id === user.id
-          ? { ...candidate, followed: action === "follow" }
-          : candidate
-      )
-    );
+    setError(null);
+    const actionKey = `${action}:${user.id}`;
+    setFriendActionKey(actionKey);
 
     try {
       const response = await fetch(`/api/social/friends/${encodeURIComponent(user.id)}`, {
@@ -194,19 +244,21 @@ export default function FriendsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const payload = (await response.json().catch(() => null)) as { followed?: boolean; error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as FriendMutationResponse | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Failed to update follow status.");
+        throw new Error(payload?.error ?? "Failed to update friendship.");
       }
 
-      if (payload?.followed === false) {
-        setFriends((current) => current.filter((friend) => friend.id !== user.id));
-      }
-    } catch (toggleError) {
-      setFriends(previousFriends);
-      setSearchResults(previousSearch);
-      setSearchError(toggleError instanceof Error ? toggleError.message : "Failed to update follow status.");
+      syncSearchRelationship(user.id, payload?.relationshipStatus ?? "none");
+      await loadPageData({ background: true });
+    } catch (friendError) {
+      const message =
+        friendError instanceof Error ? friendError.message : "Failed to update friendship.";
+      setSearchError(message);
+      setError(message);
+    } finally {
+      setFriendActionKey(null);
     }
   }
 
@@ -230,11 +282,111 @@ export default function FriendsPage() {
             return;
           }
 
-          await loadPageData();
+          await loadPageData({ background: true });
         } catch (inviteError) {
           setError(inviteError instanceof Error ? inviteError.message : `Failed to ${action} invitation.`);
         }
       })();
+    });
+  }
+
+  function renderFriendActions(user: SocialUserSummary) {
+    const relationshipStatus = getRelationshipStatus(user);
+    const isActionPending = (action: string) => friendActionKey === `${action}:${user.id}`;
+
+    if (relationshipStatus === "friend") {
+      return (
+        <button
+          type="button"
+          onClick={() => void updateFriendship(user, "remove")}
+          disabled={Boolean(friendActionKey)}
+          className="shrink-0 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:border-red-400 hover:text-red-300 disabled:opacity-60"
+        >
+          {isActionPending("remove") ? "Removing..." : "Remove"}
+        </button>
+      );
+    }
+
+    if (relationshipStatus === "incoming_request") {
+      return (
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => void updateFriendship(user, "accept")}
+            disabled={Boolean(friendActionKey)}
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+          >
+            {isActionPending("accept") ? "Accepting..." : "Accept"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void updateFriendship(user, "decline")}
+            disabled={Boolean(friendActionKey)}
+            className="rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:opacity-60"
+          >
+            {isActionPending("decline") ? "Declining..." : "Decline"}
+          </button>
+        </div>
+      );
+    }
+
+    if (relationshipStatus === "outgoing_request") {
+      return (
+        <button
+          type="button"
+          onClick={() => void updateFriendship(user, "cancel")}
+          disabled={Boolean(friendActionKey)}
+          className="shrink-0 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-200 transition-colors hover:border-amber-400 hover:text-amber-100 disabled:opacity-60"
+        >
+          {isActionPending("cancel") ? "Canceling..." : "Cancel Request"}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => void updateFriendship(user, "request")}
+        disabled={Boolean(friendActionKey)}
+        className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-60"
+      >
+        {isActionPending("request") ? "Sending..." : "Send Request"}
+      </button>
+    );
+  }
+
+  function renderUserList(
+    users: SocialUserSummary[],
+    emptyMessage: string,
+    loadingMessage?: string
+  ) {
+    if (loading && loadingMessage) {
+      return <p className="text-sm text-gray-500">{loadingMessage}</p>;
+    }
+
+    if (!users.length) {
+      return (
+        <p className="rounded-2xl border border-dashed border-gray-800 px-4 py-6 text-sm text-gray-500">
+          {emptyMessage}
+        </p>
+      );
+    }
+
+    return users.map((user) => {
+      const status = getRelationshipStatus(user);
+
+      return (
+        <div
+          key={user.id}
+          className="flex items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-950/40 px-4 py-4"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{user.displayName}</p>
+            <p className="truncate text-xs text-gray-500">{relationshipCopy(status)}</p>
+          </div>
+          {renderFriendActions(user)}
+        </div>
+      );
     });
   }
 
@@ -251,7 +403,7 @@ export default function FriendsPage() {
       <div className="mx-auto max-w-3xl px-4 py-12 text-white">
         <h1 className="text-3xl font-bold">Friends</h1>
         <p className="mt-3 text-gray-400">
-          Sign in to search app users, add friends, and respond to game invites.
+          Sign in to send friend requests, build your friends list, and receive private game invites.
         </p>
         <Link
           href="/login?next=/friends"
@@ -270,11 +422,11 @@ export default function FriendsPage() {
           <div>
             <h1 className="text-3xl font-bold">Friends</h1>
             <p className="mt-2 max-w-2xl text-gray-400">
-              Search users who have signed into your app, add them to your local friends list, and manage multiplayer invitations in one place.
+              Search signed-in users, send friend requests, and manage multiplayer invites from accepted friends.
             </p>
           </div>
           <div className="rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-400">
-            {friends.length} friend{friends.length === 1 ? "" : "s"} tracked
+            {friends.length} friend{friends.length === 1 ? "" : "s"} connected
           </div>
         </div>
 
@@ -287,20 +439,16 @@ export default function FriendsPage() {
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
             <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold">Search Users</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Results appear as you type. Add someone to keep them in your in-app friends list.
-                  </p>
-                </div>
-              </div>
+              <h2 className="text-lg font-semibold">Search Users</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Search signed-in app users and send them a friend request. Once they accept, you can invite each other to games.
+              </p>
 
               <input
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name or username..."
+                placeholder="Search by display name or email..."
                 className="mt-4 w-full rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-600 outline-none transition-colors focus:border-emerald-500"
               />
 
@@ -313,48 +461,29 @@ export default function FriendsPage() {
               <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-950/40">
                 {deferredQuery.length < 2 ? (
                   <p className="px-4 py-4 text-sm text-gray-500">
-                    Type at least 2 characters to search Quran.com users.
+                    Type at least 2 characters to search for users.
                   </p>
                 ) : searchLoading ? (
                   <p className="px-4 py-4 text-sm text-gray-500">Searching users...</p>
                 ) : searchResults.length > 0 ? (
                   <div className="divide-y divide-gray-800">
                     {searchResults.map((user) => {
-                      const isFriend = friends.some((friend) => friend.id === user.id) || user.followed;
+                      const status = getRelationshipStatus(user);
+
                       return (
                         <div
                           key={user.id}
                           className="flex items-center justify-between gap-4 px-4 py-4"
                         >
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-semibold text-white">
-                                {user.displayName}
-                              </p>
-                              {user.verified && (
-                                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
-                                  Verified
-                                </span>
-                              )}
-                            </div>
-                            <p className="truncate text-xs text-gray-500">
-                              {user.username ? `@${user.username}` : "Signed-in app user"}
+                            <p className="truncate text-sm font-semibold text-white">
+                              {user.displayName}
                             </p>
-                            {user.bio && (
-                              <p className="mt-1 text-xs text-gray-400">{user.bio}</p>
-                            )}
+                            <p className="truncate text-xs text-gray-500">
+                              {relationshipCopy(status)}
+                            </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => void toggleFollow(user, isFriend ? "unfollow" : "follow")}
-                            className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                              isFriend
-                                ? "border border-gray-700 text-gray-300 hover:border-red-400 hover:text-red-300"
-                                : "bg-emerald-600 text-white hover:bg-emerald-500"
-                            }`}
-                          >
-                            {isFriend ? "Remove" : "Add Friend"}
-                          </button>
+                          {renderFriendActions(user)}
                         </div>
                       );
                     })}
@@ -366,52 +495,45 @@ export default function FriendsPage() {
             </section>
 
             <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold">Your Friends</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    This list reflects the users you have added locally inside this app.
-                  </p>
-                </div>
-              </div>
+              <h2 className="text-lg font-semibold">Incoming Friend Requests</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Accept a request to unlock direct game invites from that user.
+              </p>
 
               <div className="mt-4 space-y-3">
-                {loading ? (
-                  <p className="text-sm text-gray-500">Loading friends...</p>
-                ) : friends.length > 0 ? (
-                  friends.map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between gap-4 rounded-2xl border border-gray-800 bg-gray-950/40 px-4 py-4"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-white">
-                            {friend.displayName}
-                          </p>
-                          {friend.verified && (
-                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
-                              Verified
-                            </span>
-                          )}
-                        </div>
-                        <p className="truncate text-xs text-gray-500">
-                          {friend.username ? `@${friend.username}` : "Signed-in app user"}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void toggleFollow(friend, "unfollow")}
-                        className="shrink-0 rounded-xl border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:border-red-400 hover:text-red-300"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="rounded-2xl border border-dashed border-gray-800 px-4 py-6 text-sm text-gray-500">
-                    You haven&apos;t added any friends yet. Search above to start building your list.
-                  </p>
+                {renderUserList(
+                  incomingRequests,
+                  "No incoming friend requests right now.",
+                  "Loading friend requests..."
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
+              <h2 className="text-lg font-semibold">Sent Requests</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                These users still need to accept before game invites will work.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {renderUserList(
+                  outgoingRequests,
+                  "You have no pending outgoing friend requests."
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
+              <h2 className="text-lg font-semibold">Your Friends</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Accepted friends can send you room invites, and you can invite them back.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {renderUserList(
+                  friends,
+                  "You haven&apos;t added any friends yet. Search above to send your first request.",
+                  "Loading friends..."
                 )}
               </div>
             </section>
@@ -419,9 +541,9 @@ export default function FriendsPage() {
 
           <div className="space-y-6">
             <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
-              <h2 className="text-lg font-semibold">Incoming Invites</h2>
+              <h2 className="text-lg font-semibold">Incoming Game Invites</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Accept to jump straight into the room lobby.
+                Only accepted friends can invite you, and each invite disappears once you accept, decline, or the lobby closes.
               </p>
 
               <div className="mt-4 space-y-3">
@@ -440,11 +562,11 @@ export default function FriendsPage() {
                             Room {invitation.room.code} • {invitation.room.game_mode}
                           </p>
                           <p className="mt-2 text-xs text-gray-600">
-                            Sent {formatRelativeDate(invitation.created_at)}
+                            Sent {formatDateTime(invitation.created_at)}
                           </p>
                         </div>
                         <span className="rounded-full border border-gray-700 px-2.5 py-1 text-[10px] uppercase tracking-wider text-gray-400">
-                          {invitation.status}
+                          pending
                         </span>
                       </div>
 
@@ -477,9 +599,9 @@ export default function FriendsPage() {
             </section>
 
             <section className="rounded-3xl border border-gray-800 bg-gray-900 p-6">
-              <h2 className="text-lg font-semibold">Sent Invites</h2>
+              <h2 className="text-lg font-semibold">Pending Game Invites You Sent</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Keep an eye on who has already accepted or declined your latest room invites.
+                This list only shows live lobby invites that still need a response.
               </p>
 
               <div className="mt-4 space-y-3">
@@ -499,18 +621,18 @@ export default function FriendsPage() {
                             {invitation.invitee.username ? ` • @${invitation.invitee.username}` : ""}
                           </p>
                           <p className="mt-2 text-xs text-gray-600">
-                            Sent {formatRelativeDate(invitation.created_at)}
+                            Sent {formatDateTime(invitation.created_at)}
                           </p>
                         </div>
                         <span className="rounded-full border border-gray-700 px-2.5 py-1 text-[10px] uppercase tracking-wider text-gray-400">
-                          {invitation.status}
+                          pending
                         </span>
                       </div>
                     </div>
                   ))
                 ) : (
                   <p className="rounded-2xl border border-dashed border-gray-800 px-4 py-6 text-sm text-gray-500">
-                    You haven&apos;t sent any game invites yet.
+                    You have no pending game invites right now.
                   </p>
                 )}
               </div>

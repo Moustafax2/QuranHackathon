@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolvePlayerId } from "@/lib/multiplayer/resolve-player";
 import { invokeSupabaseEdgeFunction } from "@/lib/multiplayer/server";
 import { getUsableSession } from "@/lib/qf-user/session";
+import { listAcceptedFriendQfUserIds } from "@/lib/social/friends";
 import { createGameInvitations } from "@/lib/social/invitations";
 
 export async function POST(request: Request) {
@@ -29,15 +30,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = await invokeSupabaseEdgeFunction<{ room_id: string; code: string }>(
-      "create-room",
-      {
-        player_id: playerId,
-        game_mode: body.game_mode,
-        settings: body.settings,
-      }
-    );
-
     const session = await getUsableSession(cookieCarrier.cookies);
     const invitees = (body.invitees ?? [])
       .filter((invitee) => Boolean(invitee?.id && invitee.displayName))
@@ -48,6 +40,29 @@ export async function POST(request: Request) {
         username: invitee.username ?? null,
         avatarUrl: invitee.avatarUrl ?? null,
       }));
+
+    if (session && invitees?.length) {
+      const acceptedFriendIds = await listAcceptedFriendQfUserIds(session.player_id);
+      const invalidInvitees = invitees.filter(
+        (invitee) => !acceptedFriendIds.has(invitee.qfUserId)
+      );
+
+      if (invalidInvitees.length) {
+        return NextResponse.json(
+          { error: "You can only invite users who are already on your friends list." },
+          { status: 403, headers: cookieCarrier.headers }
+        );
+      }
+    }
+
+    const data = await invokeSupabaseEdgeFunction<{ room_id: string; code: string }>(
+      "create-room",
+      {
+        player_id: playerId,
+        game_mode: body.game_mode,
+        settings: body.settings,
+      }
+    );
 
     if (session && invitees?.length) {
       await createGameInvitations({

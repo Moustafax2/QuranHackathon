@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     10
   );
   const page = Math.max(Number(request.nextUrl.searchParams.get("page") ?? "1"), 1);
+  const friendsOnly = request.nextUrl.searchParams.get("friendsOnly") === "1";
 
   if (query.length < 2) {
     return NextResponse.json(
@@ -34,7 +35,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchLocalPlayers(query, session.player_id, limit);
+    const results = await searchLocalPlayers(query, session.player_id, limit, {
+      friendsOnly,
+    });
 
     return NextResponse.json(
       {
