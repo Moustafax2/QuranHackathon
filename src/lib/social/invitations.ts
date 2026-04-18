@@ -19,6 +19,27 @@ type PlayerSummary = {
   quran_foundation_uid: string | null;
 };
 
+type IncomingInvitationRow = {
+  id: string;
+  status: GameInvitationRow["status"];
+  created_at: string;
+  responded_at: string | null;
+  room_id: string;
+  inviter_player_id: string;
+};
+
+type OutgoingInvitationRow = {
+  id: string;
+  status: GameInvitationRow["status"];
+  created_at: string;
+  responded_at: string | null;
+  invitee_qf_user_id: string;
+  invitee_display_name: string;
+  invitee_username: string | null;
+  invitee_avatar_url: string | null;
+  room_id: string;
+};
+
 export interface InvitationRecipientInput {
   qfUserId: string;
   displayName: string;
@@ -86,6 +107,10 @@ export async function createGameInvitations(input: {
 }
 
 async function getRoomsById(roomIds: string[]) {
+  if (!roomIds.length) {
+    return new Map<string, RoomSummary>();
+  }
+
   const supabase = createAdminSupabaseClient();
   const response = await supabase
     .from("rooms")
@@ -100,6 +125,10 @@ async function getRoomsById(roomIds: string[]) {
 }
 
 async function getPlayersById(playerIds: string[]) {
+  if (!playerIds.length) {
+    return new Map<string, PlayerSummary>();
+  }
+
   const supabase = createAdminSupabaseClient();
   const response = await supabase
     .from("players")
@@ -113,27 +142,40 @@ async function getPlayersById(playerIds: string[]) {
   return new Map(((response.data ?? []) as PlayerSummary[]).map((player) => [player.id, player]));
 }
 
+async function deleteInvitationsByIds(invitationIds: string[]) {
+  if (!invitationIds.length) {
+    return;
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const response = await supabase
+    .from("game_invitations")
+    .delete()
+    .in("id", invitationIds);
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+}
+
+export async function deleteInvitationById(invitationId: string) {
+  await deleteInvitationsByIds([invitationId]);
+}
+
 export async function listIncomingInvitationsForQfUser(qfUserId: string) {
   const supabase = createAdminSupabaseClient();
   const response = await supabase
     .from("game_invitations")
     .select("id, status, created_at, responded_at, room_id, inviter_player_id")
     .eq("invitee_qf_user_id", qfUserId)
+    .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   if (response.error) {
     throw new Error(response.error.message);
   }
 
-  const rows = (response.data ?? []) as Array<{
-    id: string;
-    status: GameInvitationRow["status"];
-    created_at: string;
-    responded_at: string | null;
-    room_id: string;
-    inviter_player_id: string;
-  }>;
-
+  const rows = (response.data ?? []) as IncomingInvitationRow[];
   if (!rows.length) {
     return [] as IncomingInvitation[];
   }
@@ -143,24 +185,30 @@ export async function listIncomingInvitationsForQfUser(qfUserId: string) {
     getPlayersById(Array.from(new Set(rows.map((row) => row.inviter_player_id)))),
   ]);
 
-  return rows.flatMap((row) => {
+  const staleIds: string[] = [];
+  const invitations: IncomingInvitation[] = [];
+
+  for (const row of rows) {
     const room = roomsById.get(row.room_id);
     const inviter = playersById.get(row.inviter_player_id);
-    if (!room || !inviter) {
-      return [];
+
+    if (!room || room.status !== "lobby" || !inviter) {
+      staleIds.push(row.id);
+      continue;
     }
 
-    return [
-      {
-        id: row.id,
-        status: row.status,
-        created_at: row.created_at,
-        responded_at: row.responded_at,
-        room,
-        inviter,
-      },
-    ];
-  });
+    invitations.push({
+      id: row.id,
+      status: row.status,
+      created_at: row.created_at,
+      responded_at: row.responded_at,
+      room,
+      inviter,
+    });
+  }
+
+  await deleteInvitationsByIds(staleIds);
+  return invitations;
 }
 
 export async function listOutgoingInvitationsForPlayer(playerId: string) {
@@ -179,52 +227,46 @@ export async function listOutgoingInvitationsForPlayer(playerId: string) {
       room_id
     `)
     .eq("inviter_player_id", playerId)
+    .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   if (response.error) {
     throw new Error(response.error.message);
   }
 
-  const rows = (response.data ?? []) as Array<{
-    id: string;
-    status: GameInvitationRow["status"];
-    created_at: string;
-    responded_at: string | null;
-    invitee_qf_user_id: string;
-    invitee_display_name: string;
-    invitee_username: string | null;
-    invitee_avatar_url: string | null;
-    room_id: string;
-  }>;
-
+  const rows = (response.data ?? []) as OutgoingInvitationRow[];
   if (!rows.length) {
     return [] as OutgoingInvitation[];
   }
 
   const roomsById = await getRoomsById(Array.from(new Set(rows.map((row) => row.room_id))));
+  const staleIds: string[] = [];
+  const invitations: OutgoingInvitation[] = [];
 
-  return rows.flatMap((row) => {
+  for (const row of rows) {
     const room = roomsById.get(row.room_id);
-    if (!room) {
-      return [];
+    if (!room || room.status !== "lobby") {
+      staleIds.push(row.id);
+      continue;
     }
 
-    return [
-      {
-        id: row.id,
-        status: row.status,
-        created_at: row.created_at,
-        responded_at: row.responded_at,
-        room,
-        invitee: {
-          qf_user_id: row.invitee_qf_user_id,
-          display_name: row.invitee_display_name,
-          username: row.invitee_username,
-          avatar_url: row.invitee_avatar_url,
-        },
+    invitations.push({
+      id: row.id,
+      status: row.status,
+      created_at: row.created_at,
+      responded_at: row.responded_at,
+      room,
+      invitee: {
+        qf_user_id: row.invitee_qf_user_id,
+        display_name: row.invitee_display_name,
+        username: row.invitee_username,
+        avatar_url: row.invitee_avatar_url,
       },
-    ];
-  });
+    });
+  }
+
+  await deleteInvitationsByIds(staleIds);
+  return invitations;
 }
 
 export async function getInvitationById(invitationId: string) {
@@ -254,26 +296,4 @@ export async function getInvitationById(invitationId: string) {
     ...invitation,
     rooms: room,
   };
-}
-
-export async function updateInvitationStatus(
-  invitationId: string,
-  status: GameInvitationRow["status"]
-) {
-  const supabase = createAdminSupabaseClient();
-  const response = await supabase
-    .from("game_invitations")
-    .update({
-      status,
-      responded_at: new Date().toISOString(),
-    })
-    .eq("id", invitationId)
-    .select("*")
-    .maybeSingle();
-
-  if (response.error) {
-    throw new Error(response.error.message);
-  }
-
-  return response.data;
 }

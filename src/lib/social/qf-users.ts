@@ -1,5 +1,11 @@
 import type { QfSocialUser } from "@/lib/qf-user/types";
 
+export type SocialRelationshipStatus =
+  | "none"
+  | "incoming_request"
+  | "outgoing_request"
+  | "friend";
+
 export interface SocialUserSummary {
   id: string;
   username: string | null;
@@ -10,6 +16,7 @@ export interface SocialUserSummary {
   verified: boolean;
   followersCount: number;
   avatarUrl: string | null;
+  relationshipStatus?: SocialRelationshipStatus;
 }
 
 export function getQfUserDisplayName(user: Pick<QfSocialUser, "firstName" | "lastName" | "username">): string {

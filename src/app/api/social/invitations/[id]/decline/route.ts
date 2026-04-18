@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
 import {
+  deleteInvitationById,
   getInvitationById,
-  updateInvitationStatus,
 } from "@/lib/social/invitations";
 
 function unauthorized() {
@@ -32,13 +32,14 @@ export async function POST(
     }
 
     if (invitation.status !== "pending") {
+      await deleteInvitationById(id);
       return NextResponse.json(
         { error: "This invitation has already been handled." },
         { status: 400 }
       );
     }
 
-    await updateInvitationStatus(id, "declined");
+    await deleteInvitationById(id);
 
     return NextResponse.json(
       { success: true },

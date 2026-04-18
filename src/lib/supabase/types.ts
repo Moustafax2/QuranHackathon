@@ -209,18 +209,21 @@ export interface Database {
         Row: {
           player_a: string;
           player_b: string;
+          requested_by: string;
           status: "pending" | "accepted";
           created_at: string;
         };
         Insert: {
           player_a: string;
           player_b: string;
+          requested_by: string;
           status?: "pending" | "accepted";
           created_at?: string;
         };
         Update: {
           player_a?: string;
           player_b?: string;
+          requested_by?: string;
           status?: "pending" | "accepted";
           created_at?: string;
         };

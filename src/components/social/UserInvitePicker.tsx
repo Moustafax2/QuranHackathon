@@ -43,7 +43,7 @@ export function UserInvitePicker({
 
       try {
         const response = await fetch(
-          `/api/social/users/search?query=${encodeURIComponent(deferredQuery)}&limit=6`,
+          `/api/social/users/search?query=${encodeURIComponent(deferredQuery)}&limit=6&friendsOnly=1`,
           {
             signal: controller.signal,
             cache: "no-store",
@@ -95,7 +95,7 @@ export function UserInvitePicker({
         <div>
           <h3 className="text-sm font-semibold text-white">Invite Friends</h3>
           <p className="mt-1 text-xs text-gray-500">
-            Search signed-in app users and send lobby invites right after room creation.
+            Search accepted friends and send them lobby invites right after room creation.
           </p>
         </div>
         <span className="rounded-full border border-gray-700 px-2.5 py-1 text-xs text-gray-400">
@@ -107,7 +107,7 @@ export function UserInvitePicker({
         type="text"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by display name or email..."
+        placeholder="Search accepted friends..."
         disabled={disabled}
         className="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-600 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
       />
@@ -122,7 +122,7 @@ export function UserInvitePicker({
               className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200"
             >
               <span>{user.displayName}</span>
-              <span className="text-emerald-400">×</span>
+              <span className="text-emerald-400">x</span>
             </button>
           ))}
         </div>
@@ -131,7 +131,7 @@ export function UserInvitePicker({
       {deferredQuery.length >= 2 && (
         <div className="rounded-2xl border border-gray-800 bg-gray-950/60">
           {loading ? (
-            <p className="px-4 py-3 text-sm text-gray-500">Searching users...</p>
+            <p className="px-4 py-3 text-sm text-gray-500">Searching friends...</p>
           ) : results.length > 0 ? (
             <div className="divide-y divide-gray-800">
               {results.map((user) => {
@@ -147,7 +147,7 @@ export function UserInvitePicker({
                         {user.displayName}
                       </p>
                       <p className="truncate text-xs text-gray-500">
-                        {user.username ? `@${user.username}` : "Signed-in app user"}
+                        {user.username ? `@${user.username}` : "Accepted friend"}
                       </p>
                     </div>
                     <button
@@ -167,7 +167,9 @@ export function UserInvitePicker({
               })}
             </div>
           ) : (
-            <p className="px-4 py-3 text-sm text-gray-500">No users found for that search.</p>
+            <p className="px-4 py-3 text-sm text-gray-500">
+              No accepted friends matched that search.
+            </p>
           )}
         </div>
       )}

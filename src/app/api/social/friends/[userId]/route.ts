@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUsableSession } from "@/lib/qf-user/session";
-import { addLocalFriend, removeLocalFriend } from "@/lib/social/friends";
+import {
+  acceptLocalFriend,
+  cancelLocalFriendRequest,
+  declineLocalFriend,
+  removeLocalFriend,
+  requestLocalFriend,
+} from "@/lib/social/friends";
 
 function unauthorized() {
   return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -18,20 +24,27 @@ export async function POST(
 
   const { userId } = await context.params;
   const body = (await request.json().catch(() => null)) as
-    | { action?: "follow" | "unfollow" }
+    | { action?: "request" | "accept" | "decline" | "cancel" | "remove" }
     | null;
 
   try {
+    const action = body?.action ?? "request";
     const result =
-      body?.action === "unfollow"
-        ? await removeLocalFriend(session.player_id, userId)
-        : await addLocalFriend(session.player_id, userId);
+      action === "accept"
+        ? await acceptLocalFriend(session.player_id, userId)
+        : action === "decline"
+          ? await declineLocalFriend(session.player_id, userId)
+          : action === "cancel"
+            ? await cancelLocalFriendRequest(session.player_id, userId)
+            : action === "remove"
+              ? await removeLocalFriend(session.player_id, userId)
+              : await requestLocalFriend(session.player_id, userId);
 
     return NextResponse.json(result, { headers: cookieCarrier.headers });
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Failed to update follow status.",
+        error: error instanceof Error ? error.message : "Failed to update friendship.",
       },
       { status: 500, headers: cookieCarrier.headers }
     );
