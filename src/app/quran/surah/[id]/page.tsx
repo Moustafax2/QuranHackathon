@@ -7,12 +7,12 @@ import Link from "next/link";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ mode?: string; translations?: string }>;
+  searchParams: Promise<{ mode?: string; translations?: string; ayah?: string }>;
 }
 
 export default async function SurahPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { mode = "ayah", translations } = await searchParams;
+  const { mode = "ayah", translations, ayah } = await searchParams;
   const chapterNumber = parseInt(id, 10);
   const showTranslations =
     translations === "1" || translations === "true" || translations === "on";
@@ -24,6 +24,13 @@ export default async function SurahPage({ params, searchParams }: Props) {
   const pageNumbers = [...new Set(verses.map((v) => v.page_number))].sort(
     (a, b) => a - b
   );
+  const initialAyahNumber = ayah ? parseInt(ayah, 10) : NaN;
+  const initialVerseKey =
+    Number.isInteger(initialAyahNumber) &&
+    initialAyahNumber >= 1 &&
+    initialAyahNumber <= chapter.verses_count
+      ? `${chapterNumber}:${initialAyahNumber}`
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -66,7 +73,11 @@ export default async function SurahPage({ params, searchParams }: Props) {
         versesCount={chapter.verses_count}
       >
         {mode === "mushaf" ? (
-          <MushafView pageNumbers={pageNumbers} verses={verses} />
+          <MushafView
+            pageNumbers={pageNumbers}
+            verses={verses}
+            initialVerseKey={initialVerseKey}
+          />
         ) : (
           <AyahView verses={verses} initialShowTranslation={showTranslations} />
         )}

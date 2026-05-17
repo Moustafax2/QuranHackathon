@@ -7,7 +7,10 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { useRoom } from "@/lib/hooks/useRoom";
 import { useGame } from "@/lib/hooks/useGame";
 import { UserInvitePicker } from "@/components/social/UserInvitePicker";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
 import { createClient } from "@/lib/supabase/client";
+import { CHAPTERS_DATA } from "@/lib/data/chapters-data";
+import { useBookmarks } from "@/lib/hooks/useBookmarks";
 import type { Database } from "@/lib/supabase/types";
 import type { GamePhase } from "@/lib/game/state-machine";
 import type { SocialUserSummary } from "@/lib/social/qf-users";
@@ -20,6 +23,441 @@ interface Props {
 type RoomInfo = Database["public"]["Tables"]["rooms"]["Row"];
 type ActiveGameLookup = Pick<Database["public"]["Tables"]["games"]["Row"], "id">;
 type RoomMembershipStatus = "loading" | "active" | "left" | "missing";
+type GameRoundReviewRow = Pick<
+  Database["public"]["Tables"]["game_rounds"]["Row"],
+  | "id"
+  | "round_number"
+  | "game_mode"
+  | "prompt_verse_key"
+  | "prompt_page_number"
+  | "correct_verse_key"
+  | "prompt_text"
+  | "correct_text"
+  | "options"
+>;
+type RoundAnswerReviewRow = Pick<
+  Database["public"]["Tables"]["round_answers"]["Row"],
+  "round_id" | "player_id" | "answer_verse_key" | "is_correct" | "points_awarded"
+>;
+type ReviewOption = { verse_key: string; text: string };
+type ReviewQuestion = GameRoundReviewRow & {
+  parsedOptions: ReviewOption[];
+  answer: RoundAnswerReviewRow | null;
+};
+
+const REVIEW_AYAH_STORAGE_PREFIX = "quran-game-review-ayahs:";
+const VERSE_KEY_PATTERN = /^([1-9]\d{0,2}):([1-9]\d{0,2})$/;
+
+function parseVerseKey(value: string | null | undefined) {
+  const match = value?.trim().match(VERSE_KEY_PATTERN);
+  if (!match) return null;
+
+  const chapterId = Number(match[1]);
+  const verseNumber = Number(match[2]);
+  const chapter = CHAPTERS_DATA.find((item) => item.id === chapterId);
+
+  if (!chapter || verseNumber > chapter.verses_count) return null;
+
+  return {
+    verseKey: `${chapterId}:${verseNumber}`,
+    chapterId,
+    chapterName: chapter.name_simple,
+    verseNumber,
+  };
+}
+
+function parseStoredOptions(options: unknown): ReviewOption[] {
+  if (!Array.isArray(options)) return [];
+
+  return options.flatMap((option) => {
+    if (typeof option === "string") {
+      try {
+        const parsed = JSON.parse(option) as Partial<ReviewOption>;
+        if (typeof parsed.verse_key === "string" && typeof parsed.text === "string") {
+          return [{ verse_key: parsed.verse_key, text: parsed.text }];
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    if (option && typeof option === "object") {
+      const parsed = option as Partial<ReviewOption>;
+      if (typeof parsed.verse_key === "string" && typeof parsed.text === "string") {
+        return [{ verse_key: parsed.verse_key, text: parsed.text }];
+      }
+    }
+
+    return [];
+  });
+}
+
+function getDefaultRelatedVerseKey(round: GameRoundReviewRow) {
+  return (
+    parseVerseKey(round.correct_verse_key)?.verseKey ??
+    parseVerseKey(round.prompt_verse_key)?.verseKey ??
+    ""
+  );
+}
+
+interface GameReviewSectionProps {
+  gameId: string | null;
+  playerId: string;
+}
+
+function GameReviewSection({ gameId, playerId }: GameReviewSectionProps) {
+  const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
+  const [relatedAyahs, setRelatedAyahs] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const {
+    isBookmarked,
+    addBookmark,
+    removeBookmark,
+    loading: bookmarksLoading,
+    error: bookmarksError,
+  } = useBookmarks();
+
+  useEffect(() => {
+    if (!gameId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadReview() {
+      setLoading(true);
+      setReviewError(null);
+
+      try {
+        const supabase = createClient();
+        const roundsResponse = await supabase
+          .from("game_rounds")
+          .select(
+            "id, round_number, game_mode, prompt_verse_key, prompt_page_number, correct_verse_key, prompt_text, correct_text, options"
+          )
+          .eq("game_id", gameId!)
+          .order("round_number", { ascending: true });
+
+        if (roundsResponse.error) {
+          throw new Error("Failed to load review questions.");
+        }
+
+        const rounds = (roundsResponse.data ?? []) as GameRoundReviewRow[];
+        const roundIds = rounds.map((round) => round.id);
+        let answers: RoundAnswerReviewRow[] = [];
+
+        if (roundIds.length > 0) {
+          const answersResponse = await supabase
+            .from("round_answers")
+            .select("round_id, player_id, answer_verse_key, is_correct, points_awarded")
+            .in("round_id", roundIds);
+
+          if (answersResponse.error) {
+            throw new Error("Failed to load your answers.");
+          }
+
+          answers = (answersResponse.data ?? []) as RoundAnswerReviewRow[];
+        }
+
+        if (cancelled) return;
+
+        const answersByRound = new Map(
+          answers
+            .filter((answer) => answer.player_id === playerId)
+            .map((answer) => [answer.round_id, answer])
+        );
+        const storedRelatedAyahs = readReviewAyahOverrides(gameId!);
+
+        setQuestions(
+          rounds.map((round) => ({
+            ...round,
+            parsedOptions: parseStoredOptions(round.options),
+            answer: answersByRound.get(round.id) ?? null,
+          }))
+        );
+        setRelatedAyahs(
+          Object.fromEntries(
+            rounds.map((round) => [
+              round.id,
+              storedRelatedAyahs[round.id] ?? getDefaultRelatedVerseKey(round),
+            ])
+          )
+        );
+      } catch (err) {
+        if (!cancelled) {
+          setReviewError(err instanceof Error ? err.message : "Failed to load review.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadReview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, playerId]);
+
+  function updateRelatedAyah(roundId: string, value: string) {
+    setRelatedAyahs((current) => {
+      const next = { ...current, [roundId]: value };
+      if (gameId) writeReviewAyahOverrides(gameId, next);
+      return next;
+    });
+  }
+
+  async function toggleBookmark(verse: NonNullable<ReturnType<typeof parseVerseKey>>) {
+    if (isBookmarked(verse.verseKey)) {
+      await removeBookmark(verse.verseKey);
+      return;
+    }
+
+    await addBookmark(verse.chapterId, verse.verseNumber);
+  }
+
+  if (!gameId) return null;
+
+  return (
+    <section className="rounded-2xl border border-gray-800 bg-gray-900/70 p-5 text-left">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Review questions</h2>
+        </div>
+        <span className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-400">
+          {questions.length} rounds
+        </span>
+      </div>
+
+      {bookmarksError && (
+        <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {bookmarksError}
+        </p>
+      )}
+
+      {loading ? (
+        <div className="rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-6 text-center text-sm text-gray-500">
+          Loading review...
+        </div>
+      ) : reviewError ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-300">
+          {reviewError}
+        </div>
+      ) : questions.length === 0 ? (
+        <div className="rounded-xl border border-gray-800 bg-gray-950/70 px-4 py-6 text-center text-sm text-gray-500">
+          No review questions were found for this game.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {questions.map((question) => {
+            const relatedInput = relatedAyahs[question.id] ?? "";
+            const related = parseVerseKey(relatedInput);
+            const answerText = question.answer
+              ? getAnswerText(question, question.answer.answer_verse_key)
+              : "No answer recorded";
+            const promptIsArabic = isArabicReviewText(question, "prompt");
+            const answerIsArabic = isArabicReviewText(question, "answer");
+            const userAnswerIsArabic = Boolean(question.answer) && answerIsArabic;
+            const answerTone = !question.answer
+              ? "text-gray-500"
+              : question.answer.is_correct
+              ? "text-emerald-300"
+              : "text-red-300";
+
+            return (
+              <article
+                key={question.id}
+                className="rounded-xl border border-gray-800 bg-gray-950/70 p-4"
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Round {question.round_number}
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">
+                      {getReviewModeLabel(question)}
+                    </h3>
+                  </div>
+                  {question.answer && (
+                    <span
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                        question.answer.is_correct
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : "bg-red-500/10 text-red-300"
+                      }`}
+                    >
+                      {question.answer.is_correct ? "Correct" : "Missed"} -{" "}
+                      {question.answer.points_awarded} pts
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Question
+                    </p>
+                    <p
+                      dir={promptIsArabic ? "rtl" : "ltr"}
+                      lang={promptIsArabic ? "ar" : "en"}
+                      className={`rounded-lg border border-gray-800 bg-gray-900/70 px-3 py-2 text-white ${
+                        promptIsArabic ? "font-amiri text-xl leading-loose" : "text-sm leading-relaxed"
+                      }`}
+                    >
+                      {question.prompt_text ?? question.prompt_verse_key}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Correct answer
+                    </p>
+                    <p
+                      dir={answerIsArabic ? "rtl" : "ltr"}
+                      lang={answerIsArabic ? "ar" : "en"}
+                      className={`rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-emerald-50 ${
+                        answerIsArabic ? "font-amiri text-xl leading-loose" : "text-sm leading-relaxed"
+                      }`}
+                    >
+                      {question.correct_text ?? question.correct_verse_key}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-gray-800 bg-gray-900/60 px-3 py-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Your answer
+                  </p>
+                  <p
+                    dir={userAnswerIsArabic ? "rtl" : "ltr"}
+                    lang={userAnswerIsArabic ? "ar" : "en"}
+                    className={`mt-1 ${answerTone} ${
+                      userAnswerIsArabic ? "font-amiri text-lg leading-loose" : "text-sm"
+                    }`}
+                  >
+                    {answerText}
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3 rounded-lg border border-gray-800 bg-gray-900/60 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                  <div>
+                    <label
+                      htmlFor={`related-ayah-${question.id}`}
+                      className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500"
+                    >
+                      Related ayah
+                    </label>
+                    <input
+                      id={`related-ayah-${question.id}`}
+                      value={relatedInput}
+                      onChange={(event) => updateRelatedAyah(question.id, event.target.value)}
+                      placeholder="2:255"
+                      className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 font-mono text-sm text-white outline-none transition-colors placeholder:text-gray-700 focus:border-emerald-500"
+                    />
+                    <p className="mt-1 min-h-5 text-xs text-gray-500">
+                      {related
+                        ? `${related.chapterName} ${related.verseNumber}`
+                        : relatedInput
+                        ? "Use a valid surah:ayah key."
+                        : "No ayah attached yet."}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {related ? (
+                      <>
+                        <div className="rounded-lg border border-gray-700 bg-gray-950 p-1 text-gray-300">
+                          <BookmarkButton
+                            isBookmarked={isBookmarked(related.verseKey)}
+                            onToggle={() => {
+                              void toggleBookmark(related);
+                            }}
+                          />
+                        </div>
+                        <Link
+                          href={`/quran/surah/${related.chapterId}?mode=mushaf&ayah=${related.verseNumber}`}
+                          className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+                        >
+                          Jump to Mushaf
+                        </Link>
+                      </>
+                    ) : (
+                      <span className="rounded-lg border border-gray-800 px-3 py-2 text-sm text-gray-600">
+                        Add ayah first
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {bookmarksLoading && (
+                  <p className="mt-2 text-xs text-gray-600">Loading bookmark state...</p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function readReviewAyahOverrides(gameId: string): Record<string, string> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = localStorage.getItem(`${REVIEW_AYAH_STORAGE_PREFIX}${gameId}`);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeReviewAyahOverrides(gameId: string, overrides: Record<string, string>) {
+  localStorage.setItem(`${REVIEW_AYAH_STORAGE_PREFIX}${gameId}`, JSON.stringify(overrides));
+}
+
+function getReviewModeLabel(round: GameRoundReviewRow) {
+  if (round.game_mode === "trivia" || round.prompt_verse_key.startsWith("trivia-")) {
+    return "Quran Trivia";
+  }
+
+  switch (round.game_mode) {
+    case "buzzer":
+      return "Recite the next ayah";
+    case "word-meaning":
+      return "Word meaning";
+    case "fill-in-blank":
+      return "Fill in the blank";
+    default:
+      return "Next ayah";
+  }
+}
+
+function getAnswerText(question: ReviewQuestion, answerKey: string | null) {
+  if (!answerKey) return "Buzzed first";
+  if (answerKey === question.correct_verse_key) return question.correct_text ?? "Correct answer";
+
+  return (
+    question.parsedOptions.find((option) => option.verse_key === answerKey)?.text ??
+    answerKey
+  );
+}
+
+function isArabicReviewText(question: GameRoundReviewRow, field: "prompt" | "answer") {
+  if (question.game_mode === "trivia" || question.prompt_verse_key.startsWith("trivia-")) {
+    return false;
+  }
+
+  if (field === "answer" && question.game_mode === "word-meaning") {
+    return false;
+  }
+
+  return true;
+}
 
 export default function GameRoomPage({ params, searchParams }: Props) {
   const router = useRouter();
@@ -57,6 +495,20 @@ export default function GameRoomPage({ params, searchParams }: Props) {
     if (activeGame?.id) {
       setGameId(activeGame.id);
       return activeGame.id;
+    }
+
+    const latestGameResponse = await supabase
+      .from("games")
+      .select("id")
+      .eq("room_id", roomPrimaryId)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const latestGame = latestGameResponse.data as ActiveGameLookup | null;
+
+    if (latestGame?.id) {
+      setGameId(latestGame.id);
+      return latestGame.id;
     }
 
     return null;
@@ -574,10 +1026,11 @@ export default function GameRoomPage({ params, searchParams }: Props) {
   }
 
   // Game in progress
-  if (phase !== "lobby" && gameState.current_round) {
+  if (phase !== "lobby" && (gameState.current_round || phase === "game_over")) {
     return (
       <GameInProgress
         key={gameId}
+        gameId={gameId}
         roomCode={roomId}
         gameState={gameState}
         playerId={player?.id ?? ""}
@@ -746,6 +1199,7 @@ import type { GameState } from "@/lib/game/state-machine";
 import type { RoomPlayer } from "@/lib/hooks/useRoom";
 
 interface GameProps {
+  gameId: string | null;
   roomCode: string;
   gameState: GameState;
   playerId: string;
@@ -758,6 +1212,7 @@ interface GameProps {
 const RESULT_MIN_MS = 3500; // minimum time to show the round result screen
 
 function GameInProgress({
+  gameId,
   roomCode,
   gameState,
   playerId,
@@ -855,51 +1310,58 @@ function GameInProgress({
 
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-gray-950 text-white">
-        <div className="mx-auto max-w-2xl px-4 py-12 text-center">
-          <h1 className="mb-2 text-4xl font-bold text-emerald-400">
-            Game Over!
-          </h1>
-          <p className="mb-8 text-lg text-gray-400">
-            {!gameState.winner_id
-              ? "Game ended."
-              : gameState.winner_id === playerId
-              ? "You won!"
-              : `${winnerName ?? "Someone"} wins!`}
-          </p>
-          <div className="mb-8 space-y-2">
-            {sortedScores.map(([pid, score], i) => {
-              const name = players.find((p) => p.player_id === pid)?.display_name ?? "Unknown";
-              return (
-                <div
-                  key={pid}
-                  className={`flex items-center justify-between rounded-xl px-5 py-3 ${
-                    i === 0
-                      ? "border border-amber-500/30 bg-amber-500/10"
-                      : "bg-gray-800/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`text-lg font-bold ${i === 0 ? "text-amber-400" : "text-gray-500"}`}>
-                      #{i + 1}
-                    </span>
-                    <span className="font-medium">
-                      {name}
-                      {pid === playerId && " (You)"}
+        <div className="mx-auto max-w-3xl px-4 py-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="mb-2 text-4xl font-bold text-emerald-400">
+              Game Over!
+            </h1>
+            <p className="mb-8 text-lg text-gray-400">
+              {!gameState.winner_id
+                ? "Game ended."
+                : gameState.winner_id === playerId
+                ? "You won!"
+                : `${winnerName ?? "Someone"} wins!`}
+            </p>
+            <div className="mb-8 space-y-2">
+              {sortedScores.map(([pid, score], i) => {
+                const name = players.find((p) => p.player_id === pid)?.display_name ?? "Unknown";
+                return (
+                  <div
+                    key={pid}
+                    className={`flex items-center justify-between rounded-xl px-5 py-3 ${
+                      i === 0
+                        ? "border border-amber-500/30 bg-amber-500/10"
+                        : "bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-lg font-bold ${i === 0 ? "text-amber-400" : "text-gray-500"}`}>
+                        #{i + 1}
+                      </span>
+                      <span className="font-medium">
+                        {name}
+                        {pid === playerId && " (You)"}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-emerald-400">
+                      {score} pts
                     </span>
                   </div>
-                  <span className="font-mono font-bold text-emerald-400">
-                    {score} pts
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-          <Link
-            href="/play"
-            className="inline-block rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Play Again
-          </Link>
+
+          <GameReviewSection gameId={gameId} playerId={playerId} />
+
+          <div className="mt-8 text-center">
+            <Link
+              href="/play"
+              className="inline-block rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              Play Again
+            </Link>
+          </div>
         </div>
       </div>
     );
