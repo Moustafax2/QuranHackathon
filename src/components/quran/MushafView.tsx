@@ -15,10 +15,27 @@ function mushafPageUrl(page: number): string {
 interface Props {
   pageNumbers: number[];
   verses: Verse[];
+  initialVerseKey?: string | null;
 }
 
-export function MushafView({ pageNumbers, verses }: Props) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+function getInitialPageIndex(
+  pageNumbers: number[],
+  verses: Verse[],
+  initialVerseKey?: string | null
+) {
+  if (!initialVerseKey) return 0;
+
+  const targetVerse = verses.find((verse) => verse.verse_key === initialVerseKey);
+  if (!targetVerse) return 0;
+
+  const pageIndex = pageNumbers.indexOf(targetVerse.page_number);
+  return pageIndex === -1 ? 0 : pageIndex;
+}
+
+export function MushafView({ pageNumbers, verses, initialVerseKey = null }: Props) {
+  const [currentIndex, setCurrentIndex] = useState(() =>
+    getInitialPageIndex(pageNumbers, verses, initialVerseKey)
+  );
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const { currentVerseKey, isPlaying, skipBack, skipForward } = useVersePlayer();
@@ -35,6 +52,9 @@ export function MushafView({ pageNumbers, verses }: Props) {
   const currentPage = pageNumbers[currentIndex];
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < pageNumbers.length - 1;
+  const targetVerse = initialVerseKey
+    ? verses.find((verse) => verse.verse_key === initialVerseKey) ?? null
+    : null;
 
   const versesOnCurrentPage = verses.filter((v) => v.page_number === currentPage);
   const bookmarkedOnCurrentPage = versesOnCurrentPage.filter((verse) =>
@@ -45,6 +65,14 @@ export function MushafView({ pageNumbers, verses }: Props) {
     setCurrentIndex(index);
     setImageLoaded(false);
   }
+
+  useEffect(() => {
+    const initialPageIndex = getInitialPageIndex(pageNumbers, verses, initialVerseKey);
+    if (initialPageIndex !== currentIndex) {
+      goTo(initialPageIndex);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialVerseKey]);
 
   // Auto-flip page when playing verse is on a different page
   useEffect(() => {
@@ -127,6 +155,17 @@ export function MushafView({ pageNumbers, verses }: Props) {
         </div>
       )}
 
+      {targetVerse && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+          <p className="text-sm font-semibold text-emerald-300">
+            Viewing {targetVerse.verse_key}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Ayah {targetVerse.verse_number} is on mushaf page {targetVerse.page_number}.
+          </p>
+        </div>
+      )}
+
       {/* Mushaf image */}
       <div className="overflow-hidden rounded-lg bg-black">
         {!imageLoaded && (
@@ -190,7 +229,9 @@ export function MushafView({ pageNumbers, verses }: Props) {
               <div
                 key={verse.id}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors ${
-                  bookmarked
+                  verse.verse_key === targetVerse?.verse_key
+                    ? "border-emerald-400/70 bg-emerald-500/15"
+                    : bookmarked
                     ? "border-emerald-500/40 bg-emerald-500/10"
                     : "border-gray-800 bg-gray-900/70"
                 }`}

@@ -34,7 +34,7 @@ export function JumpToNavigator() {
     if (jumpType === "page") {
       router.push(`/quran/page-view/${pageNumber}`);
     } else if (mode === "mushaf") {
-      router.push(`/quran/surah/${surahId}?mode=mushaf`);
+      router.push(`/quran/surah/${surahId}?mode=mushaf&ayah=${verseNumber}`);
     } else {
       router.push(`/quran/surah/${surahId}#ayah-${verseNumber}`);
     }
