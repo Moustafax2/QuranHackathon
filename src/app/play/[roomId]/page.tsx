@@ -27,14 +27,18 @@ type GameRoundReviewRow = Pick<
   Database["public"]["Tables"]["game_rounds"]["Row"],
   | "id"
   | "round_number"
-  | "game_mode"
   | "prompt_verse_key"
-  | "prompt_page_number"
   | "correct_verse_key"
   | "prompt_text"
   | "correct_text"
   | "options"
->;
+> &
+  Partial<
+    Pick<
+      Database["public"]["Tables"]["game_rounds"]["Row"],
+      "game_mode" | "prompt_page_number"
+    >
+  >;
 type RoundAnswerReviewRow = Pick<
   Database["public"]["Tables"]["round_answers"]["Row"],
   "round_id" | "player_id" | "answer_verse_key" | "is_correct" | "points_awarded"
@@ -135,7 +139,7 @@ function GameReviewSection({ gameId, playerId }: GameReviewSectionProps) {
         const roundsResponse = await supabase
           .from("game_rounds")
           .select(
-            "id, round_number, game_mode, prompt_verse_key, prompt_page_number, correct_verse_key, prompt_text, correct_text, options"
+            "id, round_number, prompt_verse_key, correct_verse_key, prompt_text, correct_text, options"
           )
           .eq("game_id", gameId!)
           .order("round_number", { ascending: true });
@@ -425,6 +429,17 @@ function getReviewModeLabel(round: GameRoundReviewRow) {
     return "Quran Trivia";
   }
 
+  const options = parseStoredOptions(round.options);
+  if (options.some((option) => option.verse_key.startsWith("meaning:"))) {
+    return "Word meaning";
+  }
+  if (options.some((option) => option.verse_key.startsWith("fill:"))) {
+    return "Fill in the blank";
+  }
+  if (options.length === 0) {
+    return "Recite the next ayah";
+  }
+
   switch (round.game_mode) {
     case "buzzer":
       return "Recite the next ayah";
@@ -452,7 +467,12 @@ function isArabicReviewText(question: GameRoundReviewRow, field: "prompt" | "ans
     return false;
   }
 
-  if (field === "answer" && question.game_mode === "word-meaning") {
+  const options = parseStoredOptions(question.options);
+  const isWordMeaning =
+    question.game_mode === "word-meaning" ||
+    options.some((option) => option.verse_key.startsWith("meaning:"));
+
+  if (field === "answer" && isWordMeaning) {
     return false;
   }
 
