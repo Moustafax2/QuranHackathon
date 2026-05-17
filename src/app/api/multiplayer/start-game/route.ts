@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { resolvePlayerId } from "@/lib/multiplayer/resolve-player";
 import { invokeSupabaseEdgeFunction } from "@/lib/multiplayer/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { generateQuestions, resolveSurahPool } from "@/lib/game/question-generator";
+import { generateQuestions } from "@/lib/game/question-generator";
 
 export async function POST(request: Request) {
   const cookieCarrier = new NextResponse();
@@ -42,11 +42,17 @@ export async function POST(request: Request) {
     const numRounds = settings?.num_rounds ?? 10;
     const gameModes: string[] =
       settings?.game_modes?.length ? settings.game_modes : [room.game_mode];
-    const surahFilter = resolveSurahPool(settings ?? {});
 
-    console.log("[start-game] generating", numRounds, "questions, modes:", gameModes, "surahFilter length:", surahFilter?.length ?? "all");
+    console.log(
+      "[start-game] generating",
+      numRounds,
+      "questions, modes:",
+      gameModes,
+      "scope:",
+      settings?.scope ?? "all"
+    );
 
-    const questions = await generateQuestions(numRounds, gameModes, surahFilter);
+    const questions = await generateQuestions(numRounds, gameModes, settings ?? {});
 
     if (questions.length === 0) {
       return NextResponse.json(
