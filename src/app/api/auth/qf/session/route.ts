@@ -5,8 +5,38 @@ import { upsertPlayerFromQfUser } from "@/lib/qf-user/user-profile";
 export async function GET() {
   const cookieCarrier = new NextResponse();
 
-  const session = await getUsableSession(cookieCarrier.cookies);
-  if (!session) {
+  try {
+    const session = await getUsableSession(cookieCarrier.cookies);
+    if (!session) {
+      clearQfCookies(cookieCarrier.cookies);
+      return NextResponse.json(
+        {
+          isAuthenticated: false,
+          user: null,
+          player: null,
+        },
+        { headers: cookieCarrier.headers }
+      );
+    }
+
+    const player = await upsertPlayerFromQfUser(session.user);
+    await writeSessionCookie(cookieCarrier.cookies, {
+      ...session,
+      player_id: player.id,
+    });
+
+    return NextResponse.json(
+      {
+        isAuthenticated: true,
+        user: session.user,
+        player,
+      },
+      {
+        headers: cookieCarrier.headers,
+      }
+    );
+  } catch (error) {
+    console.error("Failed to resolve Quran Foundation session.", error);
     clearQfCookies(cookieCarrier.cookies);
     return NextResponse.json(
       {
@@ -17,21 +47,4 @@ export async function GET() {
       { headers: cookieCarrier.headers }
     );
   }
-
-  const player = await upsertPlayerFromQfUser(session.user);
-  await writeSessionCookie(cookieCarrier.cookies, {
-    ...session,
-    player_id: player.id,
-  });
-
-  return NextResponse.json(
-    {
-      isAuthenticated: true,
-      user: session.user,
-      player,
-    },
-    {
-      headers: cookieCarrier.headers,
-    }
-  );
 }

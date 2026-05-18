@@ -1,6 +1,6 @@
 import { getChapters } from "@/lib/api";
 import { SurahCard } from "@/components/quran/SurahCard";
-import { JumpToNavigator } from "@/components/quran/JumpToNavigator";
+import { SearchBar } from "@/components/search/SearchBar";
 import Link from "next/link";
 
 export default async function QuranHomePage() {
@@ -29,7 +29,9 @@ export default async function QuranHomePage() {
           Read, listen, and explore all 114 surahs
         </p>
       </div>
-      <JumpToNavigator />
+      <div className="mb-8 rounded-lg border border-gray-700 bg-gray-900 p-4">
+        <SearchBar />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {chapters.map((chapter) => (
           <SurahCard key={chapter.id} chapter={chapter} />
