@@ -34,10 +34,11 @@ export class QuranAuthError extends Error {
 
 const TOKEN_EXPIRY_BUFFER_MS = 60_000;
 
-let cachedToken: CachedAccessToken | null = null;
-let inFlightTokenRequest: Promise<string> | null = null;
+const cachedTokens = new Map<string, CachedAccessToken>();
+const inFlightTokenRequests = new Map<string, Promise<string>>();
 
-function hasValidCachedToken(now = Date.now()): boolean {
+function hasValidCachedToken(scope: string, now = Date.now()): boolean {
+  const cachedToken = cachedTokens.get(scope);
   return Boolean(cachedToken && cachedToken.expiresAt > now);
 }
 
@@ -59,11 +60,11 @@ async function parseErrorPayload(response: Response): Promise<unknown> {
   }
 }
 
-async function requestAccessToken(): Promise<string> {
+async function requestAccessToken(scope: string): Promise<string> {
   const config = getQuranFoundationConfig();
   const body = new URLSearchParams({
     grant_type: "client_credentials",
-    scope: "content",
+    scope,
   });
 
   const response = await fetch(`${config.authBaseUrl}/oauth2/token`, {
@@ -98,20 +99,22 @@ async function requestAccessToken(): Promise<string> {
     );
   }
 
-  cachedToken = {
+  const cachedToken = {
     accessToken: payload.access_token,
     expiresAt: Date.now() + Math.max(payload.expires_in * 1000 - TOKEN_EXPIRY_BUFFER_MS, 0),
   };
+  cachedTokens.set(scope, cachedToken);
 
   return cachedToken.accessToken;
 }
 
 export function clearQuranFoundationAccessTokenCache(): void {
-  cachedToken = null;
+  cachedTokens.clear();
 }
 
 export function getQuranFoundationAccessTokenStatus(): QuranFoundationAccessTokenStatus {
-  if (!hasValidCachedToken() || !cachedToken) {
+  const cachedToken = cachedTokens.get("content");
+  if (!hasValidCachedToken("content") || !cachedToken) {
     return {
       hasCachedToken: false,
       expiresAt: null,
@@ -129,15 +132,18 @@ export function getQuranFoundationAccessTokenStatus(): QuranFoundationAccessToke
   };
 }
 
-export async function getQuranFoundationAccessToken(): Promise<string> {
-  if (hasValidCachedToken() && cachedToken) {
+export async function getQuranFoundationAccessToken(scope = "content"): Promise<string> {
+  const cachedToken = cachedTokens.get(scope);
+  if (hasValidCachedToken(scope) && cachedToken) {
     return cachedToken.accessToken;
   }
 
+  let inFlightTokenRequest = inFlightTokenRequests.get(scope);
   if (!inFlightTokenRequest) {
-    inFlightTokenRequest = requestAccessToken().finally(() => {
-      inFlightTokenRequest = null;
+    inFlightTokenRequest = requestAccessToken(scope).finally(() => {
+      inFlightTokenRequests.delete(scope);
     });
+    inFlightTokenRequests.set(scope, inFlightTokenRequest);
   }
 
   return inFlightTokenRequest;

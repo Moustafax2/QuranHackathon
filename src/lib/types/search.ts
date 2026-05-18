@@ -1,22 +1,22 @@
 export interface SearchResult {
-  verse_key: string;
-  verse_id: number;
-  text: string;
-  highlighted: string | null;
-  translations: {
-    text: string;
-    resource_id: number;
-    name: string;
-    language_name: string;
-  }[];
+  result_type: "surah" | "juz" | "hizb" | "ayah" | "rub_el_hizb" | "search_page" | "page" | "range" | "quran_range";
+  key: number | string;
+  name: string;
+  arabic?: string;
+  isArabic?: boolean;
+  isTransliteration?: boolean;
 }
 
 export interface SearchResponse {
-  search: {
-    query: string;
-    total_results: number;
+  pagination: {
     current_page: number;
+    next_page: number | null;
+    per_page: number;
     total_pages: number;
-    results: SearchResult[];
+    total_records: number;
+  };
+  result: {
+    navigation: SearchResult[];
+    verses: SearchResult[];
   };
 }

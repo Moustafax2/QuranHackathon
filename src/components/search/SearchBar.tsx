@@ -43,7 +43,7 @@ export function SearchBar() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search the Quran..."
+        placeholder="Search Arabic text or English translation..."
         className="w-full rounded-lg border border-gray-200 py-3 pl-10 pr-4 text-base outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
       />
     </div>

@@ -12,6 +12,7 @@ interface QuranGetOptions {
   params?: QuranQueryParams;
   revalidate?: number;
   cache?: RequestCache;
+  authScope?: string;
 }
 
 type NextFetchInit = RequestInit & {
@@ -34,11 +35,7 @@ export class QuranApiError extends Error {
   }
 }
 
-function buildUrl(path: string, params?: QuranQueryParams): URL {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const { apiBaseUrl } = getQuranFoundationConfig();
-  const url = new URL(`/content/api/v4${normalizedPath}`, apiBaseUrl);
-
+function appendQueryParams(url: URL, params?: QuranQueryParams): URL {
   if (!params) return url;
 
   Object.entries(params).forEach(([key, value]) => {
@@ -47,6 +44,22 @@ function buildUrl(path: string, params?: QuranQueryParams): URL {
   });
 
   return url;
+}
+
+function buildContentUrl(path: string, params?: QuranQueryParams): URL {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const { apiBaseUrl } = getQuranFoundationConfig();
+  const url = new URL(`/content/api/v4${normalizedPath}`, apiBaseUrl);
+
+  return appendQueryParams(url, params);
+}
+
+function buildApiUrl(path: string, params?: QuranQueryParams): URL {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const { apiBaseUrl } = getQuranFoundationConfig();
+  const url = new URL(normalizedPath, apiBaseUrl);
+
+  return appendQueryParams(url, params);
 }
 
 async function parseResponsePayload(response: Response): Promise<unknown> {
@@ -96,7 +109,9 @@ async function fetchWithAuth<T>(
   retryOnUnauthorized: boolean
 ): Promise<T> {
   const config = getQuranFoundationConfig();
-  const accessToken = await getQuranFoundationAccessToken();
+  const accessToken = await getQuranFoundationAccessToken(
+    options.authScope ?? "content"
+  );
   const response = await fetch(
     url.toString(),
     createFetchInit(accessToken, config.clientId, options)
@@ -124,6 +139,14 @@ export async function quranContentGet<T>(
   path: string,
   options: QuranGetOptions = {}
 ): Promise<T> {
-  const url = buildUrl(path, options.params);
+  const url = buildContentUrl(path, options.params);
+  return fetchWithAuth<T>(url, path, options, true);
+}
+
+export async function quranFoundationGet<T>(
+  path: string,
+  options: QuranGetOptions = {}
+): Promise<T> {
+  const url = buildApiUrl(path, options.params);
   return fetchWithAuth<T>(url, path, options, true);
 }

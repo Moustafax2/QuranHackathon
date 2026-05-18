@@ -4,10 +4,33 @@ import {
 } from "@/lib/api";
 import { SearchBar } from "@/components/search/SearchBar";
 import Link from "next/link";
-import type { SearchResponse } from "@/lib/types";
+import type { SearchResponse, SearchResult } from "@/lib/types";
 
 interface Props {
   searchParams: Promise<{ q?: string; page?: string }>;
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]*>/g, "");
+}
+
+function getVerseHref(result: SearchResult): string {
+  const key = String(result.key);
+  const [chapterId, ayah] = key.split(":");
+
+  if (!chapterId || !ayah) return "/quran";
+
+  return `/quran/surah/${chapterId}#ayah-${ayah}`;
+}
+
+function getNavigationHref(result: SearchResult): string {
+  if (result.result_type === "surah") return `/quran/surah/${result.key}`;
+  if (result.result_type === "page" || result.result_type === "search_page") {
+    return `/quran/page-view/${result.key}`;
+  }
+  if (result.result_type === "ayah") return getVerseHref(result);
+
+  return "/quran";
 }
 
 export default async function SearchPage({ searchParams }: Props) {
@@ -54,42 +77,60 @@ export default async function SearchPage({ searchParams }: Props) {
       {results && (
         <div className="mt-8">
           <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            {results.search.total_results} results for &ldquo;{query}&rdquo;
+            {results.pagination.total_records} results for &ldquo;{query}&rdquo;
           </p>
 
+          {results.result.navigation.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Quick matches
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {results.result.navigation.map((result, index) => (
+                  <Link
+                    key={`${result.result_type}-${result.key}-${index}`}
+                    href={getNavigationHref(result)}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 transition-colors hover:border-emerald-500 dark:border-gray-700 dark:text-gray-300 dark:hover:border-emerald-400"
+                  >
+                    {stripHtml(result.name)}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
-            {results.search.results.map((result) => {
-              const [chapterId] = result.verse_key.split(":");
-              return (
+            {results.result.verses.map((result, index) => (
                 <Link
-                  key={result.verse_id}
-                  href={`/quran/surah/${chapterId}`}
+                  key={`${result.key}-${index}`}
+                  href={getVerseHref(result)}
                   className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-emerald-500 dark:border-gray-700 dark:hover:border-emerald-400"
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      {result.verse_key}
+                      {result.key}
                     </span>
                   </div>
-                  <p
-                    dir="rtl"
-                    lang="ar"
-                    translate="no"
-                    className="font-amiri mb-2 text-lg leading-loose text-gray-900 dark:text-gray-100"
-                  >
-                    {result.text}
-                  </p>
-                  {result.translations?.[0] && (
+                  {(result.arabic || result.isArabic) && (
+                    <p
+                      dir="rtl"
+                      lang="ar"
+                      translate="no"
+                      className="font-amiri mb-2 text-lg leading-loose text-gray-900 dark:text-gray-100"
+                    >
+                      {stripHtml(result.arabic ?? result.name)}
+                    </p>
+                  )}
+                  {!result.isArabic && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {result.translations[0].text.replace(/<[^>]*>/g, "")}
+                      {stripHtml(result.name)}
                     </p>
                   )}
                 </Link>
-              );
-            })}
+            ))}
           </div>
 
-          {results.search.total_pages > 1 && (
+          {results.pagination.total_pages > 1 && (
             <div className="mt-6 flex justify-center gap-2">
               {currentPage > 1 && (
                 <Link
@@ -99,7 +140,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   Previous
                 </Link>
               )}
-              {currentPage < results.search.total_pages && (
+              {currentPage < results.pagination.total_pages && (
                 <Link
                   href={`/quran/search?q=${encodeURIComponent(query)}&page=${currentPage + 1}`}
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
@@ -116,7 +157,7 @@ export default async function SearchPage({ searchParams }: Props) {
         results &&
         !unavailableMessage &&
         !errorMessage &&
-        results.search.total_results === 0 && (
+        results.pagination.total_records === 0 && (
         <p className="mt-8 text-center text-gray-500 dark:text-gray-400">
           No results found for &ldquo;{query}&rdquo;
         </p>
