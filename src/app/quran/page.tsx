@@ -5,18 +5,23 @@ import Link from "next/link";
 
 export default async function QuranHomePage() {
   const { chapters } = await getChapters();
+  const showIntegrationSettings = Boolean(
+    process.env.ENABLE_QURAN_INTEGRATION_SETTINGS?.trim()
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8 text-center">
-        <div className="mb-4 flex justify-center sm:justify-end">
-          <Link
-            href="/quran/settings"
-            className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-white"
-          >
-            Integration Settings
-          </Link>
-        </div>
+        {showIntegrationSettings && (
+          <div className="mb-4 flex justify-center sm:justify-end">
+            <Link
+              href="/quran/settings"
+              className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-300 transition-colors hover:border-emerald-500/60 hover:text-white"
+            >
+              Integration Settings
+            </Link>
+          </div>
+        )}
         <h1 className="text-3xl font-bold text-white">
           The Holy Quran
         </h1>
