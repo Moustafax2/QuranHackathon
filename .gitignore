@@ -49,3 +49,17 @@ AGENTS.md
 # dev placeholders
 public/icons/placeholder.txt
 .vscode/
+
+# editor debug logs
+.cursor/
+
+# log files
+*.log
+supabase-functions*.log
+
+# misc / third-party tools (not part of the app)
+misc/
+
+# hackathon/dev output artifacts
+qutrub-test-output.json
+qutrub-verification-report.json

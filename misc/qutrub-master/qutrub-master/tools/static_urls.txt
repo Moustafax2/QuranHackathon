@@ -1,6 +1,0 @@
-http://qutrub.arabeyes.org/sitemap.txt
-http://qutrub.arabeyes.org/download/
-http://qutrub.arabeyes.org/projects/
-http://qutrub.arabeyes.org/contact/
-http://qutrub.arabeyes.org/index/
-http://qutrub.arabeyes.org/doc/
