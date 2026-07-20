@@ -20,7 +20,6 @@ function getDB(): Record<string, MuyassarRawEntry> {
     process.cwd(),
     "public",
     "data",
-    "al-muyassar-fi-al-gharib.json",
     "al-muyassar-fi-al-gharib.json"
   );
   const raw = fs.readFileSync(filePath, "utf-8");
